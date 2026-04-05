@@ -203,6 +203,33 @@ export default function DetailZakazky() {
     return casti[casti.length - 1] || "—"
   }
 
+  function stahnoutKontakt() {
+    if (!zakazka) return
+    const jmeno = zakazka.jmeno_nevesty || "Nevěsta"
+    const casti = jmeno.trim().split(" ")
+    const prijmeni = casti.length > 1 ? casti[casti.length - 1] : ""
+    const krestni = casti.length > 1 ? casti.slice(0, -1).join(" ") : jmeno
+    const tel = zakazka.telefon ? zakazka.telefon.replace(/\s/g, "") : ""
+    const poznamka = `Nevěsta – svatba ${formatDatum(zakazka.datum_svatby)}`
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:3.0",
+      `FN:${jmeno}`,
+      `N:${prijmeni};${krestni};;;`,
+      tel ? `TEL;TYPE=CELL:${tel}` : "",
+      zakazka.email ? `EMAIL:${zakazka.email}` : "",
+      `NOTE:${poznamka}`,
+      "END:VCARD",
+    ].filter(Boolean).join("\r\n")
+    const blob = new Blob([vcf], { type: "text/vcard" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${jmeno.replace(/\s+/g, "_")}.vcf`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   function googleKalendarUrl(): string {
     if (!zakazka?.datum_svatby) return ""
     const d = zakazka.datum_svatby.replace(/-/g, "")
@@ -344,6 +371,18 @@ export default function DetailZakazky() {
           >
             {zakazka.vystup_odevzdan ? "✓ Odevzdáno" : "Odevzdat"}
           </button>
+          {zakazka.jmeno_nevesty && (
+            <button
+              onClick={stahnoutKontakt}
+              className="bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+              title="Stáhnout kontakt nevěsty"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Kontakt
+            </button>
+          )}
           {zakazka.datum_svatby && (
             <a
               href={googleKalendarUrl()}
