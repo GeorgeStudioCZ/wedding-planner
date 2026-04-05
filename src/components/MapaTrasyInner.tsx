@@ -99,7 +99,12 @@ export default function MapaTrasyInner({ adresaPripravy, adresaObradu, adresaVes
           getTrasa(bodyRoundtrip),
         ])
         if (tRoundtrip) {
-          setTrasa({ ...tRoundtrip, kmTam: tTam?.km ?? 0 })
+          setTrasa({
+            coords: tRoundtrip.coords,
+            km: tRoundtrip.km,
+            prvniUsekCas: tTam?.prvniUsekCas ?? "",
+            kmTam: tTam?.km ?? 0,
+          })
         }
       }
 
