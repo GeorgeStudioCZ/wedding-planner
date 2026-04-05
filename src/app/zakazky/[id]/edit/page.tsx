@@ -301,8 +301,10 @@ export default function EditZakazka() {
                 <label className={labelClass}>Videa pro soc. sítě</label>
                 <select name="socialni_site" value={form.socialni_site} onChange={handleChange} className={inputClass}>
                   <option value="">Vybrat...</option>
-                  <option value="ano">Ano</option>
                   <option value="ne">Ne</option>
+                  <option value="1x-reels">1x reels 20s (+690 Kč)</option>
+                  <option value="2x-reels">2x reels 20s (+1 180 Kč)</option>
+                  <option value="3x-reels">3x reels 20s (+1 470 Kč)</option>
                 </select>
               </div>
               <div>

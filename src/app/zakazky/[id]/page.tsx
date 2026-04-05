@@ -352,7 +352,13 @@ export default function DetailZakazky() {
               <Row label="Typ služby" value={typLabel(zakazka.typ_sluzby)} />
               <Row label="Balíček" value={balicekLabel(zakazka.balicek)} />
               <Row label="Rychlost dodání" value={dodaniLabel(zakazka.rychlost_dodani)} />
-              <Row label="Videa pro soc. sítě" value={zakazka.socialni_site === "ano" ? "Ano" : zakazka.socialni_site === "ne" ? "Ne" : "—"} />
+              <Row label="Videa pro soc. sítě" value={
+                zakazka.socialni_site === "ne" ? "Ne" :
+                zakazka.socialni_site === "1x-reels" ? "1x reels 20s (+690 Kč)" :
+                zakazka.socialni_site === "2x-reels" ? "2x reels 20s (+1 180 Kč)" :
+                zakazka.socialni_site === "3x-reels" ? "3x reels 20s (+1 470 Kč)" :
+                zakazka.socialni_site === "ano" ? "Ano" : "—"
+              } />
               <Row label="2. kameraman/fotograf" value={zakazka.druhy_kameraman === "ano" ? "Ano" : zakazka.druhy_kameraman === "ne" ? "Ne" : "—"} />
             </div>
           </section>
