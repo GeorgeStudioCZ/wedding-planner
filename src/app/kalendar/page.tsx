@@ -25,7 +25,7 @@ function barvaSvatby(typ: string, stav: string): string {
   if (stav === "objednavka") return "bg-yellow-400 text-white"
   if (typ === "foto") return "bg-blue-500 text-white"
   if (typ === "video") return "bg-rose-500 text-white"
-  if (typ === "foto+video") return "bg-green-500 text-white"
+  if (typ === "foto+video") return "bg-gray-400 text-white"
   return "bg-gray-300 text-gray-700"
 }
 
@@ -146,10 +146,10 @@ export default function Kalendar() {
 
           {/* Legenda */}
           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-yellow-400 inline-block" />Objednávka</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-yellow-400 inline-block" />Předrezervace</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block" />Foto</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-rose-500 inline-block" />Video</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500 inline-block" />Foto + Video</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-400 inline-block" />Foto + Video</span>
           </div>
         </div>
 
