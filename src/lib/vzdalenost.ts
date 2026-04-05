@@ -1,4 +1,4 @@
-const START = { lat: 50.1942, lng: 15.8329 } // Střelecká 809/41, Hradec Králové
+const START = { lat: 50.2099846, lng: 15.8198059 } // Střelecká 809/41, Hradec Králové
 
 export async function geocodeAdresu(adresa: string): Promise<{ lat: number; lng: number } | null> {
   try {

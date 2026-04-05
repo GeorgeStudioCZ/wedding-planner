@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Polyline, Popup } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 
-const HOME = { lat: 50.1942, lng: 15.8329, label: "Hradec Králové" }
+const HOME = { lat: 50.2099846, lng: 15.8198059, label: "Hradec Králové" }
 
 function makeIkona(barva: string) {
   return new L.Icon({

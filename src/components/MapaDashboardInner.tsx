@@ -52,7 +52,7 @@ export default function MapaDashboardInner({ body }: { body: Bod[] }) {
         />
 
         {/* Start — Hradec Králové */}
-        <Marker position={[50.1942, 15.8329]} icon={ikonaStart}>
+        <Marker position={[50.2099846, 15.8198059]} icon={ikonaStart}>
           <Popup>
             <strong>Hradec Králové</strong><br />Tvoje základna
           </Popup>
