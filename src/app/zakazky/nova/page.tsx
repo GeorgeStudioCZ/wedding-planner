@@ -194,6 +194,7 @@ export default function NovaZakazka() {
                 <label className={labelClass}>Balíček / délka</label>
                 <select name="balicek" value={form.balicek} onChange={handleChange} className={inputClass}>
                   <option value="">Vybrat...</option>
+                  <option value="pul-den-6">Půl den (6 hod)</option>
                   <option value="pul-den">Půl den (8 hod)</option>
                   <option value="cely-den">Celý den (10 hod)</option>
                   <option value="do-vecera">Do večera (12 hod)</option>

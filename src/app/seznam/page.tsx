@@ -38,6 +38,7 @@ function typLabel(typ: string) {
 
 function balicekLabel(b: string) {
   const map: Record<string, string> = {
+    "pul-den-6": "Půl den (6 hod)",
     "pul-den":   "Půl den (8 hod)",
     "cely-den":  "Celý den (10 hod)",
     "do-vecera": "Do večera (12 hod)",
