@@ -207,9 +207,22 @@ export default function DetailZakazky() {
     if (!zakazka?.datum_svatby) return ""
     const d = zakazka.datum_svatby.replace(/-/g, "")
     let dates: string
-    if (zakazka.cas_obradu) {
-      const cas = zakazka.cas_obradu.slice(0, 5).replace(":", "")
+    if (zakazka.cas_prijezdu) {
+      const cas = zakazka.cas_prijezdu.slice(0, 5).replace(":", "")
       // Délka události dle balíčku
+      const delkyMap: Record<string, number> = {
+        "pul-den-6": 6, "pul-den": 8, "cely-den": 10, "do-vecera": 12,
+      }
+      const delka = delkyMap[zakazka.balicek] ?? 8
+      const startH = parseInt(zakazka.cas_prijezdu.slice(0, 2))
+      const startM = parseInt(zakazka.cas_prijezdu.slice(3, 5))
+      const endMin = startH * 60 + startM + delka * 60
+      const endH = Math.floor(endMin / 60) % 24
+      const endMm = endMin % 60
+      const endStr = String(endH).padStart(2, "0") + String(endMm).padStart(2, "0")
+      dates = `${d}T${cas}00/${d}T${endStr}00`
+    } else if (zakazka.cas_obradu) {
+      const cas = zakazka.cas_obradu.slice(0, 5).replace(":", "")
       const delkyMap: Record<string, number> = {
         "pul-den-6": 6, "pul-den": 8, "cely-den": 10, "do-vecera": 12,
       }
@@ -228,7 +241,7 @@ export default function DetailZakazky() {
       const nd = nextDay.toISOString().slice(0, 10).replace(/-/g, "")
       dates = `${d}/${nd}`
     }
-    const title = encodeURIComponent(`Svatba ${zakazka.jmeno_nevesty} & ${zakazka.jmeno_zenicha}`)
+    const title = encodeURIComponent(`Natáčení svatby - ${zakazka.jmeno_nevesty}`)
     const location = encodeURIComponent([zakazka.nazev_objektu, zakazka.adresa_obradu].filter(Boolean).join(", "))
     const details = encodeURIComponent([
       zakazka.typ_sluzby ? `Služba: ${typLabel(zakazka.typ_sluzby)}` : "",
