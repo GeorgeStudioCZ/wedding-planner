@@ -25,6 +25,7 @@ export default function NovaZakazka() {
     adresa_pripravy: "",
     adresa_obradu: "",
     adresa_veseli: "",
+    nazev_objektu: "",
     rychlost_dodani: "60-dnu",
     socialni_site: "ne",
     druhy_kameraman: "ne",
@@ -216,6 +217,10 @@ export default function NovaZakazka() {
           {/* Místa */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <h2 className="font-semibold text-gray-900">Místa</h2>
+            <div>
+              <label className={labelClass}>Název objektu</label>
+              <input name="nazev_objektu" value={form.nazev_objektu} onChange={handleChange} placeholder="Penzion Sýpka u Tesařů" className={inputClass} />
+            </div>
             <div>
               <label className={labelClass}>Adresa přípravy nevěsty</label>
               <input name="adresa_pripravy" value={form.adresa_pripravy} onChange={handleChange} placeholder="Ulice, PSČ, Město" className={inputClass} />

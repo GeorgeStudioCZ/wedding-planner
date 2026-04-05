@@ -54,6 +54,7 @@ type Zakazka = {
   adresa_pripravy: string
   adresa_obradu: string
   adresa_veseli: string
+  nazev_objektu: string
   rychlost_dodani: string
   socialni_site: string
   druhy_kameraman: string
@@ -379,6 +380,7 @@ export default function DetailZakazky() {
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h2 className="font-semibold text-gray-900 mb-4">Místa</h2>
             <div className="space-y-3 text-sm mb-5">
+              <Row label="Název objektu" value={zakazka.nazev_objektu} />
               <Row label="Příprava nevěsty" value={zakazka.adresa_pripravy} />
               <Row label="Obřad" value={zakazka.adresa_obradu} />
               <Row label="Svatební veselí" value={zakazka.adresa_veseli} />

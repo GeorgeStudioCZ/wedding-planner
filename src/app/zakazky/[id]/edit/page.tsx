@@ -30,6 +30,7 @@ export default function EditZakazka() {
     adresa_pripravy: "",
     adresa_obradu: "",
     adresa_veseli: "",
+    nazev_objektu: "",
     rychlost_dodani: "",
     socialni_site: "",
     druhy_kameraman: "",
@@ -64,6 +65,7 @@ export default function EditZakazka() {
           adresa_pripravy: data.adresa_pripravy ?? "",
           adresa_obradu: data.adresa_obradu ?? "",
           adresa_veseli: data.adresa_veseli ?? "",
+          nazev_objektu: data.nazev_objektu ?? "",
           rychlost_dodani: data.rychlost_dodani ?? "",
           socialni_site: data.socialni_site ?? "",
           druhy_kameraman: data.druhy_kameraman ?? "",
@@ -269,6 +271,10 @@ export default function EditZakazka() {
           {/* Místa */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <h2 className="font-semibold text-gray-900">Místa</h2>
+            <div>
+              <label className={labelClass}>Název objektu</label>
+              <input name="nazev_objektu" value={form.nazev_objektu} onChange={handleChange} placeholder="Penzion Sýpka u Tesařů" className={inputClass} />
+            </div>
             <div>
               <label className={labelClass}>Adresa přípravy nevěsty</label>
               <input name="adresa_pripravy" value={form.adresa_pripravy} onChange={handleChange} className={inputClass} />
