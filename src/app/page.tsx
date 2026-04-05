@@ -106,6 +106,10 @@ export default function Home() {
   const dnes = new Date()
   dnes.setHours(0, 0, 0, 0)
 
+  // Stavy které se nezapočítávají do statistik ani mapy
+  const NEPOTVRZENE_STAVY = ["poptavka", "rozhoduje-se", "objednavka", "cekam-platbu"]
+  const potvrzeneSvatby = zakazky.filter(z => !NEPOTVRZENE_STAVY.includes(z.stav))
+
   const probihaJednani = zakazky.filter(z =>
     ["poptavka", "rozhoduje-se"].includes(z.stav)
   )
@@ -114,37 +118,37 @@ export default function Home() {
     ["objednavka", "cekam-platbu"].includes(z.stav)
   )
 
-  const nadchazejici = zakazky.filter(z => {
+  const nadchazejici = potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
     const d = new Date(z.datum_svatby); d.setHours(0,0,0,0)
     return d >= dnes && z.stav === "zaplaceno"
   })
 
-  const realizovaneNeodevzdane = zakazky.filter(z => {
+  const realizovaneNeodevzdane = potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
     const d = new Date(z.datum_svatby); d.setHours(0,0,0,0)
     return d < dnes && !z.vystup_odevzdan
   })
 
-  const realizovaneOdevzdane = zakazky.filter(z => {
+  const realizovaneOdevzdane = potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
     const d = new Date(z.datum_svatby); d.setHours(0,0,0,0)
     return d < dnes && z.vystup_odevzdan
   })
 
-  const letoscelkem = zakazky.filter(z => z.datum_svatby && new Date(z.datum_svatby).getFullYear() === new Date().getFullYear())
+  const letoscelkem = potvrzeneSvatby.filter(z => z.datum_svatby && new Date(z.datum_svatby).getFullYear() === new Date().getFullYear())
 
   // Řádek 1
-  const realizovano = zakazky.filter(z => {
+  const realizovano = potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
     const d = new Date(z.datum_svatby); d.setHours(0, 0, 0, 0)
     return d < dnes
   })
-  const cekaNaSestrizani = zakazky.filter(z => ["ve-strizne", "po-svatbe"].includes(z.stav) && !z.vystup_odevzdan)
+  const cekaNaSestrizani = potvrzeneSvatby.filter(z => ["ve-strizne", "po-svatbe"].includes(z.stav) && !z.vystup_odevzdan)
 
   // Řádek 2
-  const celkemKm = Math.round(zakazky.reduce((sum, z) => sum + (z.vzdalenost_km ? z.vzdalenost_km * 2 : 0), 0))
-  const ujetoKm = Math.round(zakazky.filter(z => {
+  const celkemKm = Math.round(potvrzeneSvatby.reduce((sum, z) => sum + (z.vzdalenost_km ? z.vzdalenost_km * 2 : 0), 0))
+  const ujetoKm = Math.round(potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
     const d = new Date(z.datum_svatby); d.setHours(0, 0, 0, 0)
     return d < dnes
@@ -153,13 +157,13 @@ export default function Home() {
   const celkovaCasJizdy = celkemKm > 0 ? `${Math.ceil(celkemKm / 80)} h` : "—"
 
   // Řádek 3
-  const celkemObrat = zakazky.reduce((sum, z) => sum + (z.cena || 0), 0)
+  const celkemObrat = potvrzeneSvatby.reduce((sum, z) => sum + (z.cena || 0), 0)
   const nakladyBenzin = cenaBenzinu ? Math.round((ujetoKm / 100) * 9 * cenaBenzinu) : null
-  const uhrazeneZalohy = zakazky.filter(z => z.stav === "zaplaceno").length * 2900
+  const uhrazeneZalohy = potvrzeneSvatby.filter(z => z.stav === "zaplaceno").length * 2900
   const obratNadchazejicich = nadchazejici.reduce((sum, z) => sum + (z.cena || 0), 0)
   const zbyvaDoplatit = obratNadchazejicich - uhrazeneZalohy
 
-  const bodyNaMape = zakazky.filter(z => z.lat && z.lng).map(z => ({
+  const bodyNaMape = potvrzeneSvatby.filter(z => z.lat && z.lng).map(z => ({
     id: z.id, lat: z.lat!, lng: z.lng!,
     jmeno_nevesty: z.jmeno_nevesty, jmeno_zenicha: z.jmeno_zenicha,
     datum_svatby: z.datum_svatby, adresa_obradu: z.adresa_obradu,
