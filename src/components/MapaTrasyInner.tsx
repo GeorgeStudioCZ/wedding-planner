@@ -69,7 +69,7 @@ export default function MapaTrasyInner({ adresaPripravy, adresaObradu, adresaVes
   const [priprava, setPriprava] = useState<Coords | null>(null)
   const [obrad, setObrad] = useState<Coords | null>(null)
   const [veseli, setVeseli] = useState<Coords | null>(null)
-  const [trasa, setTrasa] = useState<{ coords: [number, number][]; km: number; kmTam: number } | null>(null)
+  const [trasa, setTrasa] = useState<{ coords: [number, number][]; km: number; kmTam: number; prvniUsekCas: string } | null>(null)
   const [nacitam, setNacitam] = useState(true)
 
   useEffect(() => {
