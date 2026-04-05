@@ -203,6 +203,41 @@ export default function DetailZakazky() {
     return casti[casti.length - 1] || "—"
   }
 
+  function googleKalendarUrl(): string {
+    if (!zakazka?.datum_svatby) return ""
+    const d = zakazka.datum_svatby.replace(/-/g, "")
+    let dates: string
+    if (zakazka.cas_obradu) {
+      const cas = zakazka.cas_obradu.slice(0, 5).replace(":", "")
+      // Délka události dle balíčku
+      const delkyMap: Record<string, number> = {
+        "pul-den-6": 6, "pul-den": 8, "cely-den": 10, "do-vecera": 12,
+      }
+      const delka = delkyMap[zakazka.balicek] ?? 8
+      const startH = parseInt(zakazka.cas_obradu.slice(0, 2))
+      const startM = parseInt(zakazka.cas_obradu.slice(3, 5))
+      const endMin = startH * 60 + startM + delka * 60
+      const endH = Math.floor(endMin / 60) % 24
+      const endMm = endMin % 60
+      const endStr = String(endH).padStart(2, "0") + String(endMm).padStart(2, "0")
+      dates = `${d}T${cas}00/${d}T${endStr}00`
+    } else {
+      // Celý den
+      const nextDay = new Date(zakazka.datum_svatby)
+      nextDay.setDate(nextDay.getDate() + 1)
+      const nd = nextDay.toISOString().slice(0, 10).replace(/-/g, "")
+      dates = `${d}/${nd}`
+    }
+    const title = encodeURIComponent(`Svatba ${zakazka.jmeno_nevesty} & ${zakazka.jmeno_zenicha}`)
+    const location = encodeURIComponent([zakazka.nazev_objektu, zakazka.adresa_obradu].filter(Boolean).join(", "))
+    const details = encodeURIComponent([
+      zakazka.typ_sluzby ? `Služba: ${typLabel(zakazka.typ_sluzby)}` : "",
+      zakazka.balicek ? `Balíček: ${balicekLabel(zakazka.balicek)}` : "",
+      zakazka.cas_prijezdu ? `Příjezd: ${zakazka.cas_prijezdu.slice(0, 5)}` : "",
+    ].filter(Boolean).join("\n"))
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&location=${location}&details=${details}`
+  }
+
   if (loading) {
     return <main className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400">Načítám...</main>
   }
@@ -296,6 +331,19 @@ export default function DetailZakazky() {
           >
             {zakazka.vystup_odevzdan ? "✓ Odevzdáno" : "Odevzdat"}
           </button>
+          {zakazka.datum_svatby && (
+            <a
+              href={googleKalendarUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Kalendář
+            </a>
+          )}
           <button
             onClick={() => router.push(`/zakazky/${zakazka.id}/edit`)}
             className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
