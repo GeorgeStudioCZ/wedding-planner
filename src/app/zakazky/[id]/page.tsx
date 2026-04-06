@@ -335,23 +335,45 @@ export default function DetailZakazky() {
         </div>
       )}
 
+      {/* Hlavička bez fotky */}
+      {!zakazka.foto_url && (
+        <div className="w-full bg-sky-100 py-6 px-4">
+          <div className="max-w-2xl mx-auto text-center">
+            <p className="text-xs font-semibold text-sky-500 tracking-widest uppercase mb-2">
+              {formatDatum(zakazka.datum_svatby)}
+            </p>
+            <h1 className="text-2xl md:text-3xl font-bold text-sky-900">
+              {zakazka.jmeno_nevesty || "—"} & {zakazka.jmeno_zenicha || "—"}
+            </h1>
+            <div className="flex flex-wrap justify-center gap-2 mt-3">
+              {zakazka.typ_sluzby && (
+                <span className="bg-sky-200/60 text-sky-800 text-sm font-medium px-4 py-1.5 rounded-full">
+                  {typLabel(zakazka.typ_sluzby)}
+                </span>
+              )}
+              {zakazka.datum_svatby && (
+                <span className="bg-sky-200/60 text-sky-800 text-sm font-medium px-4 py-1.5 rounded-full">
+                  ⏳ {zbyvaKdni(zakazka.datum_svatby)}
+                </span>
+              )}
+              {zakazka.vzdalenost_km && (
+                <span className="bg-sky-200/60 text-sky-800 text-sm font-medium px-4 py-1.5 rounded-full">
+                  🚗 {zakazka.vzdalenost_km} km
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto p-8">
 
-        {/* Hlavička */}
+        {/* Hlavička — navigace a akce */}
         <div className="flex items-center gap-3 mb-8">
           <button onClick={() => router.push("/")} className="text-gray-400 hover:text-gray-600 transition-colors text-sm">
             ← Zpět
           </button>
-          <div className="flex-1">
-            {!zakazka.foto_url && (
-              <>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {zakazka.jmeno_nevesty || "—"} & {zakazka.jmeno_zenicha || "—"}
-                </h1>
-                <p className="text-gray-500 text-sm mt-0.5">{formatDatum(zakazka.datum_svatby)}</p>
-              </>
-            )}
-          </div>
+          <div className="flex-1" />
           <select
             value={zakazka.stav ?? "poptavka"}
             onChange={(e) => zmenStav(e.target.value)}
