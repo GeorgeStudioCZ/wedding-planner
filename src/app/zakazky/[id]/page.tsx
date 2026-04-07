@@ -291,7 +291,8 @@ export default function DetailZakazky() {
 
       {/* Titulní fotka */}
       {zakazka.foto_url && (
-        <div className="w-full h-80 md:h-96 overflow-hidden bg-gray-200 relative">
+        <div className="max-w-2xl mx-auto px-8 pt-8">
+          <div className="h-64 md:h-80 overflow-hidden bg-gray-200 relative rounded-xl">
           <img
             src={zakazka.foto_url}
             alt={`${zakazka.jmeno_nevesty} & ${zakazka.jmeno_zenicha}`}
@@ -332,6 +333,7 @@ export default function DetailZakazky() {
               )}
             </div>
           </div>
+        </div>
         </div>
       )}
 
