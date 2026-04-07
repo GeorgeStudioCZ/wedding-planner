@@ -307,15 +307,9 @@ export default function DetailZakazky() {
             </p>
 
             {/* Jména */}
-            <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg tracking-wide text-center">
-              <span className="md:hidden flex flex-col items-center gap-1">
-                <span>{zakazka.jmeno_nevesty || "—"}</span>
-                <span className="text-white/60 text-xl">&</span>
-                <span>{zakazka.jmeno_zenicha || "—"}</span>
-              </span>
-              <span className="hidden md:inline">
-                {zakazka.jmeno_nevesty || "—"} & {zakazka.jmeno_zenicha || "—"}
-              </span>
+            <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg tracking-wide text-center flex flex-col items-center gap-1">
+              <span>{zakazka.jmeno_nevesty || "—"}</span>
+              <span>{zakazka.jmeno_zenicha || "—"}</span>
             </h1>
 
             {/* Šedé boxy s info */}
@@ -344,8 +338,9 @@ export default function DetailZakazky() {
             <p className="text-xs font-semibold text-sky-500 tracking-widest uppercase mb-2">
               {formatDatum(zakazka.datum_svatby)}
             </p>
-            <h1 className="text-2xl md:text-3xl font-bold text-sky-900">
-              {zakazka.jmeno_nevesty || "—"} & {zakazka.jmeno_zenicha || "—"}
+            <h1 className="text-2xl md:text-3xl font-bold text-sky-900 flex flex-col items-center gap-0.5">
+              <span>{zakazka.jmeno_nevesty || "—"}</span>
+              <span>{zakazka.jmeno_zenicha || "—"}</span>
             </h1>
             <div className="flex flex-wrap justify-center gap-2 mt-3">
               {zakazka.typ_sluzby && (
