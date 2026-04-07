@@ -291,7 +291,7 @@ export default function DetailZakazky() {
 
       {/* Titulní fotka */}
       {zakazka.foto_url && (
-        <div className="max-w-2xl mx-auto px-8 pt-8">
+        <div className="max-w-4xl mx-auto px-8 pt-8">
           <div className="h-64 md:h-80 overflow-hidden bg-gray-200 relative rounded-xl">
           <img
             src={zakazka.foto_url}
@@ -334,7 +334,7 @@ export default function DetailZakazky() {
       {/* Hlavička bez fotky */}
       {!zakazka.foto_url && (
         <div className="w-full bg-sky-100 py-6 px-4">
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto text-center">
             <p className="text-xs font-semibold text-sky-500 tracking-widest uppercase mb-2">
               {formatDatum(zakazka.datum_svatby)}
             </p>
@@ -363,7 +363,7 @@ export default function DetailZakazky() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto p-8">
+      <div className="max-w-4xl mx-auto p-8">
 
         {/* Hlavička — navigace a akce */}
         <div className="flex items-center gap-3 mb-8">
