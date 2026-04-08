@@ -66,6 +66,7 @@ type Zakazka = {
   stav: string
   cena_benzinu: number | null
   dalsi_info: string
+  videohovor_datum: string | null
 }
 
 export default function DetailZakazky() {
@@ -87,6 +88,12 @@ export default function DetailZakazky() {
     }])
     setZakazka({ ...zakazka, vystup_odevzdan: novy, datum_odevzdani: cas })
     nactiHistorii()
+  }
+
+  async function ulozVideohovor(datum: string | null) {
+    if (!zakazka) return
+    await supabase.from("zakazky").update({ videohovor_datum: datum }).eq("id", zakazka.id)
+    setZakazka({ ...zakazka, videohovor_datum: datum })
   }
 
   async function zmenStav(novyStav: string) {
@@ -468,6 +475,47 @@ export default function DetailZakazky() {
               <Row label="Čas příjezdu" value={formatCas(zakazka.cas_prijezdu)} />
               <Row label="Počet svatebčanů" value={zakazka.pocet_svatebcanu ? String(zakazka.pocet_svatebcanu) : "—"} />
             </div>
+          </section>
+
+          {/* Předsvatební videohovor */}
+          <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="font-semibold text-gray-900 mb-4">Předsvatební videohovor</h2>
+            {zakazka.videohovor_datum ? (
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-2 text-green-700 font-medium text-sm">
+                  <span className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-xs">✓</span>
+                  Proběhl {new Date(zakazka.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}
+                </span>
+                <input
+                  type="date"
+                  value={zakazka.videohovor_datum}
+                  onChange={e => ulozVideohovor(e.target.value)}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                />
+                <button
+                  onClick={() => ulozVideohovor(null)}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  Zrušit
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-400">Zatím neproběhl</span>
+                <button
+                  onClick={() => ulozVideohovor(new Date().toISOString().slice(0, 10))}
+                  className="bg-sky-50 hover:bg-sky-100 text-sky-700 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                >
+                  Označit jako proběhlý dnes
+                </button>
+                <input
+                  type="date"
+                  onChange={e => { if (e.target.value) ulozVideohovor(e.target.value) }}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                  placeholder="Jiné datum"
+                />
+              </div>
+            )}
           </section>
 
           {/* Služba a doplňky */}
