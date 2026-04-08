@@ -93,7 +93,12 @@ export default function DetailZakazky() {
   async function ulozVideohovor(datum: string | null) {
     if (!zakazka) return
     await supabase.from("zakazky").update({ videohovor_datum: datum }).eq("id", zakazka.id)
+    await supabase.from("zakazky_historie").insert([{
+      zakazka_id: zakazka.id,
+      stav: datum ? `videohovor-probeh: ${datum}` : "videohovor-zrusen",
+    }])
     setZakazka({ ...zakazka, videohovor_datum: datum })
+    nactiHistorii()
   }
 
   async function zmenStav(novyStav: string) {
@@ -202,6 +207,20 @@ export default function DetailZakazky() {
     if (diff === 0) return "Dnes!"
     if (diff === 1) return "Zítra!"
     return `${diff} dní`
+  }
+
+  function historieInfo(stav: string): { label: string; barva: string } {
+    if (stav.startsWith("videohovor-probeh:")) {
+      const datum = stav.replace("videohovor-probeh:", "").trim()
+      const formatted = datum ? new Date(datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" }) : ""
+      return { label: `📹 Videohovor proběhl${formatted ? ` (${formatted})` : ""}`, barva: "bg-sky-100 text-sky-700" }
+    }
+    if (stav === "videohovor-zrusen") {
+      return { label: "📹 Videohovor zrušen", barva: "bg-gray-100 text-gray-500" }
+    }
+    if (stav === "vystup-odevzdan") return { label: "✓ Výstup odevzdán", barva: "bg-green-100 text-green-700" }
+    if (stav === "vystup-odebran") return { label: "Výstup odebrán", barva: "bg-gray-100 text-gray-500" }
+    return stavInfo(stav)
   }
 
   function mestoPodleAdresy(adresa: string): string {
@@ -574,12 +593,12 @@ export default function DetailZakazky() {
                 {historie.map((h, i) => (
                   <div key={h.id} className="flex items-center gap-3">
                     <div className="flex flex-col items-center">
-                      <div className={`w-2.5 h-2.5 rounded-full ${stavInfo(h.stav).barva.split(" ")[0]}`} />
+                      <div className={`w-2.5 h-2.5 rounded-full ${historieInfo(h.stav).barva.split(" ")[0]}`} />
                       {i < historie.length - 1 && <div className="w-px h-6 bg-gray-200 mt-1" />}
                     </div>
                     <div className="flex-1 flex items-center justify-between">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${stavInfo(h.stav).barva}`}>
-                        {stavInfo(h.stav).label}
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${historieInfo(h.stav).barva}`}>
+                        {historieInfo(h.stav).label}
                       </span>
                       <span className="text-xs text-gray-400">
                         {new Date(h.created_at).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}
