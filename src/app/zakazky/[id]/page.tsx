@@ -92,7 +92,11 @@ export default function DetailZakazky() {
 
   async function ulozVideohovor(datum: string | null) {
     if (!zakazka) return
-    await supabase.from("zakazky").update({ videohovor_datum: datum }).eq("id", zakazka.id)
+    const { error } = await supabase.from("zakazky").update({ videohovor_datum: datum }).eq("id", zakazka.id)
+    if (error) {
+      alert("Chyba při ukládání: " + error.message)
+      return
+    }
     await supabase.from("zakazky_historie").insert([{
       zakazka_id: zakazka.id,
       stav: datum ? `videohovor-probeh: ${datum}` : "videohovor-zrusen",
