@@ -25,7 +25,18 @@ type Rezervace = {
   group_id: string | null
 }
 
-const KATEGORIE = ["Vše", "Stany", "Příčníky", "Paddleboardy", "Markýzy", "Doplňky"]
+const KATEGORIE = ["Vše", "Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Doplňky"]
+
+const MESICE = [
+  { label: "Celá sezóna", value: null as number | null },
+  { label: "Duben",    value: 3 },
+  { label: "Květen",   value: 4 },
+  { label: "Červen",   value: 5 },
+  { label: "Červenec", value: 6 },
+  { label: "Srpen",    value: 7 },
+  { label: "Září",     value: 8 },
+  { label: "Říjen",    value: 9 },
+]
 
 const BARVY = [
   { value: "#f43f5e", label: "Růžová" },
@@ -64,8 +75,10 @@ export default function Pujcovna() {
 
   const [polozky, setPolozky] = useState<Polozka[]>([])
   const [rezervace, setRezervace] = useState<Rezervace[]>([])
+  const [svatebnidny, setSvatebnidny] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [kategorie, setKategorie] = useState("Vše")
+  const [mesicFilter, setMesicFilter] = useState<number | null>(null)
   const [tooltip, setTooltip] = useState<{ rez: Rezervace; x: number; y: number } | null>(null)
   const [modal, setModal] = useState<{
     mode: "nova" | "edit"
@@ -92,12 +105,14 @@ export default function Pujcovna() {
 
   useEffect(() => {
     async function nacti() {
-      const [{ data: pol }, { data: rez }] = await Promise.all([
+      const [{ data: pol }, { data: rez }, { data: zakazky }] = await Promise.all([
         supabase.from("pujcovna_polozky").select("*").order("sort_order"),
         supabase.from("pujcovna_rezervace").select("*"),
+        supabase.from("zakazky").select("datum_svatby").eq("stav", "zaplaceno"),
       ])
       setPolozky(pol ?? [])
       setRezervace(rez ?? [])
+      setSvatebnidny((zakazky ?? []).map(z => z.datum_svatby).filter(Boolean))
       setLoading(false)
     }
     nacti()
@@ -127,6 +142,18 @@ export default function Pujcovna() {
     const left = Math.max(0, startDiff) * COL_WIDTH
     const width = (Math.min(endDiff, POCET_DNI - 1) - Math.max(0, startDiff) + 1) * COL_WIDTH
     return { left, width }
+  }
+
+  function scrollNaMesic(mesicCislo: number | null) {
+    setMesicFilter(mesicCislo)
+    if (mesicCislo === null) {
+      if (scrollRef.current) scrollRef.current.scrollLeft = 0
+      return
+    }
+    const idx = DNY.findIndex(d => d.getMonth() === mesicCislo)
+    if (idx >= 0 && scrollRef.current) {
+      scrollRef.current.scrollLeft = idx * COL_WIDTH
+    }
   }
 
   function klikNaDen(itemId: number, unitIndex: number, datum: Date) {
@@ -171,21 +198,26 @@ export default function Pujcovna() {
         </div>
       </div>
 
-      {/* Filtry kategorií + tlačítko Dnes */}
-      <div className="px-6 py-3 flex items-center gap-2 flex-wrap bg-white border-b border-gray-100">
-        {KATEGORIE.map(k => (
-          <button
-            key={k}
-            onClick={() => setKategorie(k)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              kategorie === k
-                ? "bg-emerald-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {k}
-          </button>
-        ))}
+      {/* Filtry + tlačítko Dnes */}
+      <div className="px-6 py-3 flex items-center gap-3 bg-white border-b border-gray-100">
+        <select
+          value={kategorie}
+          onChange={e => setKategorie(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white"
+        >
+          {KATEGORIE.map(k => (
+            <option key={k} value={k}>{k}</option>
+          ))}
+        </select>
+        <select
+          value={mesicFilter ?? ""}
+          onChange={e => scrollNaMesic(e.target.value === "" ? null : Number(e.target.value))}
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white"
+        >
+          {MESICE.map(m => (
+            <option key={m.label} value={m.value ?? ""}>{m.label}</option>
+          ))}
+        </select>
         <div className="ml-auto">
           <button
             onClick={() => {
@@ -204,11 +236,11 @@ export default function Pujcovna() {
       <div ref={scrollRef} className="overflow-auto" style={{ height: "calc(100vh - 112px)" }}>
         <div style={{ width: LABEL_WIDTH + POCET_DNI * COL_WIDTH }}>
 
-          {/* Sticky hlavička — 2 řádky: měsíce + dny */}
-          <div className="sticky top-0 z-20 flex" style={{ height: 56 }}>
+          {/* Sticky hlavička — 3 řádky: měsíce + dny + svatby */}
+          <div className="sticky top-0 z-20 flex" style={{ height: 76 }}>
             {/* Roh */}
-            <div className="sticky left-0 z-30 bg-gray-100 border-b border-r border-gray-300" style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, height: 56 }} />
-            {/* Měsíce + dny */}
+            <div className="sticky left-0 z-30 bg-gray-100 border-b border-r border-gray-300" style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, height: 76 }} />
+            {/* Měsíce + dny + svatby */}
             <div className="relative border-b border-gray-300" style={{ width: POCET_DNI * COL_WIDTH }}>
               {/* Řádek 1 — měsíce */}
               <div className="flex" style={{ height: 22 }}>
@@ -250,6 +282,21 @@ export default function Pujcovna() {
                   )
                 })}
               </div>
+              {/* Řádek 3 — svatby */}
+              <div className="flex bg-white border-t border-gray-100" style={{ height: 20 }}>
+                {DNY.map((den, i) => {
+                  const denStr = den.toISOString().slice(0, 10)
+                  const jeSvatba = svatebnidny.includes(denStr)
+                  return (
+                    <div key={i} style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
+                      className="flex items-center justify-center border-r border-gray-100">
+                      {jeSvatba && (
+                        <span className="text-rose-500 font-bold text-[11px] leading-none select-none" title="Svatba">✕</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
 
@@ -269,7 +316,7 @@ export default function Pujcovna() {
             return (
               <div key={kat}>
                 {/* Kategoriový nadpis */}
-                <div className="flex sticky z-10" style={{ top: 56 }}>
+                <div className="flex sticky z-10" style={{ top: 76 }}>
                   <div className="sticky left-0 z-10 bg-gray-800 text-white text-[11px] font-bold uppercase tracking-wider px-3 flex items-center border-b border-gray-700"
                     style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, height: 28 }}>
                     {kat}
