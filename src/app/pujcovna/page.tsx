@@ -375,6 +375,8 @@ function ModalRezervace({
   onSave: () => void
 }) {
   const dnesStr = new Date().toISOString().slice(0, 10)
+  const stanyIds = new Set(polozky.filter(p => p.category === "Stany").map(p => p.id))
+
   const [form, setForm] = useState({
     item_id: initialItemId ?? (polozky[0]?.id ?? 0),
     customer: editRezervace?.customer ?? "",
@@ -384,9 +386,47 @@ function ModalRezervace({
     color: editRezervace?.color ?? "#10b981",
     notes: editRezervace?.notes ?? "",
   })
+  const [prisl, setPrisl] = useState<Record<number, boolean>>({})
+  const [dostupnost, setDostupnost] = useState<Record<number, number>>({})
   const [chyba, setChyba] = useState<string | null>(null)
   const [ukladam, setUkladam] = useState(false)
   const [mazani, setMazani] = useState(false)
+
+  const jeStanVybran = stanyIds.has(Number(form.item_id))
+  const prislusenstvi = polozky.filter(p => p.category !== "Stany")
+  const kategoriePrisl = [...new Set(prislusenstvi.map(p => p.category))]
+
+  // Výpočet dostupnosti při změně termínu
+  useEffect(() => {
+    if (!jeStanVybran || !form.start_date || !form.end_date) return
+    const start = new Date(form.start_date)
+    const end = new Date(form.end_date)
+    const vysl: Record<number, number> = {}
+    const skupinaEdit = editRezervace?.group_id
+    for (const p of prislusenstvi) {
+      const obsazeno = rezervace.filter(r => {
+        if (r.item_id !== p.id) return false
+        if (skupinaEdit && r.group_id === skupinaEdit) return false
+        const rs = new Date(r.start_date)
+        const re = new Date(r.end_date)
+        return start <= re && end >= rs
+      }).length
+      vysl[p.id] = Math.max(0, p.unit_num - obsazeno)
+    }
+    setDostupnost(vysl)
+  }, [form.start_date, form.end_date, form.item_id, jeStanVybran])
+
+  // Načíst aktuálně vybrané příslušenství při editaci skupiny
+  useEffect(() => {
+    if (mode === "edit" && editRezervace?.group_id) {
+      const skupRez = rezervace.filter(
+        r => r.group_id === editRezervace.group_id && r.id !== editRezervace.id
+      )
+      const vybrane: Record<number, boolean> = {}
+      skupRez.forEach(r => { vybrane[r.item_id] = true })
+      setPrisl(vybrane)
+    }
+  }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -397,7 +437,7 @@ function ModalRezervace({
     const end = new Date(form.end_date)
     return rezervace.some(r => {
       if (r.item_id !== Number(form.item_id)) return false
-      if (mode === "edit" && editRezervace && r.id === editRezervace.id) return false
+      if (mode === "edit" && editRezervace && r.group_id === editRezervace.group_id) return false
       const rs = new Date(r.start_date)
       const re = new Date(r.end_date)
       return start <= re && end >= rs
@@ -411,18 +451,64 @@ function ModalRezervace({
     if (form.start_date > form.end_date) { setChyba("Datum konce musí být po datu začátku"); return }
     if (jeKonflikt()) { setChyba("Konflikt: tato položka je již rezervována v tomto termínu"); return }
     setUkladam(true)
-    const data = { ...form, item_id: Number(form.item_id) }
+
+    const groupId = editRezervace?.group_id ?? (jeStanVybran ? crypto.randomUUID() : null)
+    const hlavniData = { ...form, item_id: Number(form.item_id), group_id: groupId }
+
     if (mode === "nova") {
-      await supabase.from("pujcovna_rezervace").insert([data])
+      await supabase.from("pujcovna_rezervace").insert([hlavniData])
+      // Příslušenství
+      const prislRez = Object.entries(prisl)
+        .filter(([, checked]) => checked)
+        .map(([itemId]) => ({
+          item_id: Number(itemId),
+          customer: form.customer,
+          phone: form.phone,
+          start_date: form.start_date,
+          end_date: form.end_date,
+          color: form.color,
+          notes: "",
+          group_id: groupId,
+        }))
+      if (prislRez.length > 0) {
+        await supabase.from("pujcovna_rezervace").insert(prislRez)
+      }
     } else if (editRezervace) {
-      await supabase.from("pujcovna_rezervace").update(data).eq("id", editRezervace.id)
+      await supabase.from("pujcovna_rezervace").update(hlavniData).eq("id", editRezervace.id)
+      if (groupId) {
+        // Smazat staré příslušenství skupiny a přidat nové
+        await supabase.from("pujcovna_rezervace")
+          .delete()
+          .eq("group_id", groupId)
+          .neq("id", editRezervace.id)
+        const prislRez = Object.entries(prisl)
+          .filter(([, checked]) => checked)
+          .map(([itemId]) => ({
+            item_id: Number(itemId),
+            customer: form.customer,
+            phone: form.phone,
+            start_date: form.start_date,
+            end_date: form.end_date,
+            color: form.color,
+            notes: "",
+            group_id: groupId,
+          }))
+        if (prislRez.length > 0) {
+          await supabase.from("pujcovna_rezervace").insert(prislRez)
+        }
+      }
     }
     onSave()
   }
 
   async function handleSmazat() {
     if (!editRezervace) return
-    await supabase.from("pujcovna_rezervace").delete().eq("id", editRezervace.id)
+    if (editRezervace.group_id) {
+      // Smazat celou skupinu
+      await supabase.from("pujcovna_rezervace").delete().eq("group_id", editRezervace.group_id)
+    } else {
+      await supabase.from("pujcovna_rezervace").delete().eq("id", editRezervace.id)
+    }
     onSave()
   }
 
@@ -431,59 +517,103 @@ function ModalRezervace({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
           <h2 className="font-bold text-gray-900">{mode === "nova" ? "Nová rezervace" : "Upravit rezervaci"}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className={labelClass}>Položka</label>
-            <select name="item_id" value={form.item_id} onChange={handleChange} className={inputClass}>
-              {polozky.map(p => (
-                <option key={p.id} value={p.id}>{p.name} ({p.category})</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Zákazník</label>
-            <input name="customer" value={form.customer} onChange={handleChange} placeholder="Jméno zákazníka" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Telefon</label>
-            <input name="phone" value={form.phone} onChange={handleChange} placeholder="+420 000 000 000" className={inputClass} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
+          <div className="p-5 space-y-4">
             <div>
-              <label className={labelClass}>Od</label>
-              <input type="date" name="start_date" value={form.start_date} onChange={handleChange} className={inputClass} />
+              <label className={labelClass}>Položka</label>
+              <select name="item_id" value={form.item_id} onChange={handleChange} className={inputClass}>
+                {polozky.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.category})</option>
+                ))}
+              </select>
             </div>
             <div>
-              <label className={labelClass}>Do</label>
-              <input type="date" name="end_date" value={form.end_date} onChange={handleChange} className={inputClass} />
+              <label className={labelClass}>Zákazník</label>
+              <input name="customer" value={form.customer} onChange={handleChange} placeholder="Jméno zákazníka" className={inputClass} />
             </div>
-          </div>
-          <div>
-            <label className={labelClass}>Barva</label>
-            <div className="flex gap-2 flex-wrap">
-              {BARVY.map(b => (
-                <button
-                  key={b.value}
-                  type="button"
-                  onClick={() => setForm({ ...form, color: b.value })}
-                  className={`w-7 h-7 rounded-full transition-transform ${form.color === b.value ? "ring-2 ring-offset-2 ring-gray-400 scale-110" : ""}`}
-                  style={{ backgroundColor: b.value }}
-                  title={b.label}
-                />
-              ))}
+            <div>
+              <label className={labelClass}>Telefon</label>
+              <input name="phone" value={form.phone} onChange={handleChange} placeholder="+420 000 000 000" className={inputClass} />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Od</label>
+                <input type="date" name="start_date" value={form.start_date} onChange={handleChange} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Do</label>
+                <input type="date" name="end_date" value={form.end_date} onChange={handleChange} className={inputClass} />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Barva</label>
+              <div className="flex gap-2 flex-wrap">
+                {BARVY.map(b => (
+                  <button key={b.value} type="button"
+                    onClick={() => setForm({ ...form, color: b.value })}
+                    className={`w-7 h-7 rounded-full transition-transform ${form.color === b.value ? "ring-2 ring-offset-2 ring-gray-400 scale-110" : ""}`}
+                    style={{ backgroundColor: b.value }} title={b.label} />
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Poznámka</label>
+              <textarea name="notes" value={form.notes} onChange={handleChange} rows={2} placeholder="Volitelná poznámka..." className={inputClass} />
+            </div>
+
+            {/* Panel příslušenství — pouze při výběru stanu */}
+            {jeStanVybran && (
+              <div className="rounded-xl overflow-hidden border border-gray-200">
+                <div className="bg-gray-800 px-4 py-3 flex items-center gap-2">
+                  <span className="text-lg">🏕️</span>
+                  <div>
+                    <p className="text-white text-sm font-semibold">Příslušenství</p>
+                    <p className="text-gray-400 text-xs">Zaškrtněte co si zákazník bere spolu se stanem</p>
+                  </div>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {kategoriePrisl.map(kat => {
+                    const polozkyKat = prislusenstvi.filter(p => p.category === kat)
+                    return (
+                      <div key={kat}>
+                        <div className="px-4 py-1.5 bg-gray-50">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{kat}</span>
+                        </div>
+                        {polozkyKat.map(p => {
+                          const volnych = dostupnost[p.id] ?? p.unit_num
+                          const nedostupne = volnych === 0
+                          return (
+                            <label key={p.id} className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${nedostupne ? "opacity-40" : ""}`}>
+                              <input
+                                type="checkbox"
+                                checked={!!prisl[p.id]}
+                                disabled={nedostupne && !prisl[p.id]}
+                                onChange={e => setPrisl(prev => ({ ...prev, [p.id]: e.target.checked }))}
+                                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                              />
+                              <span className="flex-1 text-sm text-gray-700">{p.name}</span>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${nedostupne ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-700"}`}>
+                                {nedostupne ? "nedost." : `${volnych} ks`}
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {chyba && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{chyba}</p>}
           </div>
-          <div>
-            <label className={labelClass}>Poznámka</label>
-            <textarea name="notes" value={form.notes} onChange={handleChange} rows={2} placeholder="Volitelná poznámka..." className={inputClass} />
-          </div>
-          {chyba && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{chyba}</p>}
-          <div className="flex gap-2 pt-2">
+
+          <div className="flex gap-2 p-5 pt-0">
             {mode === "edit" && !mazani && (
               <button type="button" onClick={() => setMazani(true)} className="px-4 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
                 Smazat
