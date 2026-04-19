@@ -12,13 +12,16 @@ type StatsZakaznici = {
 
 type StatsSvatby = {
   nadchazejici: number
-  celkemLetos: number
-  pristiSvatba: string | null
+  cekaSestrizani: number
+  dokonceno: number
+  pristiSvatba: { datum: string; jmeno: string } | null
 }
 
 type StatsPujcovna = {
-  aktivniRezervace: number
-  pristiRezervace: string | null
+  nadchazejici: number
+  pravePujceno: number
+  dokonceno: number
+  pristiRezervace: { datum: string; jmeno: string } | null
 }
 
 export default function Rozcestnik() {
@@ -40,61 +43,68 @@ export default function Rozcestnik() {
       const dnes = new Date()
       dnes.setHours(0, 0, 0, 0)
 
+      const dnesStr = dnes.toISOString().slice(0, 10)
+      const letos = dnes.getFullYear()
+
       // Statistiky svateb
       const { data: zakazky } = await supabase
         .from("zakazky")
-        .select("datum_svatby, stav")
+        .select("datum_svatby, stav, jmeno_nevesty, jmeno_zenicha, vystup_odevzdan")
         .in("stav", ["zaplaceno", "po-svatbe", "ve-strizne", "ukonceno"])
 
       if (zakazky) {
-        const letos = new Date().getFullYear()
-        const nadchazejici = zakazky.filter(z => {
-          if (!z.datum_svatby) return false
-          const d = new Date(z.datum_svatby)
-          d.setHours(0, 0, 0, 0)
-          return d >= dnes && z.stav === "zaplaceno"
-        })
-        const celkemLetos = zakazky.filter(z =>
+        const nadchazejici = zakazky.filter(z =>
+          z.stav === "zaplaceno" && z.datum_svatby && z.datum_svatby >= dnesStr
+        )
+        const cekaSestrizani = zakazky.filter(z =>
+          ["ve-strizne", "po-svatbe"].includes(z.stav) && !z.vystup_odevzdan
+        )
+        const dokonceno = zakazky.filter(z =>
+          (z.stav === "ukonceno" || z.vystup_odevzdan) &&
           z.datum_svatby && new Date(z.datum_svatby).getFullYear() === letos
         )
-        const pristiSvatba = nadchazejici
-          .sort((a, b) => new Date(a.datum_svatby).getTime() - new Date(b.datum_svatby).getTime())[0]
-          ?.datum_svatby ?? null
+        const prvni = nadchazejici.sort((a, b) =>
+          new Date(a.datum_svatby).getTime() - new Date(b.datum_svatby).getTime()
+        )[0]
 
         setStatsSvatby({
           nadchazejici: nadchazejici.length,
-          celkemLetos: celkemLetos.length,
-          pristiSvatba,
+          cekaSestrizani: cekaSestrizani.length,
+          dokonceno: dokonceno.length,
+          pristiSvatba: prvni ? {
+            datum: prvni.datum_svatby,
+            jmeno: [prvni.jmeno_nevesty, prvni.jmeno_zenicha].filter(Boolean).join(" & "),
+          } : null,
         })
       }
 
-      // Statistiky půjčovny
+      // Statistiky půjčovny (jen stany — přeskočit příslušenství bez group_id hlavního stanu)
       const { data: rezervace } = await supabase
         .from("pujcovna_rezervace")
-        .select("start_date, end_date")
-        .gte("end_date", dnes.toISOString().slice(0, 10))
+        .select("start_date, end_date, stav, customer")
 
       if (rezervace) {
-        const aktivni = rezervace.filter(r => {
-          const start = new Date(r.start_date)
-          start.setHours(0, 0, 0, 0)
-          return start <= dnes
-        })
-        const pristiRezervace = rezervace
-          .filter(r => {
-            const start = new Date(r.start_date)
-            start.setHours(0, 0, 0, 0)
-            return start > dnes
-          })
+        const nadchazejiciRez = rezervace.filter(r =>
+          ["rezervace", "cekam-platbu", "zaplaceno"].includes(r.stav)
+        )
+        const pravePujceno = rezervace.filter(r => r.stav === "vypujceno")
+        const dokoncenoRez = rezervace.filter(r =>
+          r.stav === "dokonceno" && new Date(r.start_date).getFullYear() === letos
+        )
+        const prvniRez = nadchazejiciRez
           .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0]
-          ?.start_date ?? null
 
         setStatsPujcovna({
-          aktivniRezervace: aktivni.length,
-          pristiRezervace,
+          nadchazejici: nadchazejiciRez.length,
+          pravePujceno: pravePujceno.length,
+          dokonceno: dokoncenoRez.length,
+          pristiRezervace: prvniRez ? {
+            datum: prvniRez.start_date,
+            jmeno: prvniRez.customer,
+          } : null,
         })
       } else {
-        setStatsPujcovna({ aktivniRezervace: 0, pristiRezervace: null })
+        setStatsPujcovna({ nadchazejici: 0, pravePujceno: 0, dokonceno: 0, pristiRezervace: null })
       }
 
       // Statistiky zákazníků
@@ -163,19 +173,26 @@ export default function Rozcestnik() {
                     <div className="h-4 bg-gray-100 rounded animate-pulse w-1/2" />
                   </div>
                 ) : statsSvatby ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-rose-50 rounded-xl p-3">
-                      <p className="text-2xl font-bold text-rose-600">{statsSvatby.nadchazejici}</p>
-                      <p className="text-xs text-rose-400 mt-0.5">Nadcházející</p>
-                    </div>
-                    <div className="bg-rose-50 rounded-xl p-3">
-                      <p className="text-2xl font-bold text-rose-600">{statsSvatby.celkemLetos}</p>
-                      <p className="text-xs text-rose-400 mt-0.5">Letos celkem</p>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-rose-50 rounded-xl p-3">
+                        <p className="text-2xl font-bold text-rose-600">{statsSvatby.nadchazejici}</p>
+                        <p className="text-xs text-rose-400 mt-0.5">Nadcházející</p>
+                      </div>
+                      <div className="bg-rose-50 rounded-xl p-3">
+                        <p className="text-2xl font-bold text-rose-600">{statsSvatby.cekaSestrizani}</p>
+                        <p className="text-xs text-rose-400 mt-0.5">Čeká střih</p>
+                      </div>
+                      <div className="bg-rose-50 rounded-xl p-3">
+                        <p className="text-2xl font-bold text-rose-600">{statsSvatby.dokonceno}</p>
+                        <p className="text-xs text-rose-400 mt-0.5">Dokončeno</p>
+                      </div>
                     </div>
                     {statsSvatby.pristiSvatba && (
-                      <div className="col-span-2 bg-gray-50 rounded-xl p-3">
+                      <div className="bg-gray-50 rounded-xl p-3">
                         <p className="text-xs text-gray-500">Příští svatba</p>
-                        <p className="text-sm font-semibold text-gray-800 mt-0.5">{formatDatum(statsSvatby.pristiSvatba)}</p>
+                        <p className="text-sm font-semibold text-gray-800 mt-0.5">{statsSvatby.pristiSvatba.jmeno}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatDatum(statsSvatby.pristiSvatba.datum)}</p>
                       </div>
                     )}
                   </div>
@@ -217,19 +234,26 @@ export default function Rozcestnik() {
                     <div className="h-4 bg-gray-100 rounded animate-pulse w-1/2" />
                   </div>
                 ) : statsPujcovna ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-emerald-50 rounded-xl p-3">
-                      <p className="text-2xl font-bold text-emerald-600">{statsPujcovna.aktivniRezervace}</p>
-                      <p className="text-xs text-emerald-400 mt-0.5">Právě půjčeno</p>
-                    </div>
-                    <div className="bg-emerald-50 rounded-xl p-3">
-                      <p className="text-2xl font-bold text-emerald-600">—</p>
-                      <p className="text-xs text-emerald-400 mt-0.5">Volné stany</p>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-emerald-50 rounded-xl p-3">
+                        <p className="text-2xl font-bold text-emerald-600">{statsPujcovna.nadchazejici}</p>
+                        <p className="text-xs text-emerald-400 mt-0.5">Nadcházející</p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-xl p-3">
+                        <p className="text-2xl font-bold text-emerald-600">{statsPujcovna.pravePujceno}</p>
+                        <p className="text-xs text-emerald-400 mt-0.5">Právě půjčeno</p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-xl p-3">
+                        <p className="text-2xl font-bold text-emerald-600">{statsPujcovna.dokonceno}</p>
+                        <p className="text-xs text-emerald-400 mt-0.5">Dokončeno</p>
+                      </div>
                     </div>
                     {statsPujcovna.pristiRezervace && (
-                      <div className="col-span-2 bg-gray-50 rounded-xl p-3">
+                      <div className="bg-gray-50 rounded-xl p-3">
                         <p className="text-xs text-gray-500">Příští rezervace</p>
-                        <p className="text-sm font-semibold text-gray-800 mt-0.5">{formatDatum(statsPujcovna.pristiRezervace)}</p>
+                        <p className="text-sm font-semibold text-gray-800 mt-0.5">{statsPujcovna.pristiRezervace.jmeno}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatDatum(statsPujcovna.pristiRezervace.datum)}</p>
                       </div>
                     )}
                   </div>
