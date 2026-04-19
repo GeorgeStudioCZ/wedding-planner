@@ -251,7 +251,7 @@ export default function Home() {
         </div>
 
         {/* Videohovor */}
-        <div className="flex flex-col items-center justify-center px-2 md:px-3 py-4 border-l border-gray-100 min-w-[36px]">
+        <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100" style={{ width: 44, minWidth: 44 }}>
           {z.videohovor_datum && (
             <span title={`Videohovor: ${new Date(z.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}`} className="text-lg leading-none">
               📹
