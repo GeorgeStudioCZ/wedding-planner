@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
@@ -74,7 +74,15 @@ function pocetDni(start: string, end: string): number {
   return Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1
 }
 
-export default function Pujcovna() {
+export default function Page() {
+  return (
+    <Suspense>
+      <Pujcovna />
+    </Suspense>
+  )
+}
+
+function Pujcovna() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const dnesRef = useRef<HTMLDivElement>(null)
