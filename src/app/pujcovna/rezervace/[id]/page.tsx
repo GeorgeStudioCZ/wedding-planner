@@ -10,6 +10,7 @@ type Rezervace = {
   unit_index: number
   customer: string
   phone: string
+  email: string
   start_date: string
   end_date: string
   color: string
@@ -93,6 +94,14 @@ export default function DetailRezervace() {
             <button onClick={() => router.back()} className="text-emerald-200 hover:text-white text-sm transition-colors">← Zpět</button>
             <h1 className="text-xl font-bold text-white">Detail výpůjčky</h1>
           </div>
+          <button
+            onClick={() => router.push(`/pujcovna/kalendar?edit=${params.id}`)}
+            className="bg-white/10 hover:bg-white/20 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Upravit
+          </button>
         </div>
       </div>
 
@@ -120,6 +129,9 @@ export default function DetailRezervace() {
           <p className="text-lg font-semibold text-gray-900">{rez.customer}</p>
           {rez.phone && (
             <a href={`tel:${rez.phone}`} className="text-emerald-600 text-sm mt-1 block hover:underline">{rez.phone}</a>
+          )}
+          {rez.email && (
+            <a href={`mailto:${rez.email}`} className="text-emerald-600 text-sm mt-0.5 block hover:underline">{rez.email}</a>
           )}
         </div>
 

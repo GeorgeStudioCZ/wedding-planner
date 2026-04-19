@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 
@@ -19,6 +19,7 @@ type Rezervace = {
   unit_index: number
   customer: string
   phone: string
+  email: string
   start_date: string
   end_date: string
   color: string
@@ -75,6 +76,7 @@ function pocetDni(start: string, end: string): number {
 
 export default function Pujcovna() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const dnesRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -116,9 +118,16 @@ export default function Pujcovna() {
         supabase.from("zakazky").select("datum_svatby").eq("stav", "zaplaceno"),
       ])
       setPolozky(pol ?? [])
-      setRezervace(rez ?? [])
+      const rezData = rez ?? []
+      setRezervace(rezData)
       setSvatebnidny((zakazky ?? []).map(z => z.datum_svatby).filter(Boolean))
       setLoading(false)
+      // Otevřít edit modal pokud přišel ?edit=id
+      const editId = searchParams.get("edit")
+      if (editId) {
+        const r = rezData.find(x => x.id === Number(editId))
+        if (r) setModal({ mode: "edit", rezervace: r })
+      }
     }
     nacti()
   }, [])
@@ -444,6 +453,7 @@ function ModalRezervace({
     unit_index: editRezervace?.unit_index ?? initialUnitIndex ?? 0,
     customer: editRezervace?.customer ?? "",
     phone: editRezervace?.phone ?? "",
+    email: editRezervace?.email ?? "",
     start_date: editRezervace?.start_date ?? initialStartDate ?? dnesStr,
     end_date: editRezervace?.end_date ?? initialStartDate ?? dnesStr,
     color: editRezervace?.color ?? "#10b981",
@@ -567,6 +577,7 @@ function ModalRezervace({
             unit_index: slot,
             customer: form.customer,
             phone: form.phone,
+            email: form.email,
             start_date: form.start_date,
             end_date: form.end_date,
             color: form.color,
@@ -647,6 +658,7 @@ function ModalRezervace({
                   ...f,
                   customer: `${z.jmeno} ${z.prijmeni}`.trim() || f.customer,
                   phone: z.telefon || f.phone,
+                  email: z.email || f.email,
                 }))}
               />
               {form.customer && (
