@@ -15,6 +15,7 @@ type Polozka = {
 type Rezervace = {
   id: number
   item_id: number
+  unit_index: number
   customer: string
   phone: string
   start_date: string
@@ -69,6 +70,7 @@ export default function Pujcovna() {
   const [modal, setModal] = useState<{
     mode: "nova" | "edit"
     itemId?: number
+    unitIndex?: number
     rezervace?: Rezervace
     startDate?: string
   } | null>(null)
@@ -116,10 +118,6 @@ export default function Pujcovna() {
     ? polozky
     : polozky.filter(p => p.category === kategorie)
 
-  function getRezervaceProPolozku(itemId: number): Rezervace[] {
-    return rezervace.filter(r => r.item_id === itemId)
-  }
-
   function poziceRezervace(rez: Rezervace): { left: number; width: number } | null {
     const start = new Date(rez.start_date)
     const end = new Date(rez.end_date)
@@ -131,9 +129,9 @@ export default function Pujcovna() {
     return { left, width }
   }
 
-  function klikNaDen(itemId: number, datum: Date) {
+  function klikNaDen(itemId: number, unitIndex: number, datum: Date) {
     const dateStr = datum.toISOString().slice(0, 10)
-    setModal({ mode: "nova", itemId, startDate: dateStr })
+    setModal({ mode: "nova", itemId, unitIndex, startDate: dateStr })
   }
 
   function klikNaRezervaci(e: React.MouseEvent, rez: Rezervace) {
@@ -259,6 +257,15 @@ export default function Pujcovna() {
           {KATEGORIE.filter(k => k !== "Vše").map(kat => {
             const polozkyKat = filtrovanePolozky.filter(p => p.category === kat)
             if (polozkyKat.length === 0) return null
+
+            // Rozvinout každou položku na unit_num řádků
+            const radky: { polozka: Polozka; unitIndex: number }[] = []
+            polozkyKat.forEach(p => {
+              for (let ui = 0; ui < p.unit_num; ui++) {
+                radky.push({ polozka: p, unitIndex: ui })
+              }
+            })
+
             return (
               <div key={kat}>
                 {/* Kategoriový nadpis */}
@@ -269,19 +276,20 @@ export default function Pujcovna() {
                   </div>
                   <div className="bg-gray-800/90 border-b border-gray-700" style={{ width: POCET_DNI * COL_WIDTH, height: 28 }} />
                 </div>
-                {/* Položky kategorie */}
-                {polozkyKat.map((polozka, pi) => {
-                  const rezPolozky = getRezervaceProPolozku(polozka.id)
+                {/* Řádky položek */}
+                {radky.map(({ polozka, unitIndex }, ri) => {
+                  const rezRadku = rezervace.filter(r => r.item_id === polozka.id && r.unit_index === unitIndex)
+                  const label = polozka.unit_num > 1 ? `${polozka.name} ${unitIndex + 1}` : polozka.name
                   return (
-                    <div key={polozka.id} className="flex relative" style={{ height: ROW_HEIGHT }}>
+                    <div key={`${polozka.id}-${unitIndex}`} className="flex relative" style={{ height: ROW_HEIGHT }}>
                       {/* Štítek vlevo */}
                       <div className={`sticky left-0 z-10 flex items-center px-3 border-b border-r border-gray-200 text-xs font-medium text-gray-700 shrink-0
-                        ${pi % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                        ${ri % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
                         style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH }}>
-                        <span className="truncate">{polozka.name}</span>
+                        <span className="truncate">{label}</span>
                       </div>
                       {/* Gantt plocha */}
-                      <div className={`relative border-b border-gray-100 ${pi % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
+                      <div className={`relative border-b border-gray-100 ${ri % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
                         style={{ width: POCET_DNI * COL_WIDTH }}>
                         {/* Mřížka dnů */}
                         <div className="flex h-full absolute inset-0">
@@ -292,12 +300,12 @@ export default function Pujcovna() {
                               <div key={di} style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
                                 className={`h-full border-r border-gray-100 cursor-pointer hover:bg-emerald-50/50
                                   ${jeDnes ? "bg-rose-50/40" : jeVikend ? "bg-amber-50/40" : ""}`}
-                                onClick={() => klikNaDen(polozka.id, den)} />
+                                onClick={() => klikNaDen(polozka.id, unitIndex, den)} />
                             )
                           })}
                         </div>
                         {/* Rezervační bloky */}
-                        {rezPolozky.map(rez => {
+                        {rezRadku.map(rez => {
                           const pos = poziceRezervace(rez)
                           if (!pos) return null
                           return (
@@ -345,6 +353,7 @@ export default function Pujcovna() {
           polozky={polozky}
           rezervace={rezervace}
           initialItemId={modal.itemId}
+          initialUnitIndex={modal.unitIndex}
           initialStartDate={modal.startDate}
           editRezervace={modal.rezervace}
           onClose={() => setModal(null)}
@@ -363,12 +372,13 @@ export default function Pujcovna() {
 // ——— Modal komponenta ———
 
 function ModalRezervace({
-  mode, polozky, rezervace, initialItemId, initialStartDate, editRezervace, onClose, onSave,
+  mode, polozky, rezervace, initialItemId, initialUnitIndex, initialStartDate, editRezervace, onClose, onSave,
 }: {
   mode: "nova" | "edit"
   polozky: Polozka[]
   rezervace: Rezervace[]
   initialItemId?: number
+  initialUnitIndex?: number
   initialStartDate?: string
   editRezervace?: Rezervace
   onClose: () => void
@@ -378,7 +388,8 @@ function ModalRezervace({
   const stanyIds = new Set(polozky.filter(p => p.category === "Stany").map(p => p.id))
 
   const [form, setForm] = useState({
-    item_id: initialItemId ?? (polozky[0]?.id ?? 0),
+    item_id: editRezervace?.item_id ?? initialItemId ?? (polozky[0]?.id ?? 0),
+    unit_index: editRezervace?.unit_index ?? initialUnitIndex ?? 0,
     customer: editRezervace?.customer ?? "",
     phone: editRezervace?.phone ?? "",
     start_date: editRezervace?.start_date ?? initialStartDate ?? dnesStr,
@@ -437,7 +448,8 @@ function ModalRezervace({
     const end = new Date(form.end_date)
     return rezervace.some(r => {
       if (r.item_id !== Number(form.item_id)) return false
-      if (mode === "edit" && editRezervace && r.group_id === editRezervace.group_id) return false
+      if (r.unit_index !== form.unit_index) return false
+      if (mode === "edit" && editRezervace && r.id === editRezervace.id) return false
       const rs = new Date(r.start_date)
       const re = new Date(r.end_date)
       return start <= re && end >= rs
@@ -455,44 +467,55 @@ function ModalRezervace({
     const groupId = editRezervace?.group_id ?? (jeStanVybran ? crypto.randomUUID() : null)
     const hlavniData = { ...form, item_id: Number(form.item_id), group_id: groupId }
 
-    if (mode === "nova") {
-      await supabase.from("pujcovna_rezervace").insert([hlavniData])
-      // Příslušenství
-      const prislRez = Object.entries(prisl)
-        .filter(([, checked]) => checked)
-        .map(([itemId]) => ({
-          item_id: Number(itemId),
-          customer: form.customer,
-          phone: form.phone,
-          start_date: form.start_date,
-          end_date: form.end_date,
-          color: form.color,
-          notes: "",
-          group_id: groupId,
-        }))
-      if (prislRez.length > 0) {
-        await supabase.from("pujcovna_rezervace").insert(prislRez)
+    // Najde první volný unit_index pro příslušenství
+    function najdiVolnySlot(itemId: number, skupinaEdit: string | null | undefined): number {
+      const pol = polozky.find(p => p.id === itemId)
+      if (!pol) return 0
+      for (let ui = 0; ui < pol.unit_num; ui++) {
+        const konflikt = rezervace.some(r => {
+          if (r.item_id !== itemId || r.unit_index !== ui) return false
+          if (skupinaEdit && r.group_id === skupinaEdit) return false
+          return new Date(form.start_date) <= new Date(r.end_date) &&
+                 new Date(form.end_date) >= new Date(r.start_date)
+        })
+        if (!konflikt) return ui
       }
-    } else if (editRezervace) {
-      await supabase.from("pujcovna_rezervace").update(hlavniData).eq("id", editRezervace.id)
-      if (groupId) {
-        // Smazat staré příslušenství skupiny a přidat nové
-        await supabase.from("pujcovna_rezervace")
-          .delete()
-          .eq("group_id", groupId)
-          .neq("id", editRezervace.id)
-        const prislRez = Object.entries(prisl)
-          .filter(([, checked]) => checked)
-          .map(([itemId]) => ({
-            item_id: Number(itemId),
+      return 0
+    }
+
+    function sestavPrisl(gid: string | null) {
+      return Object.entries(prisl)
+        .filter(([, checked]) => checked)
+        .map(([itemIdStr]) => {
+          const itemId = Number(itemIdStr)
+          return {
+            item_id: itemId,
+            unit_index: najdiVolnySlot(itemId, editRezervace?.group_id),
             customer: form.customer,
             phone: form.phone,
             start_date: form.start_date,
             end_date: form.end_date,
             color: form.color,
             notes: "",
-            group_id: groupId,
-          }))
+            group_id: gid,
+          }
+        })
+    }
+
+    if (mode === "nova") {
+      await supabase.from("pujcovna_rezervace").insert([hlavniData])
+      const prislRez = sestavPrisl(groupId)
+      if (prislRez.length > 0) {
+        await supabase.from("pujcovna_rezervace").insert(prislRez)
+      }
+    } else if (editRezervace) {
+      await supabase.from("pujcovna_rezervace").update(hlavniData).eq("id", editRezervace.id)
+      if (groupId) {
+        await supabase.from("pujcovna_rezervace")
+          .delete()
+          .eq("group_id", groupId)
+          .neq("id", editRezervace.id)
+        const prislRez = sestavPrisl(groupId)
         if (prislRez.length > 0) {
           await supabase.from("pujcovna_rezervace").insert(prislRez)
         }
