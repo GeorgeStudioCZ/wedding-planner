@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { vypocitejVzdalenost } from "@/lib/vzdalenost"
+import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 
 export default function EditZakazka() {
   const router = useRouter()
@@ -160,6 +161,19 @@ export default function EditZakazka() {
           {/* Klient */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <h2 className="font-semibold text-gray-900">Klient</h2>
+            <div>
+              <label className={labelClass}>Hledat existujícího zákazníka</label>
+              <ZakaznikSearch
+                projekt="Svatby"
+                accentColor="rose"
+                onSelect={(z: Zakaznik) => setForm(f => ({
+                  ...f,
+                  telefon: z.telefon || f.telefon,
+                  email: z.email || f.email,
+                  fakturacni_adresa: [z.ulice, z.psc, z.mesto].filter(Boolean).join(", ") || f.fakturacni_adresa,
+                }))}
+              />
+            </div>
             <div>
               <label className={labelClass}>Stav zakázky</label>
               <select name="stav" value={form.stav} onChange={handleChange} className={inputClass}>

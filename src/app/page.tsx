@@ -6,6 +6,10 @@ import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import Link from "next/link"
 
+type StatsZakaznici = {
+  celkem: number
+}
+
 type StatsSvatby = {
   nadchazejici: number
   celkemLetos: number
@@ -21,6 +25,7 @@ export default function Rozcestnik() {
   const router = useRouter()
   const [statsSvatby, setStatsSvatby] = useState<StatsSvatby | null>(null)
   const [statsPujcovna, setStatsPujcovna] = useState<StatsPujcovna | null>(null)
+  const [statsZakaznici, setStatsZakaznici] = useState<StatsZakaznici | null>(null)
   const [loading, setLoading] = useState(true)
 
   async function odhlasit() {
@@ -91,6 +96,10 @@ export default function Rozcestnik() {
       } else {
         setStatsPujcovna({ aktivniRezervace: 0, pristiRezervace: null })
       }
+
+      // Statistiky zákazníků
+      const { count } = await supabase.from("zakaznici").select("*", { count: "exact", head: true })
+      setStatsZakaznici({ celkem: count ?? 0 })
 
       setLoading(false)
     }
@@ -227,6 +236,38 @@ export default function Rozcestnik() {
                 ) : null}
 
                 <div className="mt-5 flex items-center text-emerald-600 text-sm font-medium group-hover:gap-2 gap-1 transition-all">
+                  Otevřít
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Zákazníci */}
+          <Link href="/zakaznici" className="group block md:col-span-2">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:border-blue-200 transition-all duration-200">
+              <div className="h-2 bg-gradient-to-r from-blue-400 to-indigo-500" />
+              <div className="p-6 flex items-center gap-6">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-5.916-3.521M9 20H4v-2a4 4 0 015.916-3.521M15 7a4 4 0 11-8 0 4 4 0 018 0zm6 3a3 3 0 11-6 0 3 3 0 016 0zm-18 0a3 3 0 116 0 3 3 0 01-6 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-bold text-gray-900">Zákazníci</h3>
+                  <p className="text-sm text-gray-500">Centrální databáze kontaktů napříč projekty</p>
+                </div>
+                {loading ? (
+                  <div className="h-8 w-20 bg-gray-100 rounded animate-pulse" />
+                ) : statsZakaznici ? (
+                  <div className="bg-blue-50 rounded-xl px-4 py-2 text-center shrink-0">
+                    <p className="text-2xl font-bold text-blue-600">{statsZakaznici.celkem}</p>
+                    <p className="text-xs text-blue-400">kontaktů</p>
+                  </div>
+                ) : null}
+                <div className="flex items-center text-blue-500 text-sm font-medium group-hover:gap-2 gap-1 transition-all shrink-0">
                   Otevřít
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

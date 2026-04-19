@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 
 type Polozka = {
   id: number
@@ -608,6 +609,18 @@ function ModalRezervace({
                     <option key={p.id} value={p.id}>{p.name} ({p.category})</option>
                   ))}
               </select>
+            </div>
+            <div>
+              <label className={labelClass}>Hledat zákazníka</label>
+              <ZakaznikSearch
+                projekt="Půjčovna"
+                accentColor="emerald"
+                onSelect={(z: Zakaznik) => setForm(f => ({
+                  ...f,
+                  customer: `${z.jmeno} ${z.prijmeni}`.trim() || f.customer,
+                  phone: z.telefon || f.phone,
+                }))}
+              />
             </div>
             <div>
               <label className={labelClass}>Zákazník</label>
