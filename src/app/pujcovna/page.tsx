@@ -202,118 +202,123 @@ export default function Pujcovna() {
         </div>
       </div>
 
-      {/* Gantt */}
-      <div className="flex" style={{ height: "calc(100vh - 130px)" }}>
+      {/* Gantt — jeden scrollovatelný kontejner */}
+      <div ref={scrollRef} className="overflow-auto" style={{ height: "calc(100vh - 112px)" }}>
+        <div style={{ width: LABEL_WIDTH + POCET_DNI * COL_WIDTH }}>
 
-        {/* Pevné štítky vlevo */}
-        <div className="shrink-0 bg-white border-r border-gray-200 overflow-hidden" style={{ width: LABEL_WIDTH }}>
-          {/* Prázdný header */}
-          <div style={{ height: 48 }} className="border-b border-gray-200 bg-gray-50" />
-          {/* Řádky */}
-          <div className="overflow-y-hidden" style={{ height: "calc(100% - 48px)" }}>
-            {filtrovanePolozky.map((p, i) => (
-              <div
-                key={p.id}
-                style={{ height: ROW_HEIGHT }}
-                className={`flex items-center px-3 border-b border-gray-100 text-xs font-medium text-gray-700 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
-              >
-                <span className="truncate">{p.name}</span>
+          {/* Sticky hlavička — 2 řádky: měsíce + dny */}
+          <div className="sticky top-0 z-20 flex" style={{ height: 56 }}>
+            {/* Roh */}
+            <div className="sticky left-0 z-30 bg-gray-100 border-b border-r border-gray-300" style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, height: 56 }} />
+            {/* Měsíce + dny */}
+            <div className="relative border-b border-gray-300" style={{ width: POCET_DNI * COL_WIDTH }}>
+              {/* Řádek 1 — měsíce */}
+              <div className="flex" style={{ height: 22 }}>
+                {(() => {
+                  const mesice: { mesic: string; pocet: number }[] = []
+                  let aktMesic = ""
+                  let pocet = 0
+                  DNY.forEach((den, i) => {
+                    const m = den.toLocaleDateString("cs-CZ", { month: "long", year: "numeric" })
+                    if (m !== aktMesic) {
+                      if (aktMesic) mesice.push({ mesic: aktMesic, pocet })
+                      aktMesic = m
+                      pocet = 1
+                    } else {
+                      pocet++
+                    }
+                    if (i === DNY.length - 1) mesice.push({ mesic: aktMesic, pocet })
+                  })
+                  return mesice.map((m, i) => (
+                    <div key={i} className="bg-gray-200 border-r border-gray-300 flex items-center justify-center text-[11px] font-bold text-gray-700 uppercase tracking-wide overflow-hidden"
+                      style={{ width: m.pocet * COL_WIDTH, minWidth: m.pocet * COL_WIDTH }}>
+                      {m.mesic}
+                    </div>
+                  ))
+                })()}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Scrollovatelná Gantt oblast */}
-        <div ref={scrollRef} className="overflow-x-auto overflow-y-auto flex-1">
-          <div style={{ width: POCET_DNI * COL_WIDTH, minWidth: "100%" }}>
-
-            {/* Hlavička — dny */}
-            <div className="flex sticky top-0 z-10 bg-white border-b border-gray-200" style={{ height: 48 }}>
-              {DNY.map((den, i) => {
-                const jeDnes = i === dnesIndex
-                const jeSobota = den.getDay() === 6
-                const jeNedele = den.getDay() === 0
-                const jeVikend = jeSobota || jeNedele
-                const jeNovyMesic = den.getDate() === 1
-                return (
-                  <div
-                    key={i}
-                    style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
-                    className={`relative flex flex-col items-center justify-center border-r border-gray-100 text-xs select-none
-                      ${jeDnes ? "bg-rose-500 text-white font-bold" : jeVikend ? "bg-emerald-50 text-emerald-700" : "text-gray-500"}
-                    `}
-                  >
-                    {jeNovyMesic && (
-                      <span className={`absolute top-0.5 left-0.5 text-[9px] font-bold uppercase ${jeDnes ? "text-white/80" : "text-gray-400"}`}>
-                        {den.toLocaleDateString("cs-CZ", { month: "short" })}
-                      </span>
-                    )}
-                    <span className="text-[11px] font-semibold leading-none">{den.getDate()}</span>
-                    <span className="text-[9px] leading-none mt-0.5 opacity-70">
-                      {den.toLocaleDateString("cs-CZ", { weekday: "short" })}
-                    </span>
-                  </div>
-                )
-              })}
+              {/* Řádek 2 — dny */}
+              <div className="flex" style={{ height: 34 }}>
+                {DNY.map((den, i) => {
+                  const jeDnes = i === dnesIndex
+                  const jeVikend = den.getDay() === 0 || den.getDay() === 6
+                  return (
+                    <div key={i} style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
+                      className={`flex flex-col items-center justify-center border-r border-gray-200 text-xs select-none
+                        ${jeDnes ? "bg-rose-500 text-white font-bold" : jeVikend ? "bg-amber-50 text-amber-700" : "bg-white text-gray-500"}`}>
+                      <span className="text-[11px] font-semibold leading-none">{den.getDate()}</span>
+                      <span className="text-[9px] leading-none mt-0.5 opacity-70">{den.toLocaleDateString("cs-CZ", { weekday: "short" })}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-
-            {/* Řádky položek */}
-            {filtrovanePolozky.map((polozka, pi) => {
-              const rezPolozky = getRezervaceProPolozku(polozka.id)
-              return (
-                <div
-                  key={polozka.id}
-                  className={`relative border-b border-gray-100 ${pi % 2 === 0 ? "bg-white" : "bg-gray-50/30"}`}
-                  style={{ height: ROW_HEIGHT, width: POCET_DNI * COL_WIDTH }}
-                >
-                  {/* Mřížka dnů — klikací oblasti */}
-                  <div className="flex h-full">
-                    {DNY.map((den, di) => {
-                      const jeDnes = di === dnesIndex
-                      const jeVikend = den.getDay() === 0 || den.getDay() === 6
-                      return (
-                        <div
-                          key={di}
-                          style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
-                          className={`h-full border-r border-gray-100 cursor-pointer hover:bg-emerald-50/50 transition-colors
-                            ${jeDnes ? "bg-rose-50/30" : jeVikend ? "bg-emerald-50/20" : ""}
-                          `}
-                          onClick={() => klikNaDen(polozka.id, den)}
-                        />
-                      )
-                    })}
-                  </div>
-
-                  {/* Rezervační bloky */}
-                  {rezPolozky.map(rez => {
-                    const pos = poziceRezervace(rez)
-                    if (!pos) return null
-                    return (
-                      <div
-                        key={rez.id}
-                        className="absolute top-1 rounded-md cursor-pointer flex items-center px-2 overflow-hidden hover:brightness-95 transition-all shadow-sm"
-                        style={{
-                          left: pos.left + 2,
-                          width: pos.width - 4,
-                          height: ROW_HEIGHT - 8,
-                          backgroundColor: rez.color || "#10b981",
-                        }}
-                        onClick={(e) => klikNaRezervaci(e, rez)}
-                        onMouseEnter={(e) => setTooltip({ rez, x: e.clientX, y: e.clientY })}
-                        onMouseLeave={() => setTooltip(null)}
-                        onMouseMove={(e) => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
-                      >
-                        <span className="text-white text-xs font-medium truncate drop-shadow-sm">
-                          {rez.customer}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })}
-
           </div>
+
+          {/* Řádky — kategorie + položky */}
+          {KATEGORIE.filter(k => k !== "Vše").map(kat => {
+            const polozkyKat = filtrovanePolozky.filter(p => p.category === kat)
+            if (polozkyKat.length === 0) return null
+            return (
+              <div key={kat}>
+                {/* Kategoriový nadpis */}
+                <div className="flex sticky z-10" style={{ top: 56 }}>
+                  <div className="sticky left-0 z-10 bg-gray-800 text-white text-[11px] font-bold uppercase tracking-wider px-3 flex items-center border-b border-gray-700"
+                    style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, height: 28 }}>
+                    {kat}
+                  </div>
+                  <div className="bg-gray-800/90 border-b border-gray-700" style={{ width: POCET_DNI * COL_WIDTH, height: 28 }} />
+                </div>
+                {/* Položky kategorie */}
+                {polozkyKat.map((polozka, pi) => {
+                  const rezPolozky = getRezervaceProPolozku(polozka.id)
+                  return (
+                    <div key={polozka.id} className="flex relative" style={{ height: ROW_HEIGHT }}>
+                      {/* Štítek vlevo */}
+                      <div className={`sticky left-0 z-10 flex items-center px-3 border-b border-r border-gray-200 text-xs font-medium text-gray-700 shrink-0
+                        ${pi % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                        style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH }}>
+                        <span className="truncate">{polozka.name}</span>
+                      </div>
+                      {/* Gantt plocha */}
+                      <div className={`relative border-b border-gray-100 ${pi % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
+                        style={{ width: POCET_DNI * COL_WIDTH }}>
+                        {/* Mřížka dnů */}
+                        <div className="flex h-full absolute inset-0">
+                          {DNY.map((den, di) => {
+                            const jeDnes = di === dnesIndex
+                            const jeVikend = den.getDay() === 0 || den.getDay() === 6
+                            return (
+                              <div key={di} style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
+                                className={`h-full border-r border-gray-100 cursor-pointer hover:bg-emerald-50/50
+                                  ${jeDnes ? "bg-rose-50/40" : jeVikend ? "bg-amber-50/40" : ""}`}
+                                onClick={() => klikNaDen(polozka.id, den)} />
+                            )
+                          })}
+                        </div>
+                        {/* Rezervační bloky */}
+                        {rezPolozky.map(rez => {
+                          const pos = poziceRezervace(rez)
+                          if (!pos) return null
+                          return (
+                            <div key={rez.id}
+                              className="absolute top-1 rounded cursor-pointer flex items-center px-2 overflow-hidden hover:brightness-95 shadow-sm z-10"
+                              style={{ left: pos.left + 1, width: pos.width - 2, height: ROW_HEIGHT - 8, backgroundColor: rez.color || "#10b981" }}
+                              onClick={(e) => klikNaRezervaci(e, rez)}
+                              onMouseEnter={(e) => setTooltip({ rez, x: e.clientX, y: e.clientY })}
+                              onMouseLeave={() => setTooltip(null)}
+                              onMouseMove={(e) => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}>
+                              <span className="text-white text-xs font-medium truncate drop-shadow-sm">{rez.customer}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
         </div>
       </div>
 
