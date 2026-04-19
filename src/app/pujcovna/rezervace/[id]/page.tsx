@@ -9,8 +9,6 @@ type Rezervace = {
   item_id: number
   unit_index: number
   customer: string
-  phone: string
-  email: string
   start_date: string
   end_date: string
   color: string
@@ -148,14 +146,14 @@ export default function DetailRezervace() {
           <p className="text-lg font-semibold text-gray-900">
             {zakaznik ? `${zakaznik.jmeno} ${zakaznik.prijmeni}` : rez.customer}
           </p>
-          {(zakaznik?.telefon || rez.phone) && (
-            <a href={`tel:${zakaznik?.telefon || rez.phone}`} className="text-emerald-600 text-sm mt-1 block hover:underline">
-              {zakaznik?.telefon || rez.phone}
+          {zakaznik?.telefon && (
+            <a href={`tel:${zakaznik.telefon}`} className="text-emerald-600 text-sm mt-1 block hover:underline">
+              {zakaznik.telefon}
             </a>
           )}
-          {(zakaznik?.email || rez.email) && (
-            <a href={`mailto:${zakaznik?.email || rez.email}`} className="text-emerald-600 text-sm mt-0.5 block hover:underline">
-              {zakaznik?.email || rez.email}
+          {zakaznik?.email && (
+            <a href={`mailto:${zakaznik.email}`} className="text-emerald-600 text-sm mt-0.5 block hover:underline">
+              {zakaznik.email}
             </a>
           )}
           {zakaznik && (

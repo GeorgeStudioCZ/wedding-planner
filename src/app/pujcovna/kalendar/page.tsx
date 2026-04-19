@@ -18,8 +18,6 @@ type Rezervace = {
   item_id: number
   unit_index: number
   customer: string
-  phone: string
-  email: string
   start_date: string
   end_date: string
   color: string
@@ -407,7 +405,6 @@ function Pujcovna() {
           style={{ left: tooltip.x + 12, top: tooltip.y - 10 }}
         >
           <p className="font-bold mb-1">{tooltip.rez.customer}</p>
-          {tooltip.rez.phone && <p className="text-gray-300">📞 {tooltip.rez.phone}</p>}
           <p className="text-gray-300 mt-1">
             {formatDatum(tooltip.rez.start_date)} – {formatDatum(tooltip.rez.end_date)}
           </p>
@@ -463,8 +460,6 @@ function ModalRezervace({
     item_id: editRezervace?.item_id ?? initialItemId ?? (polozky[0]?.id ?? 0),
     unit_index: editRezervace?.unit_index ?? initialUnitIndex ?? 0,
     customer: editRezervace?.customer ?? "",
-    phone: editRezervace?.phone ?? "",
-    email: editRezervace?.email ?? "",
     start_date: editRezervace?.start_date ?? initialStartDate ?? dnesStr,
     end_date: editRezervace?.end_date ?? initialStartDate ?? dnesStr,
     color: editRezervace?.color ?? "#10b981",
@@ -536,7 +531,7 @@ function ModalRezervace({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setChyba(null)
-    if (!form.customer.trim()) { setChyba("Zadejte jméno zákazníka"); return }
+    if (!zakaznikId) { setChyba("Vyberte zákazníka z centrální databáze"); return }
     if (form.start_date > form.end_date) { setChyba("Datum konce musí být po datu začátku"); return }
     if (jeKonflikt()) { setChyba("Konflikt: tato položka je již rezervována v tomto termínu"); return }
     setUkladam(true)
@@ -587,13 +582,12 @@ function ModalRezervace({
             item_id: itemId,
             unit_index: slot,
             customer: form.customer,
-            phone: form.phone,
-            email: form.email,
             start_date: form.start_date,
             end_date: form.end_date,
             color: form.color,
             notes: "",
             group_id: gid,
+            zakaznik_id: zakaznikId,
           })
         }
       }
@@ -670,13 +664,11 @@ function ModalRezervace({
                   setForm(f => ({
                     ...f,
                     customer: `${z.jmeno} ${z.prijmeni}`.trim() || f.customer,
-                    phone: z.telefon || f.phone,
-                    email: z.email || f.email,
                   }))
                 }}
               />
-              {form.customer && (
-                <p className="mt-1.5 text-sm text-gray-700 font-medium px-1">{form.customer}</p>
+              {zakaznikId && (
+                <p className="mt-1.5 text-xs text-emerald-600 font-medium">✓ {form.customer}</p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">

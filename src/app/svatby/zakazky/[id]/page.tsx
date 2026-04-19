@@ -52,9 +52,6 @@ type Zakazka = {
   created_at: string
   jmeno_nevesty: string
   jmeno_zenicha: string
-  fakturacni_adresa: string
-  telefon: string
-  email: string
   zakaznik_id: number | null
   zakaznici: Zakaznik | null
   datum_svatby: string
@@ -252,8 +249,8 @@ export default function DetailZakazky() {
     const casti = jmeno.trim().split(" ")
     const prijmeni = casti.length > 1 ? casti[casti.length - 1] : ""
     const krestni = casti.length > 1 ? casti.slice(0, -1).join(" ") : jmeno
-    const telefon = zakazka.zakaznici?.telefon || zakazka.telefon
-    const email = zakazka.zakaznici?.email || zakazka.email
+    const telefon = zakazka.zakaznici?.telefon
+    const email = zakazka.zakaznici?.email
     const tel = telefon ? telefon.replace(/\s/g, "") : ""
     const poznamka = `Nevěsta – svatba ${formatDatum(zakazka.datum_svatby)}`
     const vcf = [
@@ -503,13 +500,11 @@ export default function DetailZakazky() {
             <div className="grid grid-cols-2 gap-y-3 text-sm">
               <Row label="Nevěsta" value={zakazka.jmeno_nevesty} />
               <Row label="Ženich" value={zakazka.jmeno_zenicha} />
-              <Row label="Telefon" value={zakazka.zakaznici?.telefon || zakazka.telefon} />
-              <Row label="E-mail" value={zakazka.zakaznici?.email || zakazka.email} />
+              <Row label="Telefon" value={zakazka.zakaznici?.telefon ?? "—"} />
+              <Row label="E-mail" value={zakazka.zakaznici?.email ?? "—"} />
               <div className="col-span-2">
                 <Row label="Fakturační adresa" value={
-                  zakazka.zakaznici
-                    ? [zakazka.zakaznici.ulice, zakazka.zakaznici.psc, zakazka.zakaznici.mesto].filter(Boolean).join(", ") || zakazka.fakturacni_adresa
-                    : zakazka.fakturacni_adresa
+                  [zakazka.zakaznici?.ulice, zakazka.zakaznici?.psc, zakazka.zakaznici?.mesto].filter(Boolean).join(", ") || "—"
                 } />
               </div>
             </div>

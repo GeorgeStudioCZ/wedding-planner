@@ -14,9 +14,6 @@ export default function NovaZakazka() {
   const [form, setForm] = useState({
     jmeno_nevesty: "",
     jmeno_zenicha: "",
-    fakturacni_adresa: "",
-    telefon: "",
-    email: "",
     datum_svatby: "",
     cas_obradu: "",
     cas_prijezdu: "",
@@ -45,6 +42,7 @@ export default function NovaZakazka() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!zakaznikId) { setChyba("Vyberte zákazníka z centrální databáze"); return }
     setUkladam(true)
     setChyba(null)
 
@@ -104,20 +102,17 @@ export default function NovaZakazka() {
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <h2 className="font-semibold text-gray-900">Klient</h2>
             <div>
-              <label className={labelClass}>Hledat existujícího zákazníka</label>
+              <label className={labelClass}>Zákazník <span className="text-rose-500">*</span></label>
               <ZakaznikSearch
                 projekt="Svatby"
                 accentColor="rose"
                 onSelect={(z: Zakaznik) => {
                   setZakaznikId(z.id)
-                  setForm(f => ({
-                    ...f,
-                    telefon: z.telefon || f.telefon,
-                    email: z.email || f.email,
-                    fakturacni_adresa: [z.ulice, z.psc, z.mesto].filter(Boolean).join(", ") || f.fakturacni_adresa,
-                  }))
                 }}
               />
+              {zakaznikId && (
+                <p className="mt-1.5 text-xs text-emerald-600 font-medium">✓ Zákazník propojen</p>
+              )}
             </div>
             <div>
               <label className={labelClass}>Stav zakázky</label>
@@ -140,20 +135,6 @@ export default function NovaZakazka() {
               <div>
                 <label className={labelClass}>Jméno ženicha</label>
                 <input name="jmeno_zenicha" value={form.jmeno_zenicha} onChange={handleChange} placeholder="Jiří Horák" className={inputClass} />
-              </div>
-            </div>
-            <div>
-              <label className={labelClass}>Fakturační adresa</label>
-              <input name="fakturacni_adresa" value={form.fakturacni_adresa} onChange={handleChange} placeholder="Niská 630/2, Praha 18, 196 00" className={inputClass} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>Telefon</label>
-                <input name="telefon" value={form.telefon} onChange={handleChange} placeholder="+420 730 904 230" className={inputClass} />
-              </div>
-              <div>
-                <label className={labelClass}>E-mail</label>
-                <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="jmeno@email.cz" className={inputClass} />
               </div>
             </div>
             <div>

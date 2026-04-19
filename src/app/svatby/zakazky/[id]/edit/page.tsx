@@ -19,9 +19,6 @@ export default function EditZakazka() {
   const [form, setForm] = useState({
     jmeno_nevesty: "",
     jmeno_zenicha: "",
-    fakturacni_adresa: "",
-    telefon: "",
-    email: "",
     datum_svatby: "",
     cas_obradu: "",
     cas_prijezdu: "",
@@ -54,9 +51,6 @@ export default function EditZakazka() {
         setForm({
           jmeno_nevesty: data.jmeno_nevesty ?? "",
           jmeno_zenicha: data.jmeno_zenicha ?? "",
-          fakturacni_adresa: data.fakturacni_adresa ?? "",
-          telefon: data.telefon ?? "",
-          email: data.email ?? "",
           datum_svatby: data.datum_svatby ?? "",
           cas_obradu: data.cas_obradu ? data.cas_obradu.slice(0, 5) : "",
           cas_prijezdu: data.cas_prijezdu ? data.cas_prijezdu.slice(0, 5) : "",
@@ -100,6 +94,12 @@ export default function EditZakazka() {
     let geoData: { vzdalenost_km: number | null; lat: number | null; lng: number | null } | null = null
     if (form.adresa_obradu && form.adresa_obradu !== puvodniAdresa) {
       geoData = await vypocitejVzdalenost(form.adresa_obradu)
+    }
+
+    if (!zakaznikId) {
+      setUkladam(false)
+      setChyba("Vyberte zákazníka z centrální databáze")
+      return
     }
 
     const update: Record<string, unknown> = {
@@ -165,20 +165,17 @@ export default function EditZakazka() {
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <h2 className="font-semibold text-gray-900">Klient</h2>
             <div>
-              <label className={labelClass}>Hledat existujícího zákazníka</label>
+              <label className={labelClass}>Zákazník <span className="text-rose-500">*</span></label>
               <ZakaznikSearch
                 projekt="Svatby"
                 accentColor="rose"
                 onSelect={(z: Zakaznik) => {
                   setZakaznikId(z.id)
-                  setForm(f => ({
-                    ...f,
-                    telefon: z.telefon || f.telefon,
-                    email: z.email || f.email,
-                    fakturacni_adresa: [z.ulice, z.psc, z.mesto].filter(Boolean).join(", ") || f.fakturacni_adresa,
-                  }))
                 }}
               />
+              {zakaznikId && (
+                <p className="mt-1.5 text-xs text-emerald-600 font-medium">✓ Zákazník propojen (ID: {zakaznikId})</p>
+              )}
             </div>
             <div>
               <label className={labelClass}>Stav zakázky</label>
@@ -201,20 +198,6 @@ export default function EditZakazka() {
               <div>
                 <label className={labelClass}>Jméno ženicha</label>
                 <input name="jmeno_zenicha" value={form.jmeno_zenicha} onChange={handleChange} className={inputClass} />
-              </div>
-            </div>
-            <div>
-              <label className={labelClass}>Fakturační adresa</label>
-              <input name="fakturacni_adresa" value={form.fakturacni_adresa} onChange={handleChange} className={inputClass} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>Telefon</label>
-                <input name="telefon" value={form.telefon} onChange={handleChange} className={inputClass} />
-              </div>
-              <div>
-                <label className={labelClass}>E-mail</label>
-                <input type="email" name="email" value={form.email} onChange={handleChange} className={inputClass} />
               </div>
             </div>
             <div>
