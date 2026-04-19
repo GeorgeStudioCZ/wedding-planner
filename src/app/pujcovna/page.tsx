@@ -597,9 +597,16 @@ function ModalRezervace({
             <div>
               <label className={labelClass}>Položka</label>
               <select name="item_id" value={form.item_id} onChange={handleChange} className={inputClass}>
-                {polozky.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.category})</option>
-                ))}
+                {[...polozky]
+                  .sort((a, b) => {
+                    const ai = KATEGORIE.indexOf(a.category)
+                    const bi = KATEGORIE.indexOf(b.category)
+                    if (ai !== bi) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+                    return a.sort_order - b.sort_order
+                  })
+                  .map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.category})</option>
+                  ))}
               </select>
             </div>
             <div>
