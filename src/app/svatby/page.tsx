@@ -22,6 +22,7 @@ type Zakazka = {
   vystup_odevzdan: boolean
   rychlost_dodani: string
   stav: string
+  videohovor_datum: string | null
 }
 
 export default function Home() {
@@ -42,7 +43,7 @@ export default function Home() {
   async function nactiZakazky() {
     const { data, error } = await supabase
       .from("zakazky")
-      .select("id, jmeno_nevesty, jmeno_zenicha, datum_svatby, typ_sluzby, balicek, cena, adresa_obradu, vzdalenost_km, lat, lng, vystup_odevzdan, rychlost_dodani, stav")
+      .select("id, jmeno_nevesty, jmeno_zenicha, datum_svatby, typ_sluzby, balicek, cena, adresa_obradu, vzdalenost_km, lat, lng, vystup_odevzdan, rychlost_dodani, stav, videohovor_datum")
       .order("datum_svatby", { ascending: true })
 
     if (error) {
@@ -247,6 +248,15 @@ export default function Home() {
           <p className="md:hidden font-semibold text-gray-900 text-sm truncate">{z.jmeno_nevesty || "—"}</p>
           <p className="md:hidden font-semibold text-gray-900 text-sm truncate">{z.jmeno_zenicha || "—"}</p>
           <p className="md:hidden text-xs text-gray-400 mt-0.5 truncate">{z.adresa_obradu || "—"}</p>
+        </div>
+
+        {/* Videohovor */}
+        <div className="flex flex-col items-center justify-center px-2 md:px-3 py-4 border-l border-gray-100 min-w-[36px]">
+          {z.videohovor_datum && (
+            <span title={`Videohovor: ${new Date(z.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}`} className="text-lg leading-none">
+              📹
+            </span>
+          )}
         </div>
 
         {/* Stav */}
