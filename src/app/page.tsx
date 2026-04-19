@@ -78,10 +78,18 @@ export default function Rozcestnik() {
         })
       }
 
-      // Statistiky půjčovny (jen stany — přeskočit příslušenství bez group_id hlavního stanu)
+      // Statistiky půjčovny — jen rezervace stanů (ne příslušenství)
+      const { data: stanyPolozky } = await supabase
+        .from("pujcovna_polozky")
+        .select("id")
+        .eq("category", "Stany")
+
+      const stanyIds = (stanyPolozky ?? []).map(p => p.id)
+
       const { data: rezervace } = await supabase
         .from("pujcovna_rezervace")
         .select("start_date, end_date, stav, customer")
+        .in("item_id", stanyIds.length > 0 ? stanyIds : [0])
 
       if (rezervace) {
         const nadchazejiciRez = rezervace.filter(r =>
