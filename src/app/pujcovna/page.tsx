@@ -611,7 +611,7 @@ function ModalRezervace({
               </select>
             </div>
             <div>
-              <label className={labelClass}>Hledat zákazníka</label>
+              <label className={labelClass}>Zákazník</label>
               <ZakaznikSearch
                 projekt="Půjčovna"
                 accentColor="emerald"
@@ -621,14 +621,9 @@ function ModalRezervace({
                   phone: z.telefon || f.phone,
                 }))}
               />
-            </div>
-            <div>
-              <label className={labelClass}>Zákazník</label>
-              <input name="customer" value={form.customer} onChange={handleChange} placeholder="Jméno zákazníka" className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Telefon</label>
-              <input name="phone" value={form.phone} onChange={handleChange} placeholder="+420 000 000 000" className={inputClass} />
+              {form.customer && (
+                <p className="mt-1.5 text-sm text-gray-700 font-medium px-1">{form.customer}</p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
