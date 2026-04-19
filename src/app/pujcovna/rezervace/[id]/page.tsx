@@ -16,10 +16,22 @@ type Rezervace = {
   color: string
   notes: string
   group_id: string | null
+  zakaznik_id: number | null
   vozidlo: string
   cas_vyzvednuti: string
   cas_vraceni: string
   pricniky: string
+}
+
+type Zakaznik = {
+  id: number
+  jmeno: string
+  prijmeni: string
+  telefon: string
+  email: string
+  ulice: string
+  mesto: string
+  psc: string
 }
 
 type Polozka = {
@@ -41,6 +53,7 @@ export default function DetailRezervace() {
   const router = useRouter()
   const params = useParams()
   const [rez, setRez] = useState<Rezervace | null>(null)
+  const [zakaznik, setZakaznik] = useState<Zakaznik | null>(null)
   const [polozka, setPolozka] = useState<Polozka | null>(null)
   const [prisl, setPrisl] = useState<{ rez: Rezervace; polozka: Polozka }[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +63,12 @@ export default function DetailRezervace() {
       const { data: r } = await supabase.from("pujcovna_rezervace").select("*").eq("id", params.id).single()
       if (!r) { setLoading(false); return }
       setRez(r)
+
+      // Načíst zákazníka z centrální DB
+      if (r.zakaznik_id) {
+        const { data: zak } = await supabase.from("zakaznici").select("*").eq("id", r.zakaznik_id).single()
+        if (zak) setZakaznik(zak)
+      }
 
       const { data: p } = await supabase.from("pujcovna_polozky").select("*").eq("id", r.item_id).single()
       setPolozka(p)
@@ -126,12 +145,23 @@ export default function DetailRezervace() {
         {/* Zákazník */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Zákazník</h3>
-          <p className="text-lg font-semibold text-gray-900">{rez.customer}</p>
-          {rez.phone && (
-            <a href={`tel:${rez.phone}`} className="text-emerald-600 text-sm mt-1 block hover:underline">{rez.phone}</a>
+          <p className="text-lg font-semibold text-gray-900">
+            {zakaznik ? `${zakaznik.jmeno} ${zakaznik.prijmeni}` : rez.customer}
+          </p>
+          {(zakaznik?.telefon || rez.phone) && (
+            <a href={`tel:${zakaznik?.telefon || rez.phone}`} className="text-emerald-600 text-sm mt-1 block hover:underline">
+              {zakaznik?.telefon || rez.phone}
+            </a>
           )}
-          {rez.email && (
-            <a href={`mailto:${rez.email}`} className="text-emerald-600 text-sm mt-0.5 block hover:underline">{rez.email}</a>
+          {(zakaznik?.email || rez.email) && (
+            <a href={`mailto:${zakaznik?.email || rez.email}`} className="text-emerald-600 text-sm mt-0.5 block hover:underline">
+              {zakaznik?.email || rez.email}
+            </a>
+          )}
+          {zakaznik && (
+            <a href="/zakaznici" className="text-xs text-gray-400 mt-3 inline-block hover:text-emerald-600 transition-colors">
+              Centrální databáze →
+            </a>
           )}
         </div>
 

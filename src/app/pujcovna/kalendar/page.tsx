@@ -29,6 +29,7 @@ type Rezervace = {
   cas_vyzvednuti: string
   cas_vraceni: string
   pricniky: string
+  zakaznik_id: number | null
 }
 
 const KATEGORIE = ["Vše", "Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Ostatní"]
@@ -456,6 +457,8 @@ function ModalRezervace({
   const dnesStr = new Date().toISOString().slice(0, 10)
   const stanyIds = new Set(polozky.filter(p => p.category === "Stany").map(p => p.id))
 
+  const [zakaznikId, setZakaznikId] = useState<number | null>(editRezervace?.zakaznik_id ?? null)
+
   const [form, setForm] = useState({
     item_id: editRezervace?.item_id ?? initialItemId ?? (polozky[0]?.id ?? 0),
     unit_index: editRezervace?.unit_index ?? initialUnitIndex ?? 0,
@@ -539,7 +542,7 @@ function ModalRezervace({
     setUkladam(true)
 
     const groupId = editRezervace?.group_id ?? (jeStanVybran ? crypto.randomUUID() : null)
-    const hlavniData = { ...form, item_id: Number(form.item_id), group_id: groupId }
+    const hlavniData = { ...form, item_id: Number(form.item_id), group_id: groupId, zakaznik_id: zakaznikId }
 
     // Najde první volný unit_index pro příslušenství
     function najdiVolnySlot(itemId: number, skupinaEdit: string | null | undefined): number {
@@ -662,12 +665,15 @@ function ModalRezervace({
               <ZakaznikSearch
                 projekt="Půjčovna"
                 accentColor="emerald"
-                onSelect={(z: Zakaznik) => setForm(f => ({
-                  ...f,
-                  customer: `${z.jmeno} ${z.prijmeni}`.trim() || f.customer,
-                  phone: z.telefon || f.phone,
-                  email: z.email || f.email,
-                }))}
+                onSelect={(z: Zakaznik) => {
+                  setZakaznikId(z.id)
+                  setForm(f => ({
+                    ...f,
+                    customer: `${z.jmeno} ${z.prijmeni}`.trim() || f.customer,
+                    phone: z.telefon || f.phone,
+                    email: z.email || f.email,
+                  }))
+                }}
               />
               {form.customer && (
                 <p className="mt-1.5 text-sm text-gray-700 font-medium px-1">{form.customer}</p>

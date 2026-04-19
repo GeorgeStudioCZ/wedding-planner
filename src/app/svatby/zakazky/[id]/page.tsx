@@ -36,6 +36,17 @@ function PotvrzeniSmazani({ jmena, onPotvrdit, onZrusit }: {
   )
 }
 
+type Zakaznik = {
+  id: number
+  jmeno: string
+  prijmeni: string
+  telefon: string
+  email: string
+  ulice: string
+  mesto: string
+  psc: string
+}
+
 type Zakazka = {
   id: string
   created_at: string
@@ -44,6 +55,8 @@ type Zakazka = {
   fakturacni_adresa: string
   telefon: string
   email: string
+  zakaznik_id: number | null
+  zakaznici: Zakaznik | null
   datum_svatby: string
   cas_obradu: string
   cas_prijezdu: string
@@ -131,7 +144,7 @@ export default function DetailZakazky() {
     async function nacti() {
       const { data } = await supabase
         .from("zakazky")
-        .select("*")
+        .select("*, zakaznici(*)")
         .eq("id", params.id)
         .single()
       setZakazka(data)
@@ -239,7 +252,9 @@ export default function DetailZakazky() {
     const casti = jmeno.trim().split(" ")
     const prijmeni = casti.length > 1 ? casti[casti.length - 1] : ""
     const krestni = casti.length > 1 ? casti.slice(0, -1).join(" ") : jmeno
-    const tel = zakazka.telefon ? zakazka.telefon.replace(/\s/g, "") : ""
+    const telefon = zakazka.zakaznici?.telefon || zakazka.telefon
+    const email = zakazka.zakaznici?.email || zakazka.email
+    const tel = telefon ? telefon.replace(/\s/g, "") : ""
     const poznamka = `Nevěsta – svatba ${formatDatum(zakazka.datum_svatby)}`
     const vcf = [
       "BEGIN:VCARD",
@@ -247,7 +262,7 @@ export default function DetailZakazky() {
       `FN:${jmeno}`,
       `N:${prijmeni};${krestni};;;`,
       tel ? `TEL;TYPE=CELL:${tel}` : "",
-      zakazka.email ? `EMAIL:${zakazka.email}` : "",
+      email ? `EMAIL:${email}` : "",
       `NOTE:${poznamka}`,
       "END:VCARD",
     ].filter(Boolean).join("\r\n")
@@ -477,14 +492,25 @@ export default function DetailZakazky() {
 
           {/* Klient */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Klient</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-gray-900">Klient</h2>
+              {zakazka.zakaznici && (
+                <a href="/zakaznici" className="text-xs text-rose-500 hover:text-rose-600 transition-colors">
+                  Centrální databáze →
+                </a>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-y-3 text-sm">
               <Row label="Nevěsta" value={zakazka.jmeno_nevesty} />
               <Row label="Ženich" value={zakazka.jmeno_zenicha} />
-              <Row label="Telefon" value={zakazka.telefon} />
-              <Row label="E-mail" value={zakazka.email} />
+              <Row label="Telefon" value={zakazka.zakaznici?.telefon || zakazka.telefon} />
+              <Row label="E-mail" value={zakazka.zakaznici?.email || zakazka.email} />
               <div className="col-span-2">
-                <Row label="Fakturační adresa" value={zakazka.fakturacni_adresa} />
+                <Row label="Fakturační adresa" value={
+                  zakazka.zakaznici
+                    ? [zakazka.zakaznici.ulice, zakazka.zakaznici.psc, zakazka.zakaznici.mesto].filter(Boolean).join(", ") || zakazka.fakturacni_adresa
+                    : zakazka.fakturacni_adresa
+                } />
               </div>
             </div>
           </section>

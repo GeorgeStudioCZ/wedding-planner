@@ -14,6 +14,7 @@ export default function EditZakazka() {
   const [chyba, setChyba] = useState<string | null>(null)
   const [puvodniAdresa, setPuvodniAdresa] = useState("")
   const [puvodniStav, setPuvodniStav] = useState("")
+  const [zakaznikId, setZakaznikId] = useState<number | null>(null)
 
   const [form, setForm] = useState({
     jmeno_nevesty: "",
@@ -77,6 +78,7 @@ export default function EditZakazka() {
         })
         setPuvodniAdresa(data.adresa_obradu ?? "")
         setPuvodniStav(data.stav ?? "poptavka")
+        setZakaznikId(data.zakaznik_id ?? null)
       }
       setLoading(false)
     }
@@ -102,6 +104,7 @@ export default function EditZakazka() {
 
     const update: Record<string, unknown> = {
       ...form,
+      zakaznik_id: zakaznikId,
       cena: form.cena ? Number(form.cena) : null,
       pocet_svatebcanu: form.pocet_svatebcanu ? Number(form.pocet_svatebcanu) : null,
       datum_svatby: form.datum_svatby || null,
@@ -166,12 +169,15 @@ export default function EditZakazka() {
               <ZakaznikSearch
                 projekt="Svatby"
                 accentColor="rose"
-                onSelect={(z: Zakaznik) => setForm(f => ({
-                  ...f,
-                  telefon: z.telefon || f.telefon,
-                  email: z.email || f.email,
-                  fakturacni_adresa: [z.ulice, z.psc, z.mesto].filter(Boolean).join(", ") || f.fakturacni_adresa,
-                }))}
+                onSelect={(z: Zakaznik) => {
+                  setZakaznikId(z.id)
+                  setForm(f => ({
+                    ...f,
+                    telefon: z.telefon || f.telefon,
+                    email: z.email || f.email,
+                    fakturacni_adresa: [z.ulice, z.psc, z.mesto].filter(Boolean).join(", ") || f.fakturacni_adresa,
+                  }))
+                }}
               />
             </div>
             <div>
