@@ -95,6 +95,18 @@ export default function KalendarEmbed() {
       .then(({ data }) => setSvatby(data ?? []))
   }, [])
 
+  // Posílá výšku obsahu do rodiče (auto-resize iframe)
+  useEffect(() => {
+    function sendHeight() {
+      const height = document.documentElement.scrollHeight
+      window.parent.postMessage({ type: "iframeResize", height }, "*")
+    }
+    sendHeight()
+    const ro = new ResizeObserver(sendHeight)
+    ro.observe(document.body)
+    return () => ro.disconnect()
+  }, [rok, svatby])
+
   return (
     <div className="bg-gray-50 p-4 font-sans">
 
@@ -121,7 +133,7 @@ export default function KalendarEmbed() {
       </div>
 
       {/* Mřížka měsíců */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {Array.from({ length: 12 }, (_, i) => (
           <MesicniKalendar key={i} rok={rok} mesic={i} svatby={svatby} />
         ))}
