@@ -115,7 +115,7 @@ export default function DetailZakazky() {
 
   async function smazatZakazku() {
     await supabase.from("zakazky").delete().eq("id", params.id)
-    router.push("/")
+    router.push("/svatby")
   }
 
   async function nactiHistorii() {
@@ -397,7 +397,7 @@ export default function DetailZakazky() {
 
         {/* Hlavička — navigace a akce */}
         <div className="flex items-center gap-3 mb-8">
-          <button onClick={() => router.push("/")} className="text-gray-400 hover:text-gray-600 transition-colors text-sm">
+          <button onClick={() => router.push("/svatby")} className="text-gray-400 hover:text-gray-600 transition-colors text-sm">
             ← Zpět
           </button>
           <div className="flex-1" />
@@ -445,7 +445,7 @@ export default function DetailZakazky() {
             </a>
           )}
           <button
-            onClick={() => router.push(`/zakazky/${zakazka.id}/edit`)}
+            onClick={() => router.push(`/svatby/zakazky/${zakazka.id}/edit`)}
             className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
             title="Upravit"
           >

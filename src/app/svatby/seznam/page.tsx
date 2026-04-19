@@ -81,7 +81,7 @@ export default function SeznamSvateb() {
       <div className="max-w-7xl mx-auto px-8 py-6">
 
         <div className="flex items-center justify-between mb-6">
-          <button onClick={() => router.push("/")} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
+          <button onClick={() => router.push("/svatby")} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
             ← Zpět
           </button>
           <span className="text-sm text-gray-400">{loading ? "" : `${zakazky.length} zakázek`}</span>
@@ -110,7 +110,7 @@ export default function SeznamSvateb() {
                   {zakazky.map(z => {
                     const stav = STAVY[z.stav] ?? { label: z.stav, barva: "bg-gray-100 text-gray-600" }
                     return (
-                      <Link key={z.id} href={`/zakazky/${z.id}`} legacyBehavior>
+                      <Link key={z.id} href={`/svatby/zakazky/${z.id}`} legacyBehavior>
                         <tr className="hover:bg-gray-50 cursor-pointer transition-colors">
                           <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{formatDatum(z.datum_svatby)}</td>
                           <td className="px-4 py-3 text-gray-700">{z.jmeno_nevesty || "—"}</td>

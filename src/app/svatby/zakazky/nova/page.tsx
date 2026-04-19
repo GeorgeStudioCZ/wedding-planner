@@ -75,7 +75,7 @@ export default function NovaZakazka() {
 
     setUkladam(false)
 
-    router.push("/")
+    router.push("/svatby")
   }
 
   const inputClass =
@@ -87,7 +87,7 @@ export default function NovaZakazka() {
       <div className="max-w-2xl mx-auto p-8">
         <div className="flex items-center gap-3 mb-8">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/svatby")}
             className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
           >
             ← Zpět
@@ -305,7 +305,7 @@ export default function NovaZakazka() {
             <button type="submit" disabled={ukladam} className="flex-1 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white py-2.5 rounded-lg font-medium transition-colors">
               {ukladam ? "Ukládám..." : "Uložit zakázku"}
             </button>
-            <button type="button" onClick={() => router.push("/")} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-lg font-medium transition-colors">
+            <button type="button" onClick={() => router.push("/svatby")} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-lg font-medium transition-colors">
               Zrušit
             </button>
           </div>

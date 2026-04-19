@@ -1,36 +1,27 @@
 "use client"
 
-import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
-import MapaDashboard from "@/components/MapaDashboard"
+import Link from "next/link"
 
-type Zakazka = {
-  id: string
-  jmeno_nevesty: string
-  jmeno_zenicha: string
-  datum_svatby: string
-  typ_sluzby: string
-  balicek: string
-  cena: number
-  adresa_obradu: string
-  vzdalenost_km: number | null
-  lat: number | null
-  lng: number | null
-  vystup_odevzdan: boolean
-  rychlost_dodani: string
-  stav: string
+type StatsSvatby = {
+  nadchazejici: number
+  celkemLetos: number
+  pristiSvatba: string | null
 }
 
-export default function Home() {
+type StatsPujcovna = {
+  aktivniRezervace: number
+  pristiRezervace: string | null
+}
+
+export default function Rozcestnik() {
   const router = useRouter()
-  const [zakazky, setZakazky] = useState<Zakazka[]>([])
+  const [statsSvatby, setStatsSvatby] = useState<StatsSvatby | null>(null)
+  const [statsPujcovna, setStatsPujcovna] = useState<StatsPujcovna | null>(null)
   const [loading, setLoading] = useState(true)
-  const [chyba, setChyba] = useState<string | null>(null)
-  const [statRozsireno, setStatRozsireno] = useState(false)
-  const [cenaBenzinu, setCenaBenzinu] = useState<number | null>(null)
 
   async function odhlasit() {
     const client = createClient()
@@ -39,433 +30,214 @@ export default function Home() {
     router.refresh()
   }
 
-  async function nactiZakazky() {
-    const { data, error } = await supabase
-      .from("zakazky")
-      .select("id, jmeno_nevesty, jmeno_zenicha, datum_svatby, typ_sluzby, balicek, cena, adresa_obradu, vzdalenost_km, lat, lng, vystup_odevzdan, rychlost_dodani, stav")
-      .order("datum_svatby", { ascending: true })
-
-    if (error) {
-      console.error("Supabase chyba:", error)
-      setChyba(JSON.stringify(error))
-      setLoading(false)
-      return
-    }
-
-    const zakazky = data ?? []
-
-    // Automatický přechod zaplaceno → po-svatbe po proběhlém datu
-    const dnes = new Date()
-    dnes.setHours(0, 0, 0, 0)
-    const kAktualizaci = zakazky.filter(z => {
-      if (z.stav !== "zaplaceno" || !z.datum_svatby) return false
-      const d = new Date(z.datum_svatby)
-      d.setHours(0, 0, 0, 0)
-      return d < dnes
-    })
-
-    if (kAktualizaci.length > 0) {
-      // Načti aktuální cenu benzínu pro uložení ke svatbám
-      let aktualniCenaBenzinu: number | null = null
-      try {
-        const r = await fetch("/api/cena-benzinu")
-        const d = await r.json()
-        if (d.cena) aktualniCenaBenzinu = d.cena
-      } catch {}
-
-      await Promise.all(kAktualizaci.map(z =>
-        supabase.from("zakazky").update({
-          stav: "po-svatbe",
-          ...(aktualniCenaBenzinu ? { cena_benzinu: aktualniCenaBenzinu } : {}),
-        }).eq("id", z.id).then(() =>
-          supabase.from("zakazky_historie").insert([{ zakazka_id: z.id, stav: "po-svatbe" }])
-        )
-      ))
-      kAktualizaci.forEach(z => { z.stav = "po-svatbe" })
-    }
-
-    setZakazky(zakazky)
-    setLoading(false)
-  }
-
   useEffect(() => {
-    nactiZakazky()
-    fetch("/api/cena-benzinu")
-      .then(r => r.json())
-      .then(d => { if (d.cena) setCenaBenzinu(d.cena) })
-      .catch(() => {})
+    async function nactiStats() {
+      const dnes = new Date()
+      dnes.setHours(0, 0, 0, 0)
+
+      // Statistiky svateb
+      const { data: zakazky } = await supabase
+        .from("zakazky")
+        .select("datum_svatby, stav")
+        .in("stav", ["zaplaceno", "po-svatbe", "ve-strizne", "ukonceno"])
+
+      if (zakazky) {
+        const letos = new Date().getFullYear()
+        const nadchazejici = zakazky.filter(z => {
+          if (!z.datum_svatby) return false
+          const d = new Date(z.datum_svatby)
+          d.setHours(0, 0, 0, 0)
+          return d >= dnes && z.stav === "zaplaceno"
+        })
+        const celkemLetos = zakazky.filter(z =>
+          z.datum_svatby && new Date(z.datum_svatby).getFullYear() === letos
+        )
+        const pristiSvatba = nadchazejici
+          .sort((a, b) => new Date(a.datum_svatby).getTime() - new Date(b.datum_svatby).getTime())[0]
+          ?.datum_svatby ?? null
+
+        setStatsSvatby({
+          nadchazejici: nadchazejici.length,
+          celkemLetos: celkemLetos.length,
+          pristiSvatba,
+        })
+      }
+
+      // Statistiky půjčovny
+      const { data: rezervace } = await supabase
+        .from("pujcovna_rezervace")
+        .select("start_date, end_date")
+        .gte("end_date", dnes.toISOString().slice(0, 10))
+
+      if (rezervace) {
+        const aktivni = rezervace.filter(r => {
+          const start = new Date(r.start_date)
+          start.setHours(0, 0, 0, 0)
+          return start <= dnes
+        })
+        const pristiRezervace = rezervace
+          .filter(r => {
+            const start = new Date(r.start_date)
+            start.setHours(0, 0, 0, 0)
+            return start > dnes
+          })
+          .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0]
+          ?.start_date ?? null
+
+        setStatsPujcovna({
+          aktivniRezervace: aktivni.length,
+          pristiRezervace,
+        })
+      } else {
+        setStatsPujcovna({ aktivniRezervace: 0, pristiRezervace: null })
+      }
+
+      setLoading(false)
+    }
+    nactiStats()
   }, [])
 
-  async function toggleOdevzdani(e: React.MouseEvent, id: string, aktualniStav: boolean) {
-    e.preventDefault()
-    e.stopPropagation()
-    await supabase.from("zakazky").update({ vystup_odevzdan: !aktualniStav }).eq("id", id)
-    setZakazky(prev => prev.map(z => z.id === id ? { ...z, vystup_odevzdan: !aktualniStav } : z))
-  }
-
-  const dnes = new Date()
-  dnes.setHours(0, 0, 0, 0)
-
-  // Stavy které se nezapočítávají do statistik ani mapy
-  const NEPOTVRZENE_STAVY = ["poptavka", "rozhoduje-se", "objednavka", "cekam-platbu"]
-  const potvrzeneSvatby = zakazky.filter(z => !NEPOTVRZENE_STAVY.includes(z.stav))
-
-  const probihaJednani = zakazky.filter(z =>
-    ["poptavka", "rozhoduje-se"].includes(z.stav)
-  )
-
-  const vyplnenaObjednavka = zakazky.filter(z =>
-    ["objednavka", "cekam-platbu"].includes(z.stav)
-  )
-
-  const nadchazejici = potvrzeneSvatby.filter(z => {
-    if (!z.datum_svatby) return false
-    const d = new Date(z.datum_svatby); d.setHours(0,0,0,0)
-    return d >= dnes && z.stav === "zaplaceno"
-  })
-
-  const realizovaneNeodevzdane = potvrzeneSvatby.filter(z => {
-    if (!z.datum_svatby) return false
-    const d = new Date(z.datum_svatby); d.setHours(0,0,0,0)
-    return d < dnes && !z.vystup_odevzdan
-  })
-
-  const realizovaneOdevzdane = potvrzeneSvatby.filter(z => {
-    if (!z.datum_svatby) return false
-    const d = new Date(z.datum_svatby); d.setHours(0,0,0,0)
-    return d < dnes && z.vystup_odevzdan
-  })
-
-  const letoscelkem = potvrzeneSvatby.filter(z => z.datum_svatby && new Date(z.datum_svatby).getFullYear() === new Date().getFullYear())
-
-  // Řádek 1
-  const realizovano = potvrzeneSvatby.filter(z => {
-    if (!z.datum_svatby) return false
-    const d = new Date(z.datum_svatby); d.setHours(0, 0, 0, 0)
-    return d < dnes
-  })
-  const cekaNaSestrizani = potvrzeneSvatby.filter(z => ["ve-strizne", "po-svatbe"].includes(z.stav) && !z.vystup_odevzdan)
-
-  // Řádek 2
-  const celkemKm = Math.round(potvrzeneSvatby.reduce((sum, z) => sum + (z.vzdalenost_km ? z.vzdalenost_km * 2 : 0), 0))
-  const ujetoKm = Math.round(potvrzeneSvatby.filter(z => {
-    if (!z.datum_svatby) return false
-    const d = new Date(z.datum_svatby); d.setHours(0, 0, 0, 0)
-    return d < dnes
-  }).reduce((sum, z) => sum + (z.vzdalenost_km ? z.vzdalenost_km * 2 : 0), 0))
-  const zbyvaUjetKm = celkemKm - ujetoKm
-  const celkovaCasJizdy = celkemKm > 0 ? `${Math.ceil(celkemKm / 80)} h` : "—"
-
-  // Řádek 3
-  const celkemObrat = potvrzeneSvatby.reduce((sum, z) => sum + (z.cena || 0), 0)
-  const nakladyBenzin = cenaBenzinu ? Math.round((ujetoKm / 100) * 9 * cenaBenzinu) : null
-  const uhrazeneZalohy = potvrzeneSvatby.filter(z => z.stav === "zaplaceno").length * 2900
-  const obratNadchazejicich = nadchazejici.reduce((sum, z) => sum + (z.cena || 0), 0)
-  const zbyvaDoplatit = obratNadchazejicich - uhrazeneZalohy
-
-  const bodyNaMape = potvrzeneSvatby.filter(z => z.lat && z.lng).map(z => ({
-    id: z.id, lat: z.lat!, lng: z.lng!,
-    jmeno_nevesty: z.jmeno_nevesty, jmeno_zenicha: z.jmeno_zenicha,
-    datum_svatby: z.datum_svatby, adresa_obradu: z.adresa_obradu,
-  }))
-
-  const STAVY: { value: string; label: string; barva: string }[] = [
-    { value: "poptavka",     label: "Poptávka",      barva: "bg-gray-100 text-gray-600" },
-    { value: "rozhoduje-se", label: "Rozhoduje se",  barva: "bg-yellow-100 text-yellow-700" },
-    { value: "objednavka",   label: "Objednávka",    barva: "bg-blue-100 text-blue-700" },
-    { value: "cekam-platbu", label: "Čekám platbu",  barva: "bg-orange-100 text-orange-700" },
-    { value: "zaplaceno",    label: "Zaplaceno",     barva: "bg-green-100 text-green-700" },
-    { value: "ve-strizne",   label: "Ve střižně",    barva: "bg-purple-100 text-purple-700" },
-    { value: "po-svatbe",    label: "Po svatbě",     barva: "bg-sky-100 text-sky-700" },
-    { value: "ukonceno",     label: "Ukončeno",      barva: "bg-slate-100 text-slate-500" },
-  ]
-
-  function stavInfo(stav: string) {
-    return STAVY.find(s => s.value === stav) ?? STAVY[0]
-  }
-
-
-  function deadlineDni(datum_svatby: string, rychlost_dodani: string): number | null {
-    if (!datum_svatby) return null
-    const svatba = new Date(datum_svatby)
-    svatba.setHours(0, 0, 0, 0)
-    const map: Record<string, number> = {
-      "60-dnu": 60,
-      "14-dnu": 14,
-      "7-dnu": 7,
-      "72-hodin": 3,
-    }
-    const dniNavic = map[rychlost_dodani] ?? 60
-    const deadline = new Date(svatba)
-    deadline.setDate(deadline.getDate() + dniNavic)
-    const dnes2 = new Date()
-    dnes2.setHours(0, 0, 0, 0)
-    return Math.round((deadline.getTime() - dnes2.getTime()) / (1000 * 60 * 60 * 24))
-  }
-
-  function formatCena(cena: number) {
-    if (!cena) return "—"
-    return cena.toLocaleString("cs-CZ") + " Kč"
-  }
-
-  function typLabel(typ: string) {
-    if (typ === "foto+video") return "Foto + Video"
-    if (typ === "foto") return "Foto"
-    if (typ === "video") return "Video"
-    return typ ?? "—"
-  }
-
-  function ZakazkaRadek({ z }: { z: Zakazka }) {
-    const svatba = z.datum_svatby ? new Date(z.datum_svatby) : null
-    if (svatba) svatba.setHours(0, 0, 0, 0)
-    const dniDo = svatba ? Math.round((svatba.getTime() - dnes.getTime()) / (1000 * 60 * 60 * 24)) : null
-    const probehlo = dniDo !== null && dniDo < 0
-
-    return (
-      <Link href={`/zakazky/${z.id}`} className="flex items-stretch hover:bg-gray-50 transition-colors">
-
-        {/* Datum */}
-        <div className="flex flex-col items-center justify-center px-3 md:px-5 py-4 border-r border-gray-100 min-w-[60px]">
-          {z.datum_svatby ? (
-            <>
-              <span className="text-base md:text-lg font-bold text-gray-900 leading-none">
-                {String(new Date(z.datum_svatby).getDate()).padStart(2, "0")}.{String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}.
-              </span>
-              <span className="text-xs md:text-sm text-gray-400 mt-0.5">{new Date(z.datum_svatby).getFullYear()}</span>
-            </>
-          ) : <span className="text-gray-300">—</span>}
-        </div>
-
-        {/* Jména + adresa */}
-        <div className="flex-1 px-3 md:px-5 py-4 flex flex-col justify-center min-w-0">
-          {/* Desktop: jedno řádky */}
-          <p className="hidden md:block font-semibold text-gray-900 truncate">
-            {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
-          </p>
-          <p className="hidden md:block text-xs text-gray-400 mt-0.5 truncate">{z.adresa_obradu || "—"}</p>
-          {/* Mobil: tři řádky */}
-          <p className="md:hidden font-semibold text-gray-900 text-sm truncate">{z.jmeno_nevesty || "—"}</p>
-          <p className="md:hidden font-semibold text-gray-900 text-sm truncate">{z.jmeno_zenicha || "—"}</p>
-          <p className="md:hidden text-xs text-gray-400 mt-0.5 truncate">{z.adresa_obradu || "—"}</p>
-        </div>
-
-        {/* Stav */}
-        <div className="flex flex-col items-center justify-center px-2 md:px-4 py-4 border-l border-gray-100">
-          <span className={`text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap ${stavInfo(z.stav).barva}`}>
-            {stavInfo(z.stav).label}
-          </span>
-        </div>
-
-        {/* Cena + typ */}
-        <div className="hidden md:flex flex-col items-end justify-center px-5 py-4 border-l border-gray-100 min-w-[120px]">
-          <p className="font-semibold text-gray-900 text-sm">{formatCena(z.cena)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{typLabel(z.typ_sluzby)}</p>
-        </div>
-
-        {/* Countdown / stav */}
-        <div className="flex flex-col items-center justify-center px-4 py-4 border-l border-gray-100 min-w-[90px]">
-          {dniDo === null ? (
-            <span className="text-gray-300 text-sm">—</span>
-          ) : dniDo === 0 ? (
-            <span className="text-sm font-bold text-rose-500">Dnes!</span>
-          ) : probehlo && z.vystup_odevzdan ? (
-            <button
-              onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
-              className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-            >
-              ✓ Odevzdáno
-            </button>
-          ) : probehlo && !z.vystup_odevzdan ? (() => {
-            const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
-            const barva = zbyvaDni !== null && zbyvaDni <= 3 ? "text-red-500" : "text-orange-500"
-            return (
-              <div className="flex flex-col items-center">
-                <span className="text-xs text-gray-400">Odevzdat do</span>
-                <span className={`text-2xl font-bold leading-none mt-0.5 ${barva}`}>
-                  {zbyvaDni !== null ? (zbyvaDni <= 0 ? "!" : zbyvaDni) : "—"}
-                </span>
-                <span className="text-xs text-gray-400">{zbyvaDni !== null && zbyvaDni <= 0 ? "Po termínu" : "dní"}</span>
-              </div>
-            )
-          })() : (
-            <>
-              <span className="text-xs text-gray-400">Do svatby</span>
-              <span className="text-2xl font-bold text-rose-500 leading-none mt-0.5">{dniDo}</span>
-              <span className="text-xs text-gray-400">dní</span>
-            </>
-          )}
-        </div>
-
-      </Link>
-    )
-  }
-
-  function Blok({ titulek, barva, zakazky, vychozi = true }: {
-    titulek: string
-    barva: string
-    zakazky: Zakazka[]
-    vychozi?: boolean
-  }) {
-    const [otevreno, setOtevreno] = useState(vychozi)
-    if (zakazky.length === 0) return null
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
-        <button
-          onClick={() => setOtevreno(o => !o)}
-          className="w-full p-4 flex items-center gap-2 hover:bg-gray-50 transition-colors rounded-xl"
-        >
-          <span className={`w-2.5 h-2.5 rounded-full ${barva}`} />
-          <h2 className="font-semibold text-gray-900">{titulek}</h2>
-          <span className="text-sm text-gray-400">{zakazky.length}</span>
-          <span className={`ml-auto text-gray-400 transition-transform duration-200 ${otevreno ? "rotate-0" : "-rotate-90"}`}>
-            ▾
-          </span>
-        </button>
-        {otevreno && (
-          <div className="divide-y divide-gray-100 border-t border-gray-100">
-            {zakazky.map(z => <ZakazkaRadek key={z.id} z={z} />)}
-          </div>
-        )}
-      </div>
-    )
+  function formatDatum(datum: string | null) {
+    if (!datum) return null
+    return new Date(datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })
   }
 
   return (
     <main className="min-h-screen bg-gray-50">
+
       {/* Hlavička */}
-      <div className="w-full bg-sky-100 py-6">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 relative flex items-center justify-center">
-          <h1 className="text-3xl font-bold text-sky-900 tracking-wide">Wedding Planner</h1>
+      <div className="w-full bg-gray-900 py-5">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-wide">Jiří Larva</h1>
+            <p className="text-gray-400 text-xs mt-0.5">Správa projektů</p>
+          </div>
           <button
             onClick={odhlasit}
-            className="absolute right-0 text-xs text-sky-600 hover:text-sky-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-sky-200"
+            className="text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/10"
           >
             Odhlásit
           </button>
         </div>
       </div>
 
-      {/* Navigační tlačítka */}
-      <div className="max-w-4xl mx-auto px-4 py-5 flex gap-2 mb-3 justify-center">
+      <div className="max-w-5xl mx-auto px-6 py-10">
 
-        {/* Nová zakázka */}
-        <Link href="/zakazky/nova" className="bg-rose-500 hover:bg-rose-600 text-white font-medium transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Nová zakázka</span>
-        </Link>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Vyberte projekt</h2>
+        <p className="text-gray-500 text-sm mb-8">Přejděte do jednoho z vašich projektů</p>
 
-        {/* Seznam svateb */}
-        <Link href="/seznam" className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Seznam svateb</span>
-        </Link>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-        {/* Svatební statistiky */}
-        <button className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Statistiky</span>
-        </button>
+          {/* Wedding Planner */}
+          <Link href="/svatby" className="group block">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:border-rose-200 transition-all duration-200">
 
-        {/* Kalendář */}
-        <Link href="/kalendar" className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Kalendář</span>
-        </Link>
+              {/* Barevný proužek */}
+              <div className="h-2 bg-gradient-to-r from-rose-400 to-pink-500" />
 
-        {/* Rozbalit statistiky */}
-        <button
-          onClick={() => setStatRozsireno(p => !p)}
-          className="w-12 h-12 flex items-center justify-center rounded-lg border border-rose-200 bg-white hover:bg-rose-50 transition-colors shrink-0"
-          title={statRozsireno ? "Skrýt statistiky" : "Ukázat více statistik"}
-        >
-          <span className={`text-rose-500 text-base font-bold transition-transform duration-200 inline-block ${statRozsireno ? "rotate-180" : ""}`}>▼</span>
-        </button>
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-rose-500 bg-rose-50 px-2.5 py-1 rounded-full">Aktivní</span>
+                </div>
 
-      </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-1">Wedding Planner</h3>
+                <p className="text-sm text-gray-500 mb-5">Správa svatebních zakázek, kalendář, statistiky a finanční přehled</p>
 
-      <div className="max-w-4xl mx-auto px-4 md:px-8">
+                {loading ? (
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
+                    <div className="h-4 bg-gray-100 rounded animate-pulse w-1/2" />
+                  </div>
+                ) : statsSvatby ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-rose-50 rounded-xl p-3">
+                      <p className="text-2xl font-bold text-rose-600">{statsSvatby.nadchazejici}</p>
+                      <p className="text-xs text-rose-400 mt-0.5">Nadcházející</p>
+                    </div>
+                    <div className="bg-rose-50 rounded-xl p-3">
+                      <p className="text-2xl font-bold text-rose-600">{statsSvatby.celkemLetos}</p>
+                      <p className="text-xs text-rose-400 mt-0.5">Letos celkem</p>
+                    </div>
+                    {statsSvatby.pristiSvatba && (
+                      <div className="col-span-2 bg-gray-50 rounded-xl p-3">
+                        <p className="text-xs text-gray-500">Příští svatba</p>
+                        <p className="text-sm font-semibold text-gray-800 mt-0.5">{formatDatum(statsSvatby.pristiSvatba)}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
-        {/* Statistiky */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
-          <StatBox label="Letos celkem" value={loading ? "—" : String(letoscelkem.length)} />
-          <StatBox label="Nadcházející svatby" value={loading ? "—" : String(nadchazejici.length)} />
-          <StatBox label="Realizováno svateb" value={loading ? "—" : String(realizovano.length)} />
-          <StatBox label="Čeká na sestřihání" value={loading ? "—" : String(cekaNaSestrizani.length)} />
-        </div>
-
-        {statRozsireno && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
-            <StatBox label="Celkem km (tam+zpět)" value={loading ? "—" : `${celkemKm.toLocaleString("cs-CZ")} km`} />
-            <StatBox label="Celková doba jízdy" value={loading ? "—" : celkovaCasJizdy} />
-            <StatBox label="Již ujeto km" value={loading ? "—" : `${ujetoKm.toLocaleString("cs-CZ")} km`} />
-            <StatBox label="Zbývá ujet km" value={loading ? "—" : `${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
-
-            <StatBox label="Celkem obrat" value={loading ? "—" : `${celkemObrat.toLocaleString("cs-CZ")} Kč`} />
-            <StatBox label="Uhrazené zálohy" value={loading ? "—" : `${uhrazeneZalohy.toLocaleString("cs-CZ")} Kč`} />
-            <StatBox label="Zbývá doplatit" value={loading ? "—" : `${zbyvaDoplatit.toLocaleString("cs-CZ")} Kč`} />
-            <StatBox label="Náklady na benzín" value={nakladyBenzin ? `${nakladyBenzin.toLocaleString("cs-CZ")} Kč` : "—"} />
-          </div>
-        )}
-
-        <div className="mb-8" />
-
-        {/* Mapa */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-8">
-          <h2 className="font-semibold text-gray-900 mb-4">Mapa obřadů</h2>
-          {!loading && <MapaDashboard body={bodyNaMape} />}
-          {loading && (
-            <div className="rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 text-sm" style={{ height: 420 }}>
-              Načítám...
+                <div className="mt-5 flex items-center text-rose-500 text-sm font-medium group-hover:gap-2 gap-1 transition-all">
+                  Otevřít
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
             </div>
-          )}
+          </Link>
+
+          {/* Půjčovna autostanů */}
+          <Link href="/pujcovna" className="group block">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:border-emerald-200 transition-all duration-200">
+
+              {/* Barevný proužek */}
+              <div className="h-2 bg-gradient-to-r from-emerald-400 to-teal-500" />
+
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">Aktivní</span>
+                </div>
+
+                <h3 className="text-xl font-bold text-gray-900 mb-1">Půjčovna autostanů</h3>
+                <p className="text-sm text-gray-500 mb-5">Rezervační systém pro půjčování kempingového vybavení</p>
+
+                {loading ? (
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
+                    <div className="h-4 bg-gray-100 rounded animate-pulse w-1/2" />
+                  </div>
+                ) : statsPujcovna ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-emerald-50 rounded-xl p-3">
+                      <p className="text-2xl font-bold text-emerald-600">{statsPujcovna.aktivniRezervace}</p>
+                      <p className="text-xs text-emerald-400 mt-0.5">Právě půjčeno</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-xl p-3">
+                      <p className="text-2xl font-bold text-emerald-600">—</p>
+                      <p className="text-xs text-emerald-400 mt-0.5">Volné stany</p>
+                    </div>
+                    {statsPujcovna.pristiRezervace && (
+                      <div className="col-span-2 bg-gray-50 rounded-xl p-3">
+                        <p className="text-xs text-gray-500">Příští rezervace</p>
+                        <p className="text-sm font-semibold text-gray-800 mt-0.5">{formatDatum(statsPujcovna.pristiRezervace)}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                <div className="mt-5 flex items-center text-emerald-600 text-sm font-medium group-hover:gap-2 gap-1 transition-all">
+                  Otevřít
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </Link>
+
         </div>
-
-        {/* Tři bloky zakázek */}
-        {chyba && (
-          <div className="bg-red-50 border border-red-300 rounded-xl p-5 text-sm text-red-800 break-all">
-            <strong>Chyba připojení k databázi:</strong><br />{chyba}
-          </div>
-        )}
-        {loading && !chyba && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 text-center text-gray-400">
-            Načítám...
-          </div>
-        )}
-
-        {!loading && zakazky.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
-            Zatím žádné zakázky. Přidej první kliknutím na „+ Nová zakázka".
-          </div>
-        )}
-
-        {!loading && (
-          <>
-            <Blok titulek="Probíhá jednání" barva="bg-yellow-400" zakazky={probihaJednani} vychozi={false} />
-            <Blok titulek="Vyplněná objednávka" barva="bg-blue-400" zakazky={vyplnenaObjednavka} />
-            <Blok titulek="Nadcházející svatby" barva="bg-rose-400" zakazky={nadchazejici} />
-            <Blok titulek="Realizované — čeká na odevzdání" barva="bg-orange-400" zakazky={realizovaneNeodevzdane} />
-            <Blok titulek="Realizované — výstup odevzdán" barva="bg-green-400" zakazky={realizovaneOdevzdane} />
-          </>
-        )}
-
       </div>
     </main>
-  )
-}
-
-function StatBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
-      <p className="text-xs text-gray-500 uppercase tracking-wide leading-tight">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
-    </div>
   )
 }

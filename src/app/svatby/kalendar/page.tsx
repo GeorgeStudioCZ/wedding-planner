@@ -87,7 +87,7 @@ function MesicniKalendar({
             <div key={i} className="flex items-center justify-center aspect-square p-0.5">
               {zakazka ? (
                 <Link
-                  href={`/zakazky/${zakazka.id}`}
+                  href={`/svatby/zakazky/${zakazka.id}`}
                   title={`${zakazka.jmeno_nevesty} & ${zakazka.jmeno_zenicha}`}
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-opacity hover:opacity-80 ${barvaSvatby(zakazka.typ_sluzby, zakazka.stav)}`}
                 >
@@ -133,7 +133,7 @@ export default function Kalendar() {
 
         {/* Navigace */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <button onClick={() => router.push("/")} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
+          <button onClick={() => router.push("/svatby")} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
             ← Zpět
           </button>
 
