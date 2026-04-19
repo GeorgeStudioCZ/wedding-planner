@@ -445,7 +445,7 @@ function ModalRezervace({
     color: editRezervace?.color ?? "#10b981",
     notes: editRezervace?.notes ?? "",
   })
-  const [prisl, setPrisl] = useState<Record<number, boolean>>({})
+  const [prisl, setPrisl] = useState<Record<number, number>>({})
   const [dostupnost, setDostupnost] = useState<Record<number, number>>({})
   const [chyba, setChyba] = useState<string | null>(null)
   const [ukladam, setUkladam] = useState(false)
@@ -481,8 +481,8 @@ function ModalRezervace({
       const skupRez = rezervace.filter(
         r => r.group_id === editRezervace.group_id && r.id !== editRezervace.id
       )
-      const vybrane: Record<number, boolean> = {}
-      skupRez.forEach(r => { vybrane[r.item_id] = true })
+      const vybrane: Record<number, number> = {}
+      skupRez.forEach(r => { vybrane[r.item_id] = (vybrane[r.item_id] ?? 0) + 1 })
       setPrisl(vybrane)
     }
   }, [])
@@ -532,13 +532,31 @@ function ModalRezervace({
     }
 
     function sestavPrisl(gid: string | null) {
-      return Object.entries(prisl)
-        .filter(([, checked]) => checked)
-        .map(([itemIdStr]) => {
-          const itemId = Number(itemIdStr)
-          return {
+      const rows: object[] = []
+      const usedSlots: Record<number, number[]> = {}
+      for (const [itemIdStr, pocet] of Object.entries(prisl)) {
+        if (!pocet) continue
+        const itemId = Number(itemIdStr)
+        usedSlots[itemId] = usedSlots[itemId] ?? []
+        for (let i = 0; i < pocet; i++) {
+          // najdi volný slot přeskakujíc již přidělené v této iteraci
+          const pol = polozky.find(p => p.id === itemId)
+          if (!pol) continue
+          let slot = 0
+          for (let ui = 0; ui < pol.unit_num; ui++) {
+            if (usedSlots[itemId].includes(ui)) continue
+            const konflikt = rezervace.some(r => {
+              if (r.item_id !== itemId || r.unit_index !== ui) return false
+              if (editRezervace?.group_id && r.group_id === editRezervace.group_id) return false
+              return new Date(form.start_date) <= new Date(r.end_date) &&
+                     new Date(form.end_date) >= new Date(r.start_date)
+            })
+            if (!konflikt) { slot = ui; break }
+          }
+          usedSlots[itemId].push(slot)
+          rows.push({
             item_id: itemId,
-            unit_index: najdiVolnySlot(itemId, editRezervace?.group_id),
+            unit_index: slot,
             customer: form.customer,
             phone: form.phone,
             start_date: form.start_date,
@@ -546,8 +564,10 @@ function ModalRezervace({
             color: form.color,
             notes: "",
             group_id: gid,
-          }
-        })
+          })
+        }
+      }
+      return rows
     }
 
     if (mode === "nova") {
@@ -671,21 +691,30 @@ function ModalRezervace({
                         </div>
                         {polozkyKat.map(p => {
                           const volnych = dostupnost[p.id] ?? p.unit_num
+                          const vybrano = prisl[p.id] ?? 0
                           const nedostupne = volnych === 0
                           return (
-                            <label key={p.id} className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${nedostupne ? "opacity-40" : ""}`}>
-                              <input
-                                type="checkbox"
-                                checked={!!prisl[p.id]}
-                                disabled={nedostupne && !prisl[p.id]}
-                                onChange={e => setPrisl(prev => ({ ...prev, [p.id]: e.target.checked }))}
-                                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                              />
+                            <div key={p.id} className={`flex items-center gap-3 px-4 py-2.5 ${nedostupne && vybrano === 0 ? "opacity-40" : ""}`}>
                               <span className="flex-1 text-sm text-gray-700">{p.name}</span>
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${nedostupne ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-700"}`}>
-                                {nedostupne ? "nedost." : `${volnych} ks`}
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full mr-2 ${nedostupne && vybrano === 0 ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-700"}`}>
+                                {nedostupne && vybrano === 0 ? "nedost." : `${volnych} vol.`}
                               </span>
-                            </label>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={vybrano === 0}
+                                  onClick={() => setPrisl(prev => ({ ...prev, [p.id]: Math.max(0, vybrano - 1) }))}
+                                  className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-30 text-gray-700 font-bold text-lg flex items-center justify-center transition-colors"
+                                >−</button>
+                                <span className="w-6 text-center text-sm font-semibold text-gray-800">{vybrano}</span>
+                                <button
+                                  type="button"
+                                  disabled={vybrano >= volnych}
+                                  onClick={() => setPrisl(prev => ({ ...prev, [p.id]: Math.min(volnych, vybrano + 1) }))}
+                                  className="w-7 h-7 rounded-lg bg-emerald-100 hover:bg-emerald-200 disabled:opacity-30 text-emerald-700 font-bold text-lg flex items-center justify-center transition-colors"
+                                >+</button>
+                              </div>
+                            </div>
                           )
                         })}
                       </div>
