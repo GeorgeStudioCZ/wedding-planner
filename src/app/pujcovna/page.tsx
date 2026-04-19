@@ -25,7 +25,7 @@ type Rezervace = {
   group_id: string | null
 }
 
-const KATEGORIE = ["Vše", "Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Doplňky"]
+const KATEGORIE = ["Vše", "Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Ostatní"]
 
 const MESICE = [
   { label: "Celá sezóna", value: null as number | null },
