@@ -18,6 +18,7 @@ type Rezervace = {
   item_id: number
   unit_index: number
   customer: string
+  stav: string
   start_date: string
   end_date: string
   color: string
@@ -537,7 +538,13 @@ function ModalRezervace({
     setUkladam(true)
 
     const groupId = editRezervace?.group_id ?? (jeStanVybran ? crypto.randomUUID() : null)
-    const hlavniData = { ...form, item_id: Number(form.item_id), group_id: groupId, zakaznik_id: zakaznikId }
+    const hlavniData = {
+      ...form,
+      item_id: Number(form.item_id),
+      group_id: groupId,
+      zakaznik_id: zakaznikId,
+      ...(mode === "nova" ? { stav: "rezervace" } : {}),
+    }
 
     // Najde první volný unit_index pro příslušenství
     function najdiVolnySlot(itemId: number, skupinaEdit: string | null | undefined): number {
@@ -595,7 +602,10 @@ function ModalRezervace({
     }
 
     if (mode === "nova") {
-      await supabase.from("pujcovna_rezervace").insert([hlavniData])
+      const { data: nova } = await supabase.from("pujcovna_rezervace").insert([hlavniData]).select("id").single()
+      if (nova?.id) {
+        await supabase.from("pujcovna_rezervace_historie").insert([{ rezervace_id: nova.id, stav: "rezervace" }])
+      }
       const prislRez = sestavPrisl(groupId)
       if (prislRez.length > 0) {
         await supabase.from("pujcovna_rezervace").insert(prislRez)

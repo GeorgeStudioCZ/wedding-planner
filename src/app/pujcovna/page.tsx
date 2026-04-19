@@ -24,6 +24,20 @@ type Rezervace = {
   color: string
   notes: string
   group_id: string | null
+  stav: string
+}
+
+const STAVY = [
+  { value: "rezervace",    label: "Rezervace",    barva: "bg-gray-100 text-gray-600" },
+  { value: "cekam-platbu", label: "Čekám platbu", barva: "bg-orange-100 text-orange-700" },
+  { value: "zaplaceno",    label: "Zaplaceno",    barva: "bg-green-100 text-green-700" },
+  { value: "vypujceno",    label: "Vypůjčeno",    barva: "bg-blue-100 text-blue-700" },
+  { value: "dokonceno",    label: "Dokončeno",    barva: "bg-sky-100 text-sky-700" },
+  { value: "storno",       label: "Storno",       barva: "bg-red-100 text-red-700" },
+]
+
+function stavInfo(stav: string) {
+  return STAVY.find(s => s.value === stav) ?? STAVY[0]
 }
 
 const ROK = new Date().getFullYear()
@@ -102,9 +116,12 @@ export default function PujcovnaDashboard() {
   const rezStanu = rezervace.filter(r => stanyIds.has(r.item_id))
 
   const letosRez = rezStanu.filter(r => new Date(r.start_date).getFullYear() === ROK)
-  const probiha  = rezStanu.filter(r => r.start_date <= dnesStr && r.end_date >= dnesStr)
-  const nadchazejici = rezStanu.filter(r => r.start_date > dnesStr)
-  const ukoncene = rezStanu.filter(r => r.end_date < dnesStr)
+  const rezRezervace = rezStanu.filter(r => r.stav === "rezervace")
+  const cekamPlatbu  = rezStanu.filter(r => r.stav === "cekam-platbu")
+  const zaplaceno   = rezStanu.filter(r => r.stav === "zaplaceno")
+  const vypujceno   = rezStanu.filter(r => r.stav === "vypujceno")
+  const dokonceno   = rezStanu.filter(r => r.stav === "dokonceno")
+  const storno      = rezStanu.filter(r => r.stav === "storno")
 
   const celkemDni = letosRez.reduce((s, r) => s + pocetDni(r.start_date, r.end_date), 0)
   const prumDelka = letosRez.length > 0 ? Math.round(celkemDni / letosRez.length) : 0
@@ -124,10 +141,10 @@ export default function PujcovnaDashboard() {
   }
 
   function RezervaceRadek({ r }: { r: Rezervace }) {
-    const aktivni = r.start_date <= dnesStr && r.end_date >= dnesStr
-    const minula = r.end_date < dnesStr
     const dniDo = Math.round((new Date(r.start_date).getTime() - new Date(dnesStr).getTime()) / 86400000)
+    const dniZbývá = Math.round((new Date(r.end_date).getTime() - new Date(dnesStr).getTime()) / 86400000)
     const dni = pocetDni(r.start_date, r.end_date)
+    const info = stavInfo(r.stav)
 
     return (
       <Link href={`/pujcovna/rezervace/${r.id}`} className="flex items-stretch hover:bg-gray-50 transition-colors">
@@ -149,18 +166,14 @@ export default function PujcovnaDashboard() {
           <p className="text-xs text-gray-400 mt-0.5 truncate">{stanLabel(r.item_id, r.unit_index)}</p>
         </div>
 
-        {/* Stav */}
+        {/* Stav badge */}
         <div className="flex flex-col items-center justify-center px-2 md:px-4 py-4 border-l border-gray-100">
-          {aktivni ? (
-            <span className="text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap bg-emerald-100 text-emerald-700">Probíhá</span>
-          ) : minula ? (
-            <span className="text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap bg-gray-100 text-gray-500">Ukončeno</span>
-          ) : (
-            <span className="text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap bg-blue-100 text-blue-700">Naplánováno</span>
-          )}
+          <span className={`text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap ${info.barva}`}>
+            {info.label}
+          </span>
         </div>
 
-        {/* Délka */}
+        {/* Termín */}
         <div className="hidden md:flex flex-col items-end justify-center px-5 py-4 border-l border-gray-100 min-w-[100px]">
           <p className="font-semibold text-gray-900 text-sm">{formatDatum(r.start_date)} – {formatDatum(r.end_date)}</p>
           <p className="text-xs text-gray-400 mt-0.5">{dni} {dni === 1 ? "den" : dni < 5 ? "dny" : "dní"}</p>
@@ -168,18 +181,18 @@ export default function PujcovnaDashboard() {
 
         {/* Countdown */}
         <div className="flex flex-col items-center justify-center px-4 py-4 border-l border-gray-100 min-w-[80px]">
-          {aktivni ? (
+          {r.stav === "vypujceno" ? (
             <>
-              <span className="text-xs text-gray-400">Zbývá</span>
-              <span className="text-2xl font-bold text-emerald-500 leading-none mt-0.5">
-                {Math.round((new Date(r.end_date).getTime() - new Date(dnesStr).getTime()) / 86400000)}
-              </span>
+              <span className="text-xs text-gray-400">Vrácení za</span>
+              <span className="text-2xl font-bold text-blue-500 leading-none mt-0.5">{Math.max(0, dniZbývá)}</span>
               <span className="text-xs text-gray-400">dní</span>
             </>
-          ) : minula ? (
+          ) : r.stav === "dokonceno" || r.stav === "storno" ? (
             <span className="text-gray-300 text-sm">—</span>
           ) : dniDo === 0 ? (
             <span className="text-sm font-bold text-emerald-500">Dnes!</span>
+          ) : dniDo < 0 ? (
+            <span className="text-gray-300 text-sm">—</span>
           ) : (
             <>
               <span className="text-xs text-gray-400">Za</span>
@@ -284,9 +297,9 @@ export default function PujcovnaDashboard() {
         {/* Statistiky — řádek 1 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
           <StatBox label="Letos celkem" value={loading ? "—" : String(letosRez.length)} />
-          <StatBox label="Právě půjčeno" value={loading ? "—" : String(probiha.length)} />
-          <StatBox label="Nadcházející" value={loading ? "—" : String(nadchazejici.length)} />
-          <StatBox label="Ukončeno" value={loading ? "—" : String(ukoncene.length)} />
+          <StatBox label="Vypůjčeno" value={loading ? "—" : String(vypujceno.length)} />
+          <StatBox label="Zaplaceno" value={loading ? "—" : String(zaplaceno.length)} />
+          <StatBox label="Dokončeno" value={loading ? "—" : String(dokonceno.length)} />
         </div>
 
         {/* Statistiky — řádek 2 (rozšířené) */}
@@ -334,9 +347,12 @@ export default function PujcovnaDashboard() {
 
         {!loading && (
           <>
-            <Blok titulek="Probíhá" barva="bg-emerald-400" rezervace={probiha} />
-            <Blok titulek="Nadcházející rezervace" barva="bg-blue-400" rezervace={nadchazejici} />
-            <Blok titulek="Ukončené" barva="bg-gray-300" rezervace={ukoncene} vychozi={false} />
+            <Blok titulek="Rezervace" barva="bg-gray-400" rezervace={rezRezervace} />
+            <Blok titulek="Čekám platbu" barva="bg-orange-400" rezervace={cekamPlatbu} />
+            <Blok titulek="Zaplaceno" barva="bg-green-400" rezervace={zaplaceno} />
+            <Blok titulek="Vypůjčeno" barva="bg-blue-400" rezervace={vypujceno} />
+            <Blok titulek="Dokončeno" barva="bg-sky-400" rezervace={dokonceno} vychozi={false} />
+            <Blok titulek="Storno" barva="bg-red-400" rezervace={storno} vychozi={false} />
           </>
         )}
 
