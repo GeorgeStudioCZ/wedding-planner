@@ -15,6 +15,10 @@ type Rezervace = {
   color: string
   notes: string
   group_id: string | null
+  vozidlo: string
+  cas_vyzvednuti: string
+  cas_vraceni: string
+  pricniky: string
 }
 
 type Polozka = {
@@ -136,6 +140,39 @@ export default function DetailRezervace() {
             <p className="text-emerald-700 font-semibold">{dni} {dni === 1 ? "den" : dni < 5 ? "dny" : "dní"}</p>
           </div>
         </div>
+
+        {/* Vozidlo + časy + příčníky */}
+        {(rez.vozidlo || rez.cas_vyzvednuti || rez.cas_vraceni || rez.pricniky) && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Vozidlo a logistika</h3>
+            <div className="space-y-3">
+              {rez.vozidlo && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Vozidlo</span>
+                  <span className="text-sm font-medium text-gray-900">{rez.vozidlo}</span>
+                </div>
+              )}
+              {rez.cas_vyzvednuti && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Vyzvednutí</span>
+                  <span className="text-sm font-medium text-gray-900">{rez.cas_vyzvednuti} hod</span>
+                </div>
+              )}
+              {rez.cas_vraceni && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Vrácení</span>
+                  <span className="text-sm font-medium text-gray-900">{rez.cas_vraceni} hod</span>
+                </div>
+              )}
+              {rez.pricniky && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Příčníky</span>
+                  <span className="text-sm font-medium text-gray-900">{rez.pricniky === "vlastni" ? "Má vlastní" : "Chce půjčit"}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Příslušenství */}
         {prisl.length > 0 && (

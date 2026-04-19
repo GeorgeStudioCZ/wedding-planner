@@ -24,6 +24,10 @@ type Rezervace = {
   color: string
   notes: string
   group_id: string | null
+  vozidlo: string
+  cas_vyzvednuti: string
+  cas_vraceni: string
+  pricniky: string
 }
 
 const KATEGORIE = ["Vše", "Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Ostatní"]
@@ -444,6 +448,10 @@ function ModalRezervace({
     end_date: editRezervace?.end_date ?? initialStartDate ?? dnesStr,
     color: editRezervace?.color ?? "#10b981",
     notes: editRezervace?.notes ?? "",
+    vozidlo: editRezervace?.vozidlo ?? "",
+    cas_vyzvednuti: editRezervace?.cas_vyzvednuti ?? "",
+    cas_vraceni: editRezervace?.cas_vraceni ?? "",
+    pricniky: editRezervace?.pricniky ?? "",
   })
   const [prisl, setPrisl] = useState<Record<number, number>>({})
   const [dostupnost, setDostupnost] = useState<Record<number, number>>({})
@@ -654,6 +662,38 @@ function ModalRezervace({
                 <label className={labelClass}>Do</label>
                 <input type="date" name="end_date" value={form.end_date} onChange={handleChange} className={inputClass} />
               </div>
+            </div>
+            <div>
+              <label className={labelClass}>Značka a model vozu</label>
+              <input name="vozidlo" value={form.vozidlo} onChange={handleChange} placeholder="např. Škoda Octavia Combi" className={inputClass} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Vyzvednutí</label>
+                <select name="cas_vyzvednuti" value={form.cas_vyzvednuti} onChange={handleChange} className={inputClass}>
+                  <option value="">Vybrat...</option>
+                  {Array.from({ length: 14 }, (_, i) => i + 8).map(h => (
+                    <option key={h} value={`${h}:00 - ${h + 1}:00`}>{h}:00 – {h + 1}:00</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Vrácení</label>
+                <select name="cas_vraceni" value={form.cas_vraceni} onChange={handleChange} className={inputClass}>
+                  <option value="">Vybrat...</option>
+                  {Array.from({ length: 14 }, (_, i) => i + 8).map(h => (
+                    <option key={h} value={`${h}:00 - ${h + 1}:00`}>{h}:00 – {h + 1}:00</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Příčníky na vozidlo</label>
+              <select name="pricniky" value={form.pricniky} onChange={handleChange} className={inputClass}>
+                <option value="">Vybrat...</option>
+                <option value="vlastni">Mám vlastní</option>
+                <option value="pujcit">Chci půjčit</option>
+              </select>
             </div>
             <div>
               <label className={labelClass}>Barva</label>
