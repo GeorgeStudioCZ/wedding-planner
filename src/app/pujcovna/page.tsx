@@ -281,6 +281,14 @@ export default function PujcovnaDashboard() {
           <span className="hidden md:inline whitespace-nowrap">Zákazníci</span>
         </Link>
 
+        {/* Ceník */}
+        <Link href="/pujcovna/cenik" className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="hidden md:inline whitespace-nowrap">Ceník</span>
+        </Link>
+
         {/* Rozbalit statistiky */}
         <button
           onClick={() => setStatRozsireno(p => !p)}
