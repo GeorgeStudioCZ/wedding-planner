@@ -291,32 +291,30 @@ export default function PujcovnaDashboard() {
 
         {/* Statistiky — řádek 2 (rozšířené) */}
         {statRozsireno && (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
-              <StatBox label="Celkem dní půjčeno" value={loading ? "—" : `${celkemDni} dní`} />
-              <StatBox label="Průměrná délka" value={loading ? "—" : (prumDelka > 0 ? `${prumDelka} dní` : "—")} />
-              <StatBox label="Stanů celkem" value={loading ? "—" : String(totalStanu)} />
-              <StatBox label="Sezóna" value={String(ROK)} />
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
+            <StatBox label="Celkem dní půjčeno" value={loading ? "—" : `${celkemDni} dní`} />
+            <StatBox label="Průměrná délka" value={loading ? "—" : (prumDelka > 0 ? `${prumDelka} dní` : "—")} />
+            <StatBox label="Stanů celkem" value={loading ? "—" : String(totalStanu)} />
+            <StatBox label="Sezóna" value={String(ROK)} />
+          </div>
+        )}
 
-            {/* Graf kapacity */}
-            {!loading && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-2">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-4">Využití kapacity stanů</p>
-                <div className="flex items-end gap-3" style={{ height: 120 }}>
-                  {kapacita.map(({ label, pct }) => (
-                    <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-xs font-bold text-gray-600">{pct > 0 ? `${pct}%` : ""}</span>
-                      <div className="w-full rounded-t-lg transition-all duration-500"
-                        style={{ height: `${Math.max(pct, 2)}%`, maxHeight: 80, minHeight: 4, backgroundColor: barColor(pct) }} />
-                      <div className="w-full h-0.5 bg-gray-200 rounded" />
-                      <span className="text-[10px] text-gray-500 font-medium text-center leading-tight">{label}</span>
-                    </div>
-                  ))}
+        {/* Graf kapacity — vždy viditelný */}
+        {!loading && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-2">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-4">Využití kapacity stanů</p>
+            <div className="flex items-end gap-3" style={{ height: 120 }}>
+              {kapacita.map(({ label, pct }) => (
+                <div key={label} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-xs font-bold text-gray-600">{pct > 0 ? `${pct}%` : ""}</span>
+                  <div className="w-full rounded-t-lg transition-all duration-500"
+                    style={{ height: `${Math.max(pct, 2)}%`, maxHeight: 80, minHeight: 4, backgroundColor: barColor(pct) }} />
+                  <div className="w-full h-0.5 bg-gray-200 rounded" />
+                  <span className="text-[10px] text-gray-500 font-medium text-center leading-tight">{label}</span>
                 </div>
-              </div>
-            )}
-          </>
+              ))}
+            </div>
+          </div>
         )}
 
         <div className="mb-8" />
