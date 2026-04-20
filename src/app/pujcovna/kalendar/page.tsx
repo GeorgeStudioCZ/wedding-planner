@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase-browser"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 
 type Polozka = {
@@ -11,6 +12,15 @@ type Polozka = {
   category: string
   unit_num: number
   sort_order: number
+  cena_typ: "fixni" | "stupnovana"
+  cena_fixni: number | null
+}
+
+type Stupen = {
+  polozka_id: number
+  dni_od: number
+  dni_do: number | null
+  cena_za_den: number
 }
 
 type Rezervace = {
@@ -472,9 +482,14 @@ function ModalRezervace({
   })
   const [prisl, setPrisl] = useState<Record<number, number>>({})
   const [dostupnost, setDostupnost] = useState<Record<number, number>>({})
+  const [stupne, setStupne] = useState<Stupen[]>([])
   const [chyba, setChyba] = useState<string | null>(null)
   const [ukladam, setUkladam] = useState(false)
   const [mazani, setMazani] = useState(false)
+
+  useEffect(() => {
+    createClient().from("pujcovna_ceny_stupne").select("*").then(({ data }) => setStupne(data ?? []))
+  }, [])
 
   const jeStanVybran = stanyIds.has(Number(form.item_id))
   const prislusenstvi = polozky.filter(p => p.category !== "Stany")
@@ -791,6 +806,52 @@ function ModalRezervace({
                 </div>
               </div>
             )}
+
+            {/* Shrnutí ceny */}
+            {(() => {
+              const dni = pocetDni(form.start_date, form.end_date)
+              function cenaPolozky(pol: Polozka, pocet: number): number | null {
+                if (pol.cena_typ === "fixni") {
+                  if (!pol.cena_fixni) return null
+                  return pol.cena_fixni * dni * pocet
+                }
+                const tier = stupne.find(s => s.polozka_id === pol.id && s.dni_od <= dni && (s.dni_do === null || s.dni_do >= dni))
+                return tier ? tier.cena_za_den * dni * pocet : null
+              }
+              const hlavniPol = polozky.find(p => p.id === Number(form.item_id))
+              const cenaStan = hlavniPol ? cenaPolozky(hlavniPol, 1) : null
+              const radkyPrisl = Object.entries(prisl)
+                .filter(([, count]) => count > 0)
+                .map(([idStr, count]) => {
+                  const pol = polozky.find(p => p.id === Number(idStr))
+                  return { name: pol?.name ?? "?", cena: pol ? cenaPolozky(pol, count) : null, pocet: count }
+                })
+              const majakouCenu = cenaStan !== null || radkyPrisl.some(r => r.cena !== null)
+              if (!majakouCenu) return null
+              const celkem = (cenaStan ?? 0) + radkyPrisl.reduce((s, r) => s + (r.cena ?? 0), 0)
+              return (
+                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                  <div className="space-y-1.5">
+                    {cenaStan !== null && hlavniPol && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">{hlavniPol.name} <span className="text-gray-400">({dni} dní)</span></span>
+                        <span className="font-medium text-gray-900">{cenaStan.toLocaleString("cs-CZ")} Kč</span>
+                      </div>
+                    )}
+                    {radkyPrisl.map((r, i) => r.cena !== null && (
+                      <div key={i} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{r.name}{r.pocet > 1 ? ` ×${r.pocet}` : ""}</span>
+                        <span className="font-medium text-gray-900">{r.cena.toLocaleString("cs-CZ")} Kč</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between pt-2 border-t border-emerald-200 mt-1">
+                      <span className="text-sm font-bold text-gray-700">Celkem</span>
+                      <span className="text-base font-bold text-emerald-700">{celkem.toLocaleString("cs-CZ")} Kč</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             {chyba && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{chyba}</p>}
           </div>
