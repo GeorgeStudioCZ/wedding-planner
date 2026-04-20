@@ -12,6 +12,15 @@ type Polozka = {
   category: string
   unit_num: number
   sort_order: number
+  cena_typ: "fixni" | "stupnovana"
+  cena_fixni: number | null
+}
+
+type Stupen = {
+  polozka_id: number
+  dni_od: number
+  dni_do: number | null
+  cena_za_den: number
 }
 
 type Rezervace = {
@@ -86,6 +95,7 @@ export default function PujcovnaDashboard() {
   const router = useRouter()
   const [polozky, setPolozky] = useState<Polozka[]>([])
   const [rezervace, setRezervace] = useState<Rezervace[]>([])
+  const [stupne, setStupne] = useState<Stupen[]>([])
   const [loading, setLoading] = useState(true)
   const [statRozsireno, setStatRozsireno] = useState(false)
 
@@ -98,12 +108,14 @@ export default function PujcovnaDashboard() {
 
   useEffect(() => {
     async function nacti() {
-      const [{ data: pol }, { data: rez }] = await Promise.all([
+      const [{ data: pol }, { data: rez }, { data: st }] = await Promise.all([
         supabase.from("pujcovna_polozky").select("*").order("sort_order"),
         supabase.from("pujcovna_rezervace").select("*"),
+        supabase.from("pujcovna_ceny_stupne").select("*"),
       ])
       setPolozky(pol ?? [])
       setRezervace(rez ?? [])
+      setStupne(st ?? [])
       setLoading(false)
     }
     nacti()
@@ -140,11 +152,42 @@ export default function PujcovnaDashboard() {
     return p.unit_num > 1 ? `${p.name} ${unitIndex + 1}` : p.name
   }
 
+  function vypocitejCenuPolozky(polozka: Polozka, dni: number): number | null {
+    if (polozka.cena_typ === "fixni") {
+      if (!polozka.cena_fixni) return null
+      return polozka.cena_fixni * dni
+    }
+    const tier = stupne.find(
+      s => s.polozka_id === polozka.id && s.dni_od <= dni && (s.dni_do === null || s.dni_do >= dni)
+    )
+    return tier ? tier.cena_za_den * dni : null
+  }
+
+  function celkovaCenaRezervace(r: Rezervace): number | null {
+    const pol = polozky.find(p => p.id === r.item_id)
+    if (!pol) return null
+    const zakladni = vypocitejCenuPolozky(pol, pocetDni(r.start_date, r.end_date))
+    if (zakladni === null) return null
+    let celkem = zakladni
+    if (r.group_id) {
+      const prisl = rezervace.filter(x => x.group_id === r.group_id && x.id !== r.id)
+      for (const pr of prisl) {
+        const prPol = polozky.find(p => p.id === pr.item_id)
+        if (prPol) {
+          const prCena = vypocitejCenuPolozky(prPol, pocetDni(pr.start_date, pr.end_date))
+          if (prCena !== null) celkem += prCena
+        }
+      }
+    }
+    return celkem
+  }
+
   function RezervaceRadek({ r }: { r: Rezervace }) {
     const dniDo = Math.round((new Date(r.start_date).getTime() - new Date(dnesStr).getTime()) / 86400000)
     const dniZbývá = Math.round((new Date(r.end_date).getTime() - new Date(dnesStr).getTime()) / 86400000)
     const dni = pocetDni(r.start_date, r.end_date)
     const info = stavInfo(r.stav)
+    const cena = celkovaCenaRezervace(r)
 
     return (
       <Link href={`/pujcovna/rezervace/${r.id}`} className="flex items-stretch hover:bg-gray-50 transition-colors">
@@ -164,6 +207,15 @@ export default function PujcovnaDashboard() {
             <p className="font-semibold text-gray-900 truncate">{r.customer}</p>
           </div>
           <p className="text-xs text-gray-400 mt-0.5 truncate">{stanLabel(r.item_id, r.unit_index)}</p>
+        </div>
+
+        {/* Cena výpůjčky */}
+        <div className="flex flex-col items-end justify-center px-3 md:px-4 py-4 border-l border-gray-100 min-w-[80px]">
+          {cena !== null ? (
+            <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{cena.toLocaleString("cs-CZ")} Kč</span>
+          ) : (
+            <span className="text-gray-300 text-sm">—</span>
+          )}
         </div>
 
         {/* Stav badge */}
