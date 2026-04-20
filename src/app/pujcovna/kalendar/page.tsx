@@ -754,6 +754,52 @@ function ModalRezervace({
               <textarea name="notes" value={form.notes} onChange={handleChange} rows={2} placeholder="Volitelná poznámka..." className={inputClass} />
             </div>
 
+            {/* Shrnutí ceny */}
+            {(() => {
+              const dni = pocetDni(form.start_date, form.end_date)
+              function cenaPolozky(pol: Polozka, pocet: number): number | null {
+                if (pol.cena_typ === "fixni") {
+                  if (!pol.cena_fixni) return null
+                  return pol.cena_fixni * dni * pocet
+                }
+                const tier = stupne.find(s => s.polozka_id === pol.id && s.dni_od <= dni && (s.dni_do === null || s.dni_do >= dni))
+                return tier ? tier.cena_za_den * dni * pocet : null
+              }
+              const hlavniPol = polozky.find(p => p.id === Number(form.item_id))
+              const cenaStan = hlavniPol ? cenaPolozky(hlavniPol, 1) : null
+              const radkyPrisl = Object.entries(prisl)
+                .filter(([, count]) => count > 0)
+                .map(([idStr, count]) => {
+                  const pol = polozky.find(p => p.id === Number(idStr))
+                  return { name: pol?.name ?? "?", cena: pol ? cenaPolozky(pol, count) : null, pocet: count }
+                })
+              const majakouCenu = cenaStan !== null || radkyPrisl.some(r => r.cena !== null)
+              if (!majakouCenu) return null
+              const celkem = (cenaStan ?? 0) + radkyPrisl.reduce((s, r) => s + (r.cena ?? 0), 0)
+              return (
+                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                  <div className="space-y-1.5">
+                    {cenaStan !== null && hlavniPol && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">{hlavniPol.name} <span className="text-gray-400">({dni} dní)</span></span>
+                        <span className="font-medium text-gray-900">{cenaStan.toLocaleString("cs-CZ")} Kč</span>
+                      </div>
+                    )}
+                    {radkyPrisl.map((r, i) => r.cena !== null && (
+                      <div key={i} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{r.name}{r.pocet > 1 ? ` ×${r.pocet}` : ""}</span>
+                        <span className="font-medium text-gray-900">{r.cena.toLocaleString("cs-CZ")} Kč</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between pt-2 border-t border-emerald-200 mt-1">
+                      <span className="text-sm font-bold text-gray-700">Celkem</span>
+                      <span className="text-base font-bold text-emerald-700">{celkem.toLocaleString("cs-CZ")} Kč</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* Panel příslušenství — pouze při výběru stanu */}
             {jeStanVybran && (
               <div className="rounded-xl overflow-hidden border border-gray-200">
@@ -806,52 +852,6 @@ function ModalRezervace({
                 </div>
               </div>
             )}
-
-            {/* Shrnutí ceny */}
-            {(() => {
-              const dni = pocetDni(form.start_date, form.end_date)
-              function cenaPolozky(pol: Polozka, pocet: number): number | null {
-                if (pol.cena_typ === "fixni") {
-                  if (!pol.cena_fixni) return null
-                  return pol.cena_fixni * dni * pocet
-                }
-                const tier = stupne.find(s => s.polozka_id === pol.id && s.dni_od <= dni && (s.dni_do === null || s.dni_do >= dni))
-                return tier ? tier.cena_za_den * dni * pocet : null
-              }
-              const hlavniPol = polozky.find(p => p.id === Number(form.item_id))
-              const cenaStan = hlavniPol ? cenaPolozky(hlavniPol, 1) : null
-              const radkyPrisl = Object.entries(prisl)
-                .filter(([, count]) => count > 0)
-                .map(([idStr, count]) => {
-                  const pol = polozky.find(p => p.id === Number(idStr))
-                  return { name: pol?.name ?? "?", cena: pol ? cenaPolozky(pol, count) : null, pocet: count }
-                })
-              const majakouCenu = cenaStan !== null || radkyPrisl.some(r => r.cena !== null)
-              if (!majakouCenu) return null
-              const celkem = (cenaStan ?? 0) + radkyPrisl.reduce((s, r) => s + (r.cena ?? 0), 0)
-              return (
-                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
-                  <div className="space-y-1.5">
-                    {cenaStan !== null && hlavniPol && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">{hlavniPol.name} <span className="text-gray-400">({dni} dní)</span></span>
-                        <span className="font-medium text-gray-900">{cenaStan.toLocaleString("cs-CZ")} Kč</span>
-                      </div>
-                    )}
-                    {radkyPrisl.map((r, i) => r.cena !== null && (
-                      <div key={i} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{r.name}{r.pocet > 1 ? ` ×${r.pocet}` : ""}</span>
-                        <span className="font-medium text-gray-900">{r.cena.toLocaleString("cs-CZ")} Kč</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between pt-2 border-t border-emerald-200 mt-1">
-                      <span className="text-sm font-bold text-gray-700">Celkem</span>
-                      <span className="text-base font-bold text-emerald-700">{celkem.toLocaleString("cs-CZ")} Kč</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
 
             {chyba && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{chyba}</p>}
           </div>
