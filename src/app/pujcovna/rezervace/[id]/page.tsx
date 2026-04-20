@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase-browser"
 
 type Rezervace = {
   id: number
@@ -38,6 +38,15 @@ type Polozka = {
   name: string
   category: string
   unit_num: number
+  cena_typ: "fixni" | "stupnovana"
+  cena_fixni: number | null
+}
+
+type Stupen = {
+  polozka_id: number
+  dni_od: number
+  dni_do: number | null
+  cena_za_den: number
 }
 
 type Historie = {
@@ -67,6 +76,35 @@ function pocetDni(start: string, end: string) {
   return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86400000) + 1
 }
 
+function formatCena(c: number) {
+  return c.toLocaleString("cs-CZ") + " Kč"
+}
+
+function vypocitejCenu(
+  polozka: Polozka,
+  stupne: Stupen[],
+  dni: number
+): { celkem: number; sazba: number; popis: string } | null {
+  if (polozka.cena_typ === "fixni") {
+    if (!polozka.cena_fixni) return null
+    return {
+      celkem: polozka.cena_fixni * dni,
+      sazba: polozka.cena_fixni,
+      popis: `${dni} ${dni === 1 ? "den" : dni < 5 ? "dny" : "dní"} × ${formatCena(polozka.cena_fixni)}/den`,
+    }
+  } else {
+    const tier = stupne.find(
+      s => s.polozka_id === polozka.id && s.dni_od <= dni && (s.dni_do === null || s.dni_do >= dni)
+    )
+    if (!tier) return null
+    return {
+      celkem: tier.cena_za_den * dni,
+      sazba: tier.cena_za_den,
+      popis: `${dni} ${dni === 1 ? "den" : dni < 5 ? "dny" : "dní"} × ${formatCena(tier.cena_za_den)}/den`,
+    }
+  }
+}
+
 export default function DetailRezervace() {
   const router = useRouter()
   const params = useParams()
@@ -74,11 +112,13 @@ export default function DetailRezervace() {
   const [zakaznik, setZakaznik] = useState<Zakaznik | null>(null)
   const [polozka, setPolozka] = useState<Polozka | null>(null)
   const [prisl, setPrisl] = useState<{ rez: Rezervace; polozka: Polozka }[]>([])
+  const [stupne, setStupne] = useState<Stupen[]>([])
   const [historie, setHistorie] = useState<Historie[]>([])
   const [loading, setLoading] = useState(true)
 
   async function nactiHistorii() {
-    const { data } = await supabase
+    const sb = createClient()
+    const { data } = await sb
       .from("pujcovna_rezervace_historie")
       .select("id, created_at, stav")
       .eq("rezervace_id", params.id)
@@ -88,38 +128,50 @@ export default function DetailRezervace() {
 
   async function zmenStav(novyStav: string) {
     if (!rez || novyStav === rez.stav) return
-    await supabase.from("pujcovna_rezervace").update({ stav: novyStav }).eq("id", rez.id)
-    await supabase.from("pujcovna_rezervace_historie").insert([{ rezervace_id: rez.id, stav: novyStav }])
+    const sb = createClient()
+    await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("id", rez.id)
+    await sb.from("pujcovna_rezervace_historie").insert([{ rezervace_id: rez.id, stav: novyStav }])
     setRez({ ...rez, stav: novyStav })
     nactiHistorii()
   }
 
   useEffect(() => {
     async function nacti() {
-      const { data: r } = await supabase.from("pujcovna_rezervace").select("*").eq("id", params.id).single()
+      const sb = createClient()
+      const { data: r } = await sb.from("pujcovna_rezervace").select("*").eq("id", params.id).single()
       if (!r) { setLoading(false); return }
       setRez(r)
 
       if (r.zakaznik_id) {
-        const { data: zak } = await supabase.from("zakaznici").select("*").eq("id", r.zakaznik_id).single()
+        const { data: zak } = await sb.from("zakaznici").select("*").eq("id", r.zakaznik_id).single()
         if (zak) setZakaznik(zak)
       }
 
-      const { data: p } = await supabase.from("pujcovna_polozky").select("*").eq("id", r.item_id).single()
+      const { data: p } = await sb.from("pujcovna_polozky").select("*").eq("id", r.item_id).single()
       setPolozka(p)
 
+      let vsechnyItemIds: number[] = [r.item_id]
+
       if (r.group_id) {
-        const { data: skupRez } = await supabase
+        const { data: skupRez } = await sb
           .from("pujcovna_rezervace").select("*")
           .eq("group_id", r.group_id)
           .neq("id", r.id)
         if (skupRez && skupRez.length > 0) {
           const itemIds = [...new Set(skupRez.map((x: Rezervace) => x.item_id))]
-          const { data: polozky } = await supabase.from("pujcovna_polozky").select("*").in("id", itemIds)
+          vsechnyItemIds = [...vsechnyItemIds, ...itemIds]
+          const { data: polozky } = await sb.from("pujcovna_polozky").select("*").in("id", itemIds)
           const polMap = Object.fromEntries((polozky ?? []).map((x: Polozka) => [x.id, x]))
           setPrisl(skupRez.map((x: Rezervace) => ({ rez: x, polozka: polMap[x.item_id] })))
         }
       }
+
+      // Načti stupňované ceny pro všechny položky v rezervaci
+      const { data: st } = await sb
+        .from("pujcovna_ceny_stupne")
+        .select("*")
+        .in("polozka_id", vsechnyItemIds)
+      setStupne(st ?? [])
 
       setLoading(false)
     }
@@ -142,6 +194,15 @@ export default function DetailRezervace() {
   const stanLabel = polozka.unit_num > 1 ? `${polozka.name} ${rez.unit_index + 1}` : polozka.name
   const dni = pocetDni(rez.start_date, rez.end_date)
 
+  // Výpočet cen
+  const cenaStan = vypocitejCenu(polozka, stupne, dni)
+  const cenyPrisl = prisl.map(({ rez: r, polozka: p }) => ({
+    name: p?.name ?? "—",
+    vypocet: p ? vypocitejCenu(p, stupne, pocetDni(r.start_date, r.end_date)) : null,
+  }))
+  const majakoukolicenu = cenaStan || cenyPrisl.some(c => c.vypocet)
+  const celkem = (cenaStan?.celkem ?? 0) + cenyPrisl.reduce((s, c) => s + (c.vypocet?.celkem ?? 0), 0)
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="w-full bg-emerald-700 py-5">
@@ -151,7 +212,6 @@ export default function DetailRezervace() {
             <h1 className="text-xl font-bold text-white">Detail výpůjčky</h1>
           </div>
           <div className="flex items-center gap-2">
-            {/* Výběr stavu */}
             <select
               value={rez.stav ?? "rezervace"}
               onChange={(e) => zmenStav(e.target.value)}
@@ -161,7 +221,6 @@ export default function DetailRezervace() {
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
-            {/* Upravit */}
             <button
               onClick={() => router.push(`/pujcovna/kalendar?edit=${params.id}`)}
               className="bg-white/10 hover:bg-white/20 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
@@ -284,6 +343,50 @@ export default function DetailRezervace() {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Cena */}
+        {majakoukolicenu && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Cena</h3>
+            <div className="space-y-3">
+
+              {/* Stan */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{stanLabel}</p>
+                  {cenaStan && (
+                    <p className="text-xs text-gray-400 mt-0.5">{cenaStan.popis}</p>
+                  )}
+                </div>
+                <p className="text-sm font-semibold text-gray-900 shrink-0 ml-4">
+                  {cenaStan ? formatCena(cenaStan.celkem) : <span className="text-gray-400 font-normal">—</span>}
+                </p>
+              </div>
+
+              {/* Příslušenství */}
+              {cenyPrisl.map((c, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{c.name}</p>
+                    {c.vypocet && (
+                      <p className="text-xs text-gray-400 mt-0.5">{c.vypocet.popis}</p>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900 shrink-0 ml-4">
+                    {c.vypocet ? formatCena(c.vypocet.celkem) : <span className="text-gray-400 font-normal">—</span>}
+                  </p>
+                </div>
+              ))}
+
+              {/* Celkem */}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                <p className="text-sm font-bold text-gray-700">Celkem</p>
+                <p className="text-lg font-bold text-emerald-700">{formatCena(celkem)}</p>
+              </div>
+
             </div>
           </div>
         )}
