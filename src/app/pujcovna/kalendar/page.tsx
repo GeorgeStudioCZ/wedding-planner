@@ -14,6 +14,7 @@ type Polozka = {
   sort_order: number
   cena_typ: "fixni" | "stupnovana" | "kusova"
   cena_fixni: number | null
+  neomezene: boolean
 }
 
 type Stupen = {
@@ -519,7 +520,7 @@ function ModalRezervace({
         const re = new Date(r.end_date)
         return start <= re && end >= rs
       }).length
-      vysl[p.id] = Math.max(0, p.unit_num - obsazeno)
+      vysl[p.id] = p.neomezene ? 999 : Math.max(0, p.unit_num - obsazeno)
     }
     setDostupnost(vysl)
   }, [form.start_date, form.end_date, form.item_id, jeStanVybran])
@@ -832,7 +833,7 @@ function ModalRezervace({
                             <div key={p.id} className={`flex items-center gap-3 px-4 py-2.5 ${nedostupne && vybrano === 0 ? "opacity-40" : ""}`}>
                               <span className="flex-1 text-sm text-gray-700">{p.name}</span>
                               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full mr-2 ${nedostupne && vybrano === 0 ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-700"}`}>
-                                {nedostupne && vybrano === 0 ? "nedost." : `${volnych} vol.`}
+                                {nedostupne && vybrano === 0 ? "nedost." : p.neomezene ? "∞" : `${volnych} vol.`}
                               </span>
                               <div className="flex items-center gap-1">
                                 <button
@@ -844,8 +845,8 @@ function ModalRezervace({
                                 <span className="w-6 text-center text-sm font-semibold text-gray-800">{vybrano}</span>
                                 <button
                                   type="button"
-                                  disabled={vybrano >= volnych}
-                                  onClick={() => setPrisl(prev => ({ ...prev, [p.id]: Math.min(volnych, vybrano + 1) }))}
+                                  disabled={!p.neomezene && vybrano >= volnych}
+                                  onClick={() => setPrisl(prev => ({ ...prev, [p.id]: vybrano + 1 }))}
                                   className="w-7 h-7 rounded-lg bg-emerald-100 hover:bg-emerald-200 disabled:opacity-30 text-emerald-700 font-bold text-lg flex items-center justify-center transition-colors"
                                 >+</button>
                               </div>
