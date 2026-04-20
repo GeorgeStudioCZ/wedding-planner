@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase-browser"
 
 type Polozka = {
   id: number
@@ -28,7 +27,6 @@ const VYCHOZI_STUPNE: Omit<Stupen, "polozka_id">[] = [
 ]
 
 export default function Cenik() {
-  const router = useRouter()
   const [polozky, setPolozky] = useState<Polozka[]>([])
   const [stupne, setStupne] = useState<Record<number, Stupen[]>>({})
   const [loading, setLoading] = useState(true)
@@ -36,9 +34,10 @@ export default function Cenik() {
 
   useEffect(() => {
     async function nacti() {
+      const sb = createClient()
       const [{ data: pol }, { data: st }] = await Promise.all([
-        supabase.from("pujcovna_polozky").select("id, name, category, sort_order, cena_typ, cena_fixni").order("sort_order"),
-        supabase.from("pujcovna_ceny_stupne").select("*").order("dni_od"),
+        sb.from("pujcovna_polozky").select("id, name, category, sort_order, cena_typ, cena_fixni").order("sort_order"),
+        sb.from("pujcovna_ceny_stupne").select("*").order("dni_od"),
       ])
       setPolozky(pol ?? [])
       const mapa: Record<number, Stupen[]> = {}
@@ -54,24 +53,28 @@ export default function Cenik() {
 
   async function ulozPolozku(p: Polozka) {
     setUkladam(p.id)
-    await supabase.from("pujcovna_polozky")
+    const sb = createClient()
+
+    await sb.from("pujcovna_polozky")
       .update({ cena_typ: p.cena_typ, cena_fixni: p.cena_fixni })
       .eq("id", p.id)
 
     if (p.cena_typ === "stupnovana") {
       const stPolozky = stupne[p.id] ?? VYCHOZI_STUPNE.map(s => ({ ...s, polozka_id: p.id }))
-      // Smazat staré a vložit nové
-      await supabase.from("pujcovna_ceny_stupne").delete().eq("polozka_id", p.id)
-      await supabase.from("pujcovna_ceny_stupne").insert(
+      await sb.from("pujcovna_ceny_stupne").delete().eq("polozka_id", p.id)
+      await sb.from("pujcovna_ceny_stupne").insert(
         stPolozky.map(s => ({ polozka_id: p.id, dni_od: s.dni_od, dni_do: s.dni_do, cena_za_den: s.cena_za_den }))
       )
+    } else {
+      // Pokud přepnuto na fixní, smaž staré stupně
+      await sb.from("pujcovna_ceny_stupne").delete().eq("polozka_id", p.id)
     }
+
     setUkladam(null)
   }
 
   function updatePolozka(id: number, changes: Partial<Polozka>) {
     setPolozky(prev => prev.map(p => p.id === id ? { ...p, ...changes } : p))
-    // Pokud přepínáme na stupňovanou a ještě nemáme stupně, inicializujeme
     if (changes.cena_typ === "stupnovana" && !stupne[id]) {
       setStupne(prev => ({
         ...prev,
