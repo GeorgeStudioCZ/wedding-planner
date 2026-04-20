@@ -185,7 +185,7 @@ function Pujcovna() {
 
   function klikNaRezervaci(e: React.MouseEvent, rez: Rezervace) {
     e.stopPropagation()
-    setModal({ mode: "edit", rezervace: rez })
+    router.push(`/pujcovna/rezervace/${rez.id}`)
   }
 
   const dnesIndex = Math.round((new Date().setHours(0,0,0,0) - SEZONA_START.getTime()) / (1000 * 60 * 60 * 24))
