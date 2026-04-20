@@ -54,14 +54,17 @@ const MESICE = [
   { label: "Říjen",    value: 9 },
 ]
 
-const BARVY = [
-  { value: "#f43f5e", label: "Růžová" },
-  { value: "#3b82f6", label: "Modrá" },
-  { value: "#10b981", label: "Zelená" },
-  { value: "#f59e0b", label: "Oranžová" },
-  { value: "#8b5cf6", label: "Fialová" },
-  { value: "#06b6d4", label: "Tyrkysová" },
+const BARVY_STANU: { klic: string; barva: string }[] = [
+  { klic: "malý",    barva: "#F23753" },
+  { klic: "střední", barva: "#3477F5" },
+  { klic: "velký",   barva: "#F3940E" },
 ]
+
+function barvaStanu(pol: Polozka | undefined): string {
+  if (!pol) return "#10b981"
+  const name = pol.name.toLowerCase()
+  return BARVY_STANU.find(b => name.includes(b.klic))?.barva ?? "#10b981"
+}
 
 function datumNaDen(datum: string): number {
   const d = new Date(datum)
@@ -467,13 +470,19 @@ function ModalRezervace({
 
   const [zakaznikId, setZakaznikId] = useState<number | null>(editRezervace?.zakaznik_id ?? null)
 
+  const pocatecniItemId = editRezervace?.item_id ?? initialItemId ?? (polozky[0]?.id ?? 0)
+  const pocatecniPol = polozky.find(p => p.id === pocatecniItemId)
+  const pocatecniBarva = stanyIds.has(pocatecniItemId)
+    ? barvaStanu(pocatecniPol)
+    : (editRezervace?.color ?? "#10b981")
+
   const [form, setForm] = useState({
-    item_id: editRezervace?.item_id ?? initialItemId ?? (polozky[0]?.id ?? 0),
+    item_id: pocatecniItemId,
     unit_index: editRezervace?.unit_index ?? initialUnitIndex ?? 0,
     customer: editRezervace?.customer ?? "",
     start_date: editRezervace?.start_date ?? initialStartDate ?? dnesStr,
     end_date: editRezervace?.end_date ?? initialStartDate ?? dnesStr,
-    color: editRezervace?.color ?? "#10b981",
+    color: pocatecniBarva,
     notes: editRezervace?.notes ?? "",
     vozidlo: editRezervace?.vozidlo ?? "",
     cas_vyzvednuti: editRezervace?.cas_vyzvednuti ?? "",
@@ -528,7 +537,12 @@ function ModalRezervace({
   }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
-    setForm({ ...form, [e.target.name]: e.target.value })
+    const updated = { ...form, [e.target.name]: e.target.value }
+    if (e.target.name === "item_id") {
+      const pol = polozky.find(p => p.id === Number(e.target.value))
+      if (pol && stanyIds.has(pol.id)) updated.color = barvaStanu(pol)
+    }
+    setForm(updated)
   }
 
   function jeKonflikt(): boolean {
@@ -737,17 +751,6 @@ function ModalRezervace({
                 <option value="vlastni">Mám vlastní</option>
                 <option value="pujcit">Chci půjčit</option>
               </select>
-            </div>
-            <div>
-              <label className={labelClass}>Barva</label>
-              <div className="flex gap-2 flex-wrap">
-                {BARVY.map(b => (
-                  <button key={b.value} type="button"
-                    onClick={() => setForm({ ...form, color: b.value })}
-                    className={`w-7 h-7 rounded-full transition-transform ${form.color === b.value ? "ring-2 ring-offset-2 ring-gray-400 scale-110" : ""}`}
-                    style={{ backgroundColor: b.value }} title={b.label} />
-                ))}
-              </div>
             </div>
             <div>
               <label className={labelClass}>Poznámka</label>
