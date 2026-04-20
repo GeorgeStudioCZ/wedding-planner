@@ -108,10 +108,11 @@ export default function PujcovnaDashboard() {
 
   useEffect(() => {
     async function nacti() {
+      const sb = createClient()
       const [{ data: pol }, { data: rez }, { data: st }] = await Promise.all([
         supabase.from("pujcovna_polozky").select("*").order("sort_order"),
         supabase.from("pujcovna_rezervace").select("*"),
-        supabase.from("pujcovna_ceny_stupne").select("*"),
+        sb.from("pujcovna_ceny_stupne").select("*"),
       ])
       setPolozky(pol ?? [])
       setRezervace(rez ?? [])
