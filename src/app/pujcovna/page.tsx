@@ -197,15 +197,15 @@ export default function PujcovnaDashboard() {
       <Link href={`/pujcovna/rezervace/${r.id}`} className="flex items-stretch hover:bg-gray-50 transition-colors">
 
         {/* Datum */}
-        <div className="flex flex-col items-center justify-center px-3 md:px-5 py-4 border-r border-gray-100 min-w-[60px]">
-          <span className="text-base md:text-lg font-bold text-gray-900 leading-none">
+        <div className="flex flex-col items-center justify-center px-3 py-4 border-r border-gray-100 shrink-0" style={{ width: 64 }}>
+          <span className="text-base font-bold text-gray-900 leading-none">
             {String(new Date(r.start_date).getDate()).padStart(2, "0")}.{String(new Date(r.start_date).getMonth() + 1).padStart(2, "0")}.
           </span>
-          <span className="text-xs md:text-sm text-gray-400 mt-0.5">{new Date(r.start_date).getFullYear()}</span>
+          <span className="text-xs text-gray-400 mt-0.5">{new Date(r.start_date).getFullYear()}</span>
         </div>
 
         {/* Zákazník + stan */}
-        <div className="flex-1 px-3 md:px-5 py-4 flex flex-col justify-center min-w-0">
+        <div className="flex-1 px-3 md:px-4 py-4 flex flex-col justify-center min-w-0">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
             <p className="font-semibold text-gray-900 truncate">{r.customer}</p>
@@ -214,7 +214,7 @@ export default function PujcovnaDashboard() {
         </div>
 
         {/* Cena výpůjčky */}
-        <div className="flex flex-col items-end justify-center px-3 md:px-4 py-4 border-l border-gray-100 min-w-[80px]">
+        <div className="flex flex-col items-end justify-center px-3 py-4 border-l border-gray-100 shrink-0" style={{ width: 100 }}>
           {cena !== null ? (
             <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{cena.toLocaleString("cs-CZ")} Kč</span>
           ) : (
@@ -223,20 +223,20 @@ export default function PujcovnaDashboard() {
         </div>
 
         {/* Stav badge */}
-        <div className="flex flex-col items-center justify-center px-2 md:px-4 py-4 border-l border-gray-100">
+        <div className="flex flex-col items-center justify-center px-2 py-4 border-l border-gray-100 shrink-0" style={{ width: 110 }}>
           <span className={`text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap ${info.barva}`}>
             {info.label}
           </span>
         </div>
 
         {/* Termín */}
-        <div className="hidden md:flex flex-col items-end justify-center px-5 py-4 border-l border-gray-100 min-w-[100px]">
+        <div className="hidden md:flex flex-col items-end justify-center px-3 py-4 border-l border-gray-100 shrink-0" style={{ width: 120 }}>
           <p className="font-semibold text-gray-900 text-sm">{formatDatum(r.start_date)} – {formatDatum(r.end_date)}</p>
           <p className="text-xs text-gray-400 mt-0.5">{dni} {dni === 1 ? "den" : dni < 5 ? "dny" : "dní"}</p>
         </div>
 
         {/* Countdown */}
-        <div className="flex flex-col items-center justify-center px-4 py-4 border-l border-gray-100 min-w-[80px]">
+        <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100 shrink-0" style={{ width: 56 }}>
           {r.stav === "vypujceno" ? (
             <>
               <span className="text-xs text-gray-400">Vrácení za</span>
