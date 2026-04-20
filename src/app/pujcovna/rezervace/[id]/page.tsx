@@ -38,7 +38,7 @@ type Polozka = {
   name: string
   category: string
   unit_num: number
-  cena_typ: "fixni" | "stupnovana"
+  cena_typ: "fixni" | "stupnovana" | "kusova"
   cena_fixni: number | null
 }
 
@@ -85,6 +85,14 @@ function vypocitejCenu(
   stupne: Stupen[],
   dni: number
 ): { celkem: number; sazba: number; popis: string } | null {
+  if (polozka.cena_typ === "kusova") {
+    if (!polozka.cena_fixni) return null
+    return {
+      celkem: polozka.cena_fixni,
+      sazba: polozka.cena_fixni,
+      popis: `1 ks`,
+    }
+  }
   if (polozka.cena_typ === "fixni") {
     if (!polozka.cena_fixni) return null
     return {
@@ -92,16 +100,16 @@ function vypocitejCenu(
       sazba: polozka.cena_fixni,
       popis: `${dni} ${dni === 1 ? "den" : dni < 5 ? "dny" : "dní"} × ${formatCena(polozka.cena_fixni)}/den`,
     }
-  } else {
-    const tier = stupne.find(
-      s => s.polozka_id === polozka.id && s.dni_od <= dni && (s.dni_do === null || s.dni_do >= dni)
-    )
-    if (!tier) return null
-    return {
-      celkem: tier.cena_za_den * dni,
-      sazba: tier.cena_za_den,
-      popis: `${dni} ${dni === 1 ? "den" : dni < 5 ? "dny" : "dní"} × ${formatCena(tier.cena_za_den)}/den`,
-    }
+  }
+  // stupnovana
+  const tier = stupne.find(
+    s => s.polozka_id === polozka.id && s.dni_od <= dni && (s.dni_do === null || s.dni_do >= dni)
+  )
+  if (!tier) return null
+  return {
+    celkem: tier.cena_za_den * dni,
+    sazba: tier.cena_za_den,
+    popis: `${dni} ${dni === 1 ? "den" : dni < 5 ? "dny" : "dní"} × ${formatCena(tier.cena_za_den)}/den`,
   }
 }
 

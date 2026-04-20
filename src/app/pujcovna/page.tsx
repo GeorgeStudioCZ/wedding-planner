@@ -12,7 +12,7 @@ type Polozka = {
   category: string
   unit_num: number
   sort_order: number
-  cena_typ: "fixni" | "stupnovana"
+  cena_typ: "fixni" | "stupnovana" | "kusova"
   cena_fixni: number | null
 }
 
@@ -154,6 +154,9 @@ export default function PujcovnaDashboard() {
   }
 
   function vypocitejCenuPolozky(polozka: Polozka, dni: number): number | null {
+    if (polozka.cena_typ === "kusova") {
+      return polozka.cena_fixni ?? null
+    }
     if (polozka.cena_typ === "fixni") {
       if (!polozka.cena_fixni) return null
       return polozka.cena_fixni * dni

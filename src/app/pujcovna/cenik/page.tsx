@@ -8,7 +8,7 @@ type Polozka = {
   name: string
   category: string
   sort_order: number
-  cena_typ: "fixni" | "stupnovana"
+  cena_typ: "fixni" | "stupnovana" | "kusova"
   cena_fixni: number | null
 }
 
@@ -66,7 +66,6 @@ export default function Cenik() {
         stPolozky.map(s => ({ polozka_id: p.id, dni_od: s.dni_od, dni_do: s.dni_do, cena_za_den: s.cena_za_den }))
       )
     } else {
-      // Pokud přepnuto na fixní, smaž staré stupně
       await sb.from("pujcovna_ceny_stupne").delete().eq("polozka_id", p.id)
     }
 
@@ -118,7 +117,6 @@ export default function Cenik() {
               <div className="divide-y divide-gray-100">
                 {polozky.filter(p => p.category === kat).map(p => {
                   const stPolozky = stupne[p.id] ?? VYCHOZI_STUPNE.map(s => ({ ...s, polozka_id: p.id }))
-                  const jeStupnovana = p.cena_typ === "stupnovana"
                   return (
                     <div key={p.id} className="p-5">
                       {/* Název + přepínač typu */}
@@ -127,21 +125,27 @@ export default function Cenik() {
                         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 shrink-0">
                           <button
                             onClick={() => updatePolozka(p.id, { cena_typ: "fixni" })}
-                            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${!jeStupnovana ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+                            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${p.cena_typ === "fixni" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
                           >
                             Fixní / den
                           </button>
                           <button
                             onClick={() => updatePolozka(p.id, { cena_typ: "stupnovana" })}
-                            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${jeStupnovana ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+                            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${p.cena_typ === "stupnovana" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
                           >
                             Stupňovaná
+                          </button>
+                          <button
+                            onClick={() => updatePolozka(p.id, { cena_typ: "kusova" })}
+                            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${p.cena_typ === "kusova" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+                          >
+                            Kusová
                           </button>
                         </div>
                       </div>
 
                       {/* Cena */}
-                      {!jeStupnovana ? (
+                      {p.cena_typ === "fixni" && (
                         <div className="flex items-center gap-3">
                           <span className="text-sm text-gray-500 w-20">1 den</span>
                           <input
@@ -153,7 +157,21 @@ export default function Cenik() {
                           />
                           <span className="text-sm text-gray-400">Kč / den</span>
                         </div>
-                      ) : (
+                      )}
+                      {p.cena_typ === "kusova" && (
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-500 w-20">1 ks</span>
+                          <input
+                            type="number"
+                            value={p.cena_fixni ?? ""}
+                            onChange={e => updatePolozka(p.id, { cena_fixni: Number(e.target.value) || null })}
+                            placeholder="0"
+                            className={inputCls}
+                          />
+                          <span className="text-sm text-gray-400">Kč / ks</span>
+                        </div>
+                      )}
+                      {p.cena_typ === "stupnovana" && (
                         <div className="space-y-2">
                           {stPolozky.map((s, i) => (
                             <div key={i} className="flex items-center gap-3">

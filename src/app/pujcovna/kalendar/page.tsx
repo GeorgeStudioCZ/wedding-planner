@@ -12,7 +12,7 @@ type Polozka = {
   category: string
   unit_num: number
   sort_order: number
-  cena_typ: "fixni" | "stupnovana"
+  cena_typ: "fixni" | "stupnovana" | "kusova"
   cena_fixni: number | null
 }
 
@@ -761,6 +761,9 @@ function ModalRezervace({
             {(() => {
               const dni = pocetDni(form.start_date, form.end_date)
               function cenaPolozky(pol: Polozka, pocet: number): number | null {
+                if (pol.cena_typ === "kusova") {
+                  return pol.cena_fixni != null ? pol.cena_fixni * pocet : null
+                }
                 if (pol.cena_typ === "fixni") {
                   if (!pol.cena_fixni) return null
                   return pol.cena_fixni * dni * pocet
