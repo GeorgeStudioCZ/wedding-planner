@@ -197,7 +197,7 @@ export default function PujcovnaDashboard() {
       <Link href={`/pujcovna/rezervace/${r.id}`} className="flex items-stretch hover:bg-gray-50 transition-colors">
 
         {/* Datum */}
-        <div className="flex flex-col items-center justify-center px-3 py-4 border-r border-gray-100 shrink-0" style={{ width: 64 }}>
+        <div className="flex flex-col items-center justify-center px-3 py-4 border-r border-gray-100 shrink-0 text-center" style={{ width: 64 }}>
           <span className="text-base font-bold text-gray-900 leading-none">
             {String(new Date(r.start_date).getDate()).padStart(2, "0")}.{String(new Date(r.start_date).getMonth() + 1).padStart(2, "0")}.
           </span>
@@ -236,7 +236,7 @@ export default function PujcovnaDashboard() {
         </div>
 
         {/* Countdown */}
-        <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100 shrink-0" style={{ width: 56 }}>
+        <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100 shrink-0" style={{ width: 70 }}>
           {r.stav === "vypujceno" ? (
             <>
               <span className="text-xs text-gray-400">Vrácení za</span>
