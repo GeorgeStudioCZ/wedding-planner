@@ -248,8 +248,7 @@ export default function PujcovnaDashboard() {
             <span className="text-gray-300 text-sm">—</span>
           ) : (
             <>
-              <span className="text-xs text-gray-400">Za</span>
-              <span className="text-2xl font-bold text-emerald-500 leading-none mt-0.5">{dniDo}</span>
+              <span className="text-2xl font-bold text-emerald-500 leading-none">{dniDo}</span>
               <span className="text-xs text-gray-400">dní</span>
             </>
           )}
