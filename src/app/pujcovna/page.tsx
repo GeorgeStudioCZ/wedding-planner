@@ -147,6 +147,18 @@ export default function PujcovnaDashboard() {
     return { label, pct }
   })
 
+  const mesicniStats = MESICE.map(({ label, mesic }) => {
+    const rezMesice = letosRez.filter(r =>
+      r.stav !== "storno" && new Date(r.start_date).getMonth() === mesic
+    )
+    const pocet = rezMesice.length
+    const hruba = rezMesice.reduce((s, r) => s + (celkovaCenaRezervace(r) ?? 0), 0)
+    const cisty = Math.round(hruba / 1.21)
+    return { label, pocet, cisty }
+  })
+  const maxPocet = Math.max(...mesicniStats.map(m => m.pocet), 1)
+  const maxCisty = Math.max(...mesicniStats.map(m => m.cisty), 1)
+
   function stanLabel(itemId: number, unitIndex: number) {
     const p = polozky.find(x => x.id === itemId)
     if (!p) return "—"
@@ -389,6 +401,43 @@ export default function PujcovnaDashboard() {
                   <span className="text-[10px] text-gray-500 font-medium text-center leading-tight">{label}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Graf rezervací a příjmu po měsících */}
+        {!loading && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-2">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Rezervace a příjem bez DPH</p>
+              <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-emerald-400" />Rezervace</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-blue-400" />Příjem bez DPH</span>
+              </div>
+            </div>
+            <div className="flex gap-2" style={{ height: 130 }}>
+              {mesicniStats.map(({ label, pocet, cisty }) => {
+                const cH = pocet > 0 ? Math.max(4, Math.round((pocet / maxPocet) * 72)) : 0
+                const mH = cisty > 0 ? Math.max(4, Math.round((cisty / maxCisty) * 72)) : 0
+                return (
+                  <div key={label} className="flex-1 flex flex-col items-center justify-end gap-1">
+                    <div className="w-full flex items-end gap-0.5" style={{ height: 84 }}>
+                      {/* Počet rezervací */}
+                      <div className="flex-1 flex flex-col items-center justify-end h-full">
+                        {pocet > 0 && <span className="text-[9px] font-bold text-emerald-600 leading-none mb-0.5">{pocet}</span>}
+                        <div className="w-full rounded-t-sm transition-all duration-500" style={{ height: cH, backgroundColor: "#34d399" }} />
+                      </div>
+                      {/* Příjem bez DPH */}
+                      <div className="flex-1 flex flex-col items-center justify-end h-full">
+                        {cisty > 0 && <span className="text-[9px] font-bold text-blue-500 leading-none mb-0.5">{Math.round(cisty / 1000)}k</span>}
+                        <div className="w-full rounded-t-sm transition-all duration-500" style={{ height: mH, backgroundColor: "#60a5fa" }} />
+                      </div>
+                    </div>
+                    <div className="w-full h-0.5 bg-gray-200 rounded" />
+                    <span className="text-[10px] text-gray-500 font-medium text-center leading-tight">{label}</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
