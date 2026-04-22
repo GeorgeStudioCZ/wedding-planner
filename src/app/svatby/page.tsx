@@ -658,12 +658,12 @@ export default function Home() {
   }
 
   // ── ZakazkyBlok ─────────────────────────────────────────────────────────────
-  function ZakazkyBlok({ titulek, dot, zakazky, vychozi = true, noTopMargin = false }: { titulek: string; dot: string; zakazky: Zakazka[]; vychozi?: boolean; noTopMargin?: boolean }) {
+  function ZakazkyBlok({ titulek, dot, zakazky, vychozi = true }: { titulek: string; dot: string; zakazky: Zakazka[]; vychozi?: boolean }) {
     const [open, setOpen] = useState(vychozi)
     if (zakazky.length === 0) return null
     const sorted = [...zakazky].sort((a, b) => (a.datum_svatby || "").localeCompare(b.datum_svatby || ""))
     return (
-      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)", marginTop: noTopMargin ? 0 : 16 }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
         <button onClick={() => setOpen(o => !o)} style={{ width: "100%", padding: "14px 18px", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer" }}>
           <span style={{ width: 8, height: 8, borderRadius: 99, background: dot }} />
           <span style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)" }}>{titulek}</span>
@@ -831,10 +831,10 @@ export default function Home() {
           {/* konec sloupce 2 */}
 
           {/* ── SLOUPEC 3 — všechny ostatní stavy ────────────────────────── */}
-          <div className="mt-4 xl:mt-0 min-w-0">
+          <div className="mt-4 xl:mt-0 min-w-0" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
             {/* Probíhá jednání */}
-            <ZakazkyBlok titulek="Probíhá jednání" dot="#fbbf24" zakazky={probihaJednani} vychozi={true} noTopMargin={true} />
+            <ZakazkyBlok titulek="Probíhá jednání" dot="#fbbf24" zakazky={probihaJednani} vychozi={true} />
 
             {/* Vyplněná objednávka */}
             <ZakazkyBlok titulek="Vyplněná objednávka" dot="#60a5fa" zakazky={vyplnenaObjednavka} vychozi={true} />
