@@ -553,16 +553,15 @@ export default function Home() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            Dva hlavní sloupce na xl — na menších obrazovkách stacked
-            grid-cols: levý sloupec 1fr, pravý 480 px
+            Tři hlavní sloupce na xl — na menších obrazovkách stacked
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="xl:grid xl:grid-cols-2 xl:gap-5 xl:items-start">
+        <div className="xl:grid xl:grid-cols-3 xl:gap-5 xl:items-start">
 
-          {/* ── LEVÝ SLOUPEC ─────────────────────────────────────────────── */}
+          {/* ── SLOUPEC 1 — statistiky, mapa, kalendář ───────────────────── */}
           <div className="min-w-0">
 
-            {/* Stat grid — 4 × 3 na xl */}
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+            {/* Stat grid — 3 × 4 na xl */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-3">
               <StatBox label="Letos celkem"           value={String(letosConfirmed)} />
               <StatBox label="Nadcházející svatby"    value={String(nadchazejici.length)} />
               <StatBox label="Realizováno svateb"     value={String(realizovano.length)} />
@@ -605,9 +604,9 @@ export default function Home() {
             </div>
 
           </div>
-          {/* konec levého sloupce */}
+          {/* konec sloupce 1 */}
 
-          {/* ── PRAVÝ SLOUPEC — seznam svateb ────────────────────────────── */}
+          {/* ── SLOUPEC 2 — nadcházející + aktivní zakázky ───────────────── */}
           <div className="mt-4 xl:mt-0 min-w-0">
 
             {/* Nadcházející svatby */}
@@ -633,17 +632,23 @@ export default function Home() {
               )}
             </div>
 
-            {/* Realizované — čeká odevzdání */}
-            <ZakazkyBlok titulek="Realizované — čeká odevzdání" dot="#fb923c" zakazky={realizovaneNeodevzdane} vychozi={true} />
-
-            {/* Realizované — odevzdáno */}
-            <ZakazkyBlok titulek="Realizované — odevzdáno" dot="#4ade80" zakazky={realizovaneOdevzdane} vychozi={false} />
-
             {/* Probíhá jednání */}
             <ZakazkyBlok titulek="Probíhá jednání" dot="#fbbf24" zakazky={probihaJednani} vychozi={false} />
 
             {/* Vyplněná objednávka */}
             <ZakazkyBlok titulek="Vyplněná objednávka" dot="#60a5fa" zakazky={vyplnenaObjednavka} vychozi={true} />
+
+          </div>
+          {/* konec sloupce 2 */}
+
+          {/* ── SLOUPEC 3 — realizované + dokončené ──────────────────────── */}
+          <div className="mt-4 xl:mt-0 min-w-0">
+
+            {/* Realizované — čeká na sestřihání */}
+            <ZakazkyBlok titulek="Realizované — čeká odevzdání" dot="#fb923c" zakazky={realizovaneNeodevzdane} vychozi={true} />
+
+            {/* Realizované — dokončené */}
+            <ZakazkyBlok titulek="Realizované — odevzdáno" dot="#4ade80" zakazky={realizovaneOdevzdane} vychozi={true} />
 
             {/* Error state */}
             {chyba && (
@@ -653,10 +658,10 @@ export default function Home() {
             )}
 
           </div>
-          {/* konec pravého sloupce */}
+          {/* konec sloupce 3 */}
 
         </div>
-        {/* konec dvousloupcového gridu */}
+        {/* konec třísloupcového gridu */}
 
       </div>
     </AppShell>
