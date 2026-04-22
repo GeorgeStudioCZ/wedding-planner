@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import AppShell from "@/components/AppShell"
 
 type Zakazka = {
   id: string
@@ -69,14 +70,7 @@ export default function SeznamSvateb() {
   }, [])
 
   return (
-    <main className="min-h-screen bg-gray-50">
-
-      {/* Hlavička */}
-      <div className="w-full bg-sky-100 py-6">
-        <div className="max-w-7xl mx-auto px-8 flex items-center justify-center">
-          <h1 className="text-3xl font-bold text-sky-900 tracking-wide">Seznam svateb</h1>
-        </div>
-      </div>
+    <AppShell module="wed">
 
       <div className="max-w-7xl mx-auto px-8 py-6">
 
@@ -139,6 +133,6 @@ export default function SeznamSvateb() {
           </div>
         )}
       </div>
-    </main>
+    </AppShell>
   )
 }

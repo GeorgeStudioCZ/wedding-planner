@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import MapaTrasy from "@/components/MapaTrasy"
+import AppShell from "@/components/AppShell"
 
 function PotvrzeniSmazani({ jmena, onPotvrdit, onZrusit }: {
   jmena: string
@@ -321,15 +322,15 @@ export default function DetailZakazky() {
   }
 
   if (loading) {
-    return <main className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400">Načítám...</main>
+    return <div className="flex items-center justify-center h-64 text-[var(--muted)]">Načítám...</div>
   }
 
   if (!zakazka) {
-    return <main className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400">Zakázka nenalezena.</main>
+    return <div className="flex items-center justify-center h-64 text-[var(--muted)]">Zakázka nenalezena.</div>
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <AppShell module="wed">
 
       {/* Titulní fotka */}
       {zakazka.foto_url && (
@@ -655,7 +656,7 @@ export default function DetailZakazky() {
 
         </div>
       </div>
-    </main>
+    </AppShell>
   )
 }
 

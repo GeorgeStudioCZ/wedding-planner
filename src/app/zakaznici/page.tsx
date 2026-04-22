@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import AppShell from "@/components/AppShell"
 
 type Zakaznik = {
   id: number
@@ -86,18 +87,12 @@ export default function Zakaznici() {
   const inputClass = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <AppShell module="wed">
 
-      {/* Hlavička */}
-      <div className="w-full bg-gray-900 py-5">
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <a href="/" className="text-gray-400 hover:text-white text-sm transition-colors">← Rozcestník</a>
-            <div>
-              <h1 className="text-xl font-bold text-white">Zákazníci</h1>
-              <p className="text-gray-400 text-xs mt-0.5">Centrální databáze kontaktů</p>
-            </div>
-          </div>
+      <div className="max-w-5xl mx-auto px-6 py-8">
+
+        <div className="flex items-center justify-between mb-6">
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>Zákazníci</h1>
           <button
             onClick={() => setNovyModal(true)}
             className="bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
@@ -108,9 +103,6 @@ export default function Zakaznici() {
             Nový zákazník
           </button>
         </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 py-8">
 
         {/* Filtry */}
         <div className="flex gap-3 mb-6 flex-wrap">
@@ -296,6 +288,6 @@ export default function Zakaznici() {
         </div>
       )}
 
-    </main>
+    </AppShell>
   )
 }

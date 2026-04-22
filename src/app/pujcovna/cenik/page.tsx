@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase-browser"
+import AppShell from "@/components/AppShell"
 
 type Polozka = {
   id: number
@@ -95,15 +96,7 @@ export default function Cenik() {
   const inputCls = "border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 w-28 text-right"
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="w-full bg-emerald-100 py-6">
-        <div className="max-w-3xl mx-auto px-6 relative flex items-center justify-center">
-          <a href="/pujcovna" className="absolute left-0 text-xs text-emerald-700 hover:text-emerald-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-emerald-200">
-            ← Zpět
-          </a>
-          <h1 className="text-2xl font-bold text-emerald-900">Ceník půjčovny</h1>
-        </div>
-      </div>
+    <AppShell module="van">
 
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         {loading ? (
@@ -209,6 +202,6 @@ export default function Cenik() {
           ))
         )}
       </div>
-    </main>
+    </AppShell>
   )
 }

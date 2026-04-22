@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { createClient } from "@/lib/supabase-browser"
+import AppShell from "@/components/AppShell"
 
 type Rezervace = {
   id: number
@@ -188,15 +189,11 @@ export default function DetailRezervace() {
   }, [params.id])
 
   if (loading) return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <p className="text-gray-400">Načítám...</p>
-    </main>
+    <div className="flex items-center justify-center h-64 text-[var(--muted)]">Načítám...</div>
   )
 
   if (!rez || !polozka) return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <p className="text-gray-400">Rezervace nenalezena.</p>
-    </main>
+    <div className="flex items-center justify-center h-64 text-[var(--muted)]">Rezervace nenalezena.</div>
   )
 
   const stanLabel = polozka.unit_num > 1 ? `${polozka.name} ${rez.unit_index + 1}` : polozka.name
@@ -212,13 +209,10 @@ export default function DetailRezervace() {
   const celkem = (cenaStan?.celkem ?? 0) + cenyPrisl.reduce((s, c) => s + (c.vypocet?.celkem ?? 0), 0)
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="w-full bg-emerald-700 py-5">
-        <div className="max-w-2xl mx-auto px-6 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-4 shrink-0">
-            <button onClick={() => router.back()} className="text-emerald-200 hover:text-white text-sm transition-colors">← Zpět</button>
-            <h1 className="text-xl font-bold text-white">Detail výpůjčky</h1>
-          </div>
+    <AppShell module="van">
+      <div className="max-w-2xl mx-auto px-6 py-8 space-y-5">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>Detail výpůjčky</h1>
           <div className="flex items-center gap-2">
             <select
               value={rez.stav ?? "rezervace"}
@@ -239,9 +233,6 @@ export default function DetailRezervace() {
             </button>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-6 py-8 space-y-5">
 
         {/* Barevný proužek + stan */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -437,6 +428,6 @@ export default function DetailRezervace() {
         </div>
 
       </div>
-    </main>
+    </AppShell>
   )
 }

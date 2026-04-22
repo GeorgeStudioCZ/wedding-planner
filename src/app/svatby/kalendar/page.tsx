@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
+import AppShell from "@/components/AppShell"
 
 type Zakazka = {
   id: string
@@ -120,14 +121,7 @@ export default function Kalendar() {
   }, [])
 
   return (
-    <main className="min-h-screen bg-gray-50">
-
-      {/* Hlavička */}
-      <div className="w-full bg-sky-100 py-6">
-        <div className="max-w-5xl mx-auto px-8 flex items-center justify-center">
-          <h1 className="text-3xl font-bold text-sky-900 tracking-wide">Kalendář svateb</h1>
-        </div>
-      </div>
+    <AppShell module="wed">
 
       <div className="max-w-5xl mx-auto px-8 py-6">
 
@@ -161,6 +155,6 @@ export default function Kalendar() {
         </div>
 
       </div>
-    </main>
+    </AppShell>
   )
 }

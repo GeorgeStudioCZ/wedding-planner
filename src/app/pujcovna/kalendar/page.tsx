@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
+import AppShell from "@/components/AppShell"
 
 type Polozka = {
   id: number
@@ -90,9 +91,11 @@ function pocetDni(start: string, end: string): number {
 
 export default function Page() {
   return (
-    <Suspense>
-      <Pujcovna />
-    </Suspense>
+    <AppShell module="van">
+      <Suspense>
+        <Pujcovna />
+      </Suspense>
+    </AppShell>
   )
 }
 
@@ -206,36 +209,15 @@ function Pujcovna() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">Načítám...</p>
-      </main>
+      <div className="flex items-center justify-center h-64 text-[var(--muted)]">Načítám...</div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-
-      {/* Hlavička */}
-      <div className="w-full bg-emerald-700 py-5">
-        <div className="max-w-full px-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <a href="/pujcovna" className="text-emerald-200 hover:text-white text-sm transition-colors">← Dashboard</a>
-            <h1 className="text-xl font-bold text-white">Půjčovna — Kalendář</h1>
-          </div>
-          <button
-            onClick={() => setModal({ mode: "nova" })}
-            className="bg-white hover:bg-emerald-50 text-emerald-700 font-medium text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Nová rezervace
-          </button>
-        </div>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 
       {/* Filtry + tlačítko Dnes */}
-      <div className="px-6 py-3 flex items-center gap-3 bg-white border-b border-gray-100">
+      <div className="px-6 py-3 flex items-center gap-3 bg-white border-b" style={{ borderColor: "var(--line)", flexShrink: 0 }}>
         <select
           value={kategorie}
           onChange={e => setKategorie(e.target.value)}
@@ -269,7 +251,7 @@ function Pujcovna() {
       </div>
 
       {/* Gantt — jeden scrollovatelný kontejner */}
-      <div ref={scrollRef} className="overflow-auto" style={{ height: "calc(100vh - 112px)" }}>
+      <div ref={scrollRef} className="overflow-auto" style={{ flex: "1 1 0" }}>
         <div style={{ width: LABEL_WIDTH + POCET_DNI * COL_WIDTH }}>
 
           {/* Sticky hlavička — 3 řádky: měsíce + dny + svatby */}
@@ -447,7 +429,7 @@ function Pujcovna() {
         />
       )}
 
-    </main>
+    </div>
   )
 }
 

@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { vypocitejVzdalenost } from "@/lib/vzdalenost"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
+import AppShell from "@/components/AppShell"
 
 export default function EditZakazka() {
   const router = useRouter()
@@ -143,11 +144,11 @@ export default function EditZakazka() {
   const labelClass = "block text-sm font-medium text-gray-700 mb-1"
 
   if (loading) {
-    return <main className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400">Načítám...</main>
+    return <div className="flex items-center justify-center h-64 text-[var(--muted)]">Načítám...</div>
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <AppShell module="wed">
       <div className="max-w-2xl mx-auto p-8">
         <div className="flex items-center gap-3 mb-8">
           <button
@@ -369,6 +370,6 @@ export default function EditZakazka() {
 
         </form>
       </div>
-    </main>
+    </AppShell>
   )
 }

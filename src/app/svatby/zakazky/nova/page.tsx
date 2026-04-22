@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import AppShell from "@/components/AppShell"
 import { vypocitejVzdalenost } from "@/lib/vzdalenost"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 
@@ -84,7 +85,7 @@ export default function NovaZakazka() {
   const labelClass = "block text-sm font-medium text-gray-700 mb-1"
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <AppShell module="wed">
       <div className="max-w-2xl mx-auto p-8">
         <div className="flex items-center gap-3 mb-8">
           <button
@@ -312,6 +313,6 @@ export default function NovaZakazka() {
 
         </form>
       </div>
-    </main>
+    </AppShell>
   )
 }
