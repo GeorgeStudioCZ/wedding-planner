@@ -632,19 +632,19 @@ export default function Home() {
               )}
             </div>
 
+          </div>
+          {/* konec sloupce 2 */}
+
+          {/* ── SLOUPEC 3 — všechny ostatní stavy ────────────────────────── */}
+          <div className="mt-4 xl:mt-0 min-w-0">
+
             {/* Probíhá jednání */}
-            <ZakazkyBlok titulek="Probíhá jednání" dot="#fbbf24" zakazky={probihaJednani} vychozi={false} />
+            <ZakazkyBlok titulek="Probíhá jednání" dot="#fbbf24" zakazky={probihaJednani} vychozi={true} />
 
             {/* Vyplněná objednávka */}
             <ZakazkyBlok titulek="Vyplněná objednávka" dot="#60a5fa" zakazky={vyplnenaObjednavka} vychozi={true} />
 
-          </div>
-          {/* konec sloupce 2 */}
-
-          {/* ── SLOUPEC 3 — realizované + dokončené ──────────────────────── */}
-          <div className="mt-4 xl:mt-0 min-w-0">
-
-            {/* Realizované — čeká na sestřihání */}
+            {/* Realizované — čeká odevzdání */}
             <ZakazkyBlok titulek="Realizované — čeká odevzdání" dot="#fb923c" zakazky={realizovaneNeodevzdane} vychozi={true} />
 
             {/* Realizované — dokončené */}
