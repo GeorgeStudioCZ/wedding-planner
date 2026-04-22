@@ -623,8 +623,32 @@ export default function Home() {
                 foot="tam + zpět za sezónu" />
               <KpiCard tone="mint"  label="Již ujeto km"         value={ujetoKm > 0 ? `${ujetoKm.toLocaleString("cs-CZ")} km` : "0 km"}
                 foot={celkemKm > 0 ? `${Math.round(ujetoKm / celkemKm * 100)} % z celku` : "—"} />
-              <KpiCard tone="sky"   label="Zbývá doplatit"       value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"}
-                foot="zbývá k inkasu" />
+              {/* 6. karta — šipka pro toggle v pravém dolním rohu */}
+              <div style={{ position: "relative" }}>
+                <KpiCard tone="sky" label="Zbývá doplatit" value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"}
+                  foot="zbývá k inkasu" />
+                <button
+                  onClick={() => setStatsRozsireno(v => !v)}
+                  title={statsRozsireno ? "Skrýt statistiky" : "Více statistik"}
+                  style={{
+                    position: "absolute", bottom: 10, right: 10,
+                    width: 26, height: 26,
+                    background: "rgba(255,255,255,.18)",
+                    border: "1px solid rgba(255,255,255,.35)",
+                    borderRadius: 6, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "white", fontSize: 13, lineHeight: 1,
+                    backdropFilter: "blur(4px)",
+                    transition: "background .15s",
+                  }}
+                >
+                  <span style={{
+                    display: "inline-block",
+                    transform: statsRozsireno ? "rotate(180deg)" : "none",
+                    transition: "transform .2s",
+                  }}>▾</span>
+                </button>
+              </div>
 
               {/* Dalších 6 — zobrazí se po rozbalení */}
               {statsRozsireno && <>
@@ -636,27 +660,6 @@ export default function Home() {
                 <StatBox label="Náklady na benzín"  value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
               </>}
             </div>
-
-            {/* Toggle — zobrazit / skrýt zbývající statistiky */}
-            <button
-              onClick={() => setStatsRozsireno(v => !v)}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                marginTop: 8, padding: "5px 10px",
-                background: "none", border: "1px solid var(--line-strong)",
-                borderRadius: 99, cursor: "pointer", fontSize: 11,
-                fontFamily: "var(--font-mono)", letterSpacing: ".06em",
-                color: "var(--muted)", transition: "color .15s",
-              }}
-            >
-              <span style={{
-                display: "inline-block",
-                transform: statsRozsireno ? "rotate(180deg)" : "none",
-                transition: "transform .2s",
-                lineHeight: 1,
-              }}>▾</span>
-              {statsRozsireno ? "Méně statistik" : "Více statistik"}
-            </button>
 
             {/* Mapa */}
             <div className="mt-4" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
