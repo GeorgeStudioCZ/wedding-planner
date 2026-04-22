@@ -129,7 +129,7 @@ function KpiCard({ tone, label, value, foot }: {
       boxShadow: "var(--shadow-card)",
     }}>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, letterSpacing: ".14em", textTransform: "uppercase", opacity: .82 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 42, lineHeight: 1, marginTop: 6, letterSpacing: "-.01em" }}>{value}</div>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 42, lineHeight: 1, marginTop: 6, letterSpacing: "-.01em" }}>{value}</div>
       <div style={{ position: "absolute", left: 18, right: 18, bottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, opacity: .9 }}>{foot}</div>
     </div>
   )
@@ -360,7 +360,8 @@ export default function PujcovnaDashboard() {
           {/* Countdown */}
           <div style={{
             fontFamily: "var(--font-serif), serif",
-            fontStyle: "italic",
+            fontStyle: "normal",
+            fontWeight: 700,
             fontSize: 22,
             lineHeight: 1,
             color: "var(--van-ink)",
@@ -424,7 +425,7 @@ export default function PujcovnaDashboard() {
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--muted)" }}>
               Autostany Planner · Sezóna {ROK}
             </div>
-            <h1 style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 34, lineHeight: 1.05, letterSpacing: "-.01em", color: "var(--ink)", margin: "4px 0 0" }}>
+            <h1 style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 34, lineHeight: 1.05, letterSpacing: "-.01em", color: "var(--ink)", margin: "4px 0 0" }}>
               Přehled <span style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", color: "var(--muted)", fontWeight: 400 }}>/ Dashboard</span>
             </h1>
           </div>

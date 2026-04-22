@@ -106,7 +106,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
             boxShadow: "inset 0 0 0 2px rgba(255,255,255,.15)",
             display: "grid", placeItems: "center",
             color: "white", fontWeight: 700, fontSize: 14,
-            fontFamily: "var(--font-serif), serif", fontStyle: "italic",
+            fontFamily: "var(--font-serif), serif", fontStyle: "normal",
           }}>G</div>
           <div>
             <div style={{ fontWeight: 600, letterSpacing: "-.01em", color: "white", fontSize: 15 }}>George Studio</div>

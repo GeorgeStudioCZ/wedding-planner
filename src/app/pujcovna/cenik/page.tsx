@@ -131,7 +131,7 @@ export default function Cenik() {
           Autostany · Nastavení
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-          <h1 style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: 26, fontWeight: 400, color: "var(--ink)", margin: 0 }}>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontStyle: "normal", fontWeight: 700, fontSize: 26, color: "var(--ink)", margin: 0 }}>
             Ceník půjčovny
           </h1>
           <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 2 }}>

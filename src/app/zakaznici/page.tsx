@@ -144,7 +144,7 @@ export default function Zakaznici() {
           CRM · Kontakty
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-          <h1 style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: 26, fontWeight: 400, color: "var(--ink)", margin: 0 }}>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontStyle: "normal", fontWeight: 700, fontSize: 26, color: "var(--ink)", margin: 0 }}>
             Zákazníci
           </h1>
           <button
@@ -171,7 +171,7 @@ export default function Zakaznici() {
             { label: "Půjčovna", value: pujcovnich, color: "#0a7a5a" },
           ].map(s => (
             <div key={s.label} style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: 28, fontWeight: 400, color: s.color, lineHeight: 1 }}>
+              <span style={{ fontFamily: "var(--font-serif)", fontStyle: "normal", fontWeight: 700, fontSize: 28, color: s.color, lineHeight: 1 }}>
                 {s.value}
               </span>
               <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)", letterSpacing: ".08em", textTransform: "uppercase", marginTop: 3 }}>

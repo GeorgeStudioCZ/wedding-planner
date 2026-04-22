@@ -51,7 +51,7 @@ function KpiCard({ tone, label, value, foot }: {
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: ".14em", textTransform: "uppercase", opacity: .82 }}>
         {label}
       </div>
-      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 38, lineHeight: 1, marginTop: 4, letterSpacing: "-.01em" }}>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 38, lineHeight: 1, marginTop: 4, letterSpacing: "-.01em" }}>
         {value}
       </div>
       {foot && (
@@ -74,7 +74,7 @@ function StatBox({ label, value }: { label: string; value: string }) {
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 6 }}>
         {label}
       </div>
-      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 30, fontWeight: 400, color: "var(--ink)", lineHeight: 1 }}>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, color: "var(--ink)", fontSize: 30, lineHeight: 1 }}>
         {value}
       </div>
     </div>
@@ -136,8 +136,8 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
             {/* Název měsíce */}
             <div style={{ marginBottom: 10 }}>
               <div style={{
-                fontFamily: "var(--font-serif), serif", fontStyle: "italic",
-                fontSize: 18, fontWeight: 400, color: "var(--ink)", lineHeight: 1,
+                fontFamily: "var(--font-serif), serif", fontStyle: "normal",
+                fontSize: 18, fontWeight: 700, color: "var(--ink)", lineHeight: 1,
               }}>
                 {MESICE_NAZVY[month]}
               </div>
@@ -462,7 +462,7 @@ export default function Home() {
         return (
           <div style={{ textAlign: "right" }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--muted)" }}>Odevzdat do</div>
-            <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 22, lineHeight: 1, color: col }}>
+            <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 22, lineHeight: 1, color: col }}>
               {zbyvaDni !== null ? (zbyvaDni <= 0 ? "!" : zbyvaDni) : "—"}
             </div>
             <div style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", fontSize: 10.5, color: "var(--muted)" }}>dní</div>
@@ -471,7 +471,7 @@ export default function Home() {
       }
       return (
         <div style={{ textAlign: "right", minWidth: 44 }}>
-          <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 22, lineHeight: 1, color: "var(--wed)" }}>{dniDo}</div>
+          <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 22, lineHeight: 1, color: "var(--wed)" }}>{dniDo}</div>
           <div style={{ fontFamily: "var(--font-sans)", fontSize: 10.5, color: "var(--muted)", letterSpacing: ".1em" }}>dní</div>
         </div>
       )
@@ -596,7 +596,7 @@ export default function Home() {
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--muted)" }}>
               Wedding Planner · Sezóna {new Date().getFullYear()}
             </div>
-            <h1 style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 34, lineHeight: 1.05, letterSpacing: "-.01em", color: "var(--ink)", margin: "4px 0 0" }}>
+            <h1 style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 34, lineHeight: 1.05, letterSpacing: "-.01em", color: "var(--ink)", margin: "4px 0 0" }}>
               Přehled <span style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", color: "var(--muted)", fontWeight: 400 }}>/ Dashboard</span>
             </h1>
           </div>
