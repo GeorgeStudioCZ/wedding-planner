@@ -48,6 +48,14 @@ function StatBox({ label, value }: { label: string; value: string }) {
 const MESICE_NAZVY = ["Leden","Únor","Březen","Duben","Květen","Červen","Červenec","Srpen","Září","Říjen","Listopad","Prosinec"]
 const DNY_NAZVY    = ["Po","Út","St","Čt","Pá","So","Ne"]
 
+// Barvy kategorií — stejná logika jako na stránce kalendáře
+function typSvatbyBarva(typ: string): string {
+  if (typ === "foto")       return "#3b82f6"  // modrá
+  if (typ === "video")      return "#f43f5e"  // růžová
+  if (typ === "foto+video") return "#8b5cf6"  // fialová
+  return "#94a3b8"                            // šedá (nezadáno)
+}
+
 function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
   const today = new Date()
   const mesice = [0, 1, 2].map(offset => {
@@ -55,8 +63,11 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
     return { year: d.getFullYear(), month: d.getMonth() }
   })
 
-  const svatebniDny = new Set(
-    zakazky.filter(z => z.datum_svatby).map(z => z.datum_svatby.slice(0, 10))
+  // Mapa datum → barva podle typ_sluzby
+  const svatebniDny = new Map<string, string>(
+    zakazky
+      .filter(z => z.datum_svatby)
+      .map(z => [z.datum_svatby.slice(0, 10), typSvatbyBarva(z.typ_sluzby)])
   )
 
   return (
@@ -136,11 +147,12 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
 
                 if (day === null) return <div key={i} style={gridLine} />
 
-                const dateStr   = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-                const isSvatba  = svatebniDny.has(dateStr)
-                const isDnes    = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
-                const colIndex  = (startDow + day - 1) % 7
-                const isWeekend = colIndex >= 5
+                const dateStr    = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                const svatbaBarva = svatebniDny.get(dateStr)   // undefined = žádná svatba
+                const isSvatba   = !!svatbaBarva
+                const isDnes     = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
+                const colIndex   = (startDow + day - 1) % 7
+                const isWeekend  = colIndex >= 5
 
                 return (
                   <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", ...gridLine }}>
@@ -148,7 +160,7 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
                       display: "flex", alignItems: "center", justifyContent: "center",
                       width: "76%", aspectRatio: "1", fontSize: 12,
                       borderRadius: isSvatba ? 6 : 99,
-                      background: isSvatba ? "var(--wed-grad-a, #f43f5e)" : isDnes ? "rgba(0,0,0,.07)" : "transparent",
+                      background: isSvatba ? svatbaBarva : isDnes ? "rgba(0,0,0,.07)" : "transparent",
                       color: isSvatba ? "white" : isWeekend ? "#e11d48" : "var(--ink-2)",
                       fontWeight: isSvatba || isDnes ? 700 : 400,
                       outline: isDnes && !isSvatba ? "1.5px solid var(--line-strong)" : "none",
@@ -174,6 +186,7 @@ export default function Home() {
   const [chyba, setChyba] = useState<string | null>(null)
   const [cenaBenzinu, setCenaBenzinu] = useState<number | null>(null)
   const [filter, setFilter] = useState<"Vše" | "Zaplaceno" | "Čeká">("Vše")
+  const [statsRozsireno, setStatsRozsireno] = useState(false)
 
   async function nactiZakazky() {
     const { data, error } = await supabase
@@ -560,21 +573,47 @@ export default function Home() {
           {/* ── SLOUPEC 1 — statistiky, mapa, kalendář ───────────────────── */}
           <div className="min-w-0">
 
-            {/* Stat grid — 3 × 4 na xl */}
+            {/* Stat grid — 6 výchozích + toggle + 6 skrytých */}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-3">
-              <StatBox label="Letos celkem"           value={String(letosConfirmed)} />
-              <StatBox label="Nadcházející svatby"    value={String(nadchazejici.length)} />
-              <StatBox label="Realizováno svateb"     value={String(realizovano.length)} />
-              <StatBox label="Čeká na sestřihání"     value={String(cekaNaSestrizani.length)} />
-              <StatBox label="Celkem km (tam+zpět)"   value={celkemKm > 0 ? `${celkemKm.toLocaleString("cs-CZ")} km` : "—"} />
-              <StatBox label="Celková doba jízdy"     value={celkovaCasJizdy} />
-              <StatBox label="Již ujeto km"           value={ujetoKm > 0 ? `${ujetoKm.toLocaleString("cs-CZ")} km` : "0 km"} />
-              <StatBox label="Zbývá ujet km"          value={`${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
-              <StatBox label="Celkem obrat"           value={celkemObrat > 0 ? formatCena(celkemObrat) : "—"} />
-              <StatBox label="Uhrazené zálohy"        value={uhrazeneZalohy > 0 ? formatCena(uhrazeneZalohy) : "—"} />
-              <StatBox label="Zbývá doplatit"         value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"} />
-              <StatBox label="Náklady na benzín"      value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
+              {/* Vždy viditelných 6 */}
+              <StatBox label="Nadcházející svatby"  value={String(nadchazejici.length)} />
+              <StatBox label="Čeká na sestřihání"   value={String(cekaNaSestrizani.length)} />
+              <StatBox label="Realizováno svateb"   value={String(realizovano.length)} />
+              <StatBox label="Celkem km (tam+zpět)" value={celkemKm > 0 ? `${celkemKm.toLocaleString("cs-CZ")} km` : "—"} />
+              <StatBox label="Již ujeto km"         value={ujetoKm > 0 ? `${ujetoKm.toLocaleString("cs-CZ")} km` : "0 km"} />
+              <StatBox label="Zbývá doplatit"       value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"} />
+
+              {/* Dalších 6 — zobrazí se po rozbalení */}
+              {statsRozsireno && <>
+                <StatBox label="Letos celkem"       value={String(letosConfirmed)} />
+                <StatBox label="Celková doba jízdy" value={celkovaCasJizdy} />
+                <StatBox label="Zbývá ujet km"      value={`${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
+                <StatBox label="Celkem obrat"       value={celkemObrat > 0 ? formatCena(celkemObrat) : "—"} />
+                <StatBox label="Uhrazené zálohy"    value={uhrazeneZalohy > 0 ? formatCena(uhrazeneZalohy) : "—"} />
+                <StatBox label="Náklady na benzín"  value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
+              </>}
             </div>
+
+            {/* Toggle — zobrazit / skrýt zbývající statistiky */}
+            <button
+              onClick={() => setStatsRozsireno(v => !v)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                marginTop: 8, padding: "5px 10px",
+                background: "none", border: "1px solid var(--line-strong)",
+                borderRadius: 99, cursor: "pointer", fontSize: 11,
+                fontFamily: "var(--font-mono)", letterSpacing: ".06em",
+                color: "var(--muted)", transition: "color .15s",
+              }}
+            >
+              <span style={{
+                display: "inline-block",
+                transform: statsRozsireno ? "rotate(180deg)" : "none",
+                transition: "transform .2s",
+                lineHeight: 1,
+              }}>▾</span>
+              {statsRozsireno ? "Méně statistik" : "Více statistik"}
+            </button>
 
             {/* Mapa */}
             <div className="mt-4" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
@@ -593,10 +632,14 @@ export default function Home() {
               <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kalendář</h3>
                 <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>3 měsíce</span>
-                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, background: "var(--wed-grad-a, #f43f5e)", display: "inline-block" }} />
-                  svatba
-                </span>
+                <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+                  {([["foto", "#3b82f6"], ["video", "#f43f5e"], ["foto+video", "#8b5cf6"]] as const).map(([label, color]) => (
+                    <span key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: "inline-block", flexShrink: 0 }} />
+                      {label}
+                    </span>
+                  ))}
+                </div>
               </div>
               <div style={{ padding: "20px 22px" }}>
                 <MiniKalendar zakazky={potvrzeneSvatby} />
