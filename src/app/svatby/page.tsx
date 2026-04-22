@@ -26,6 +26,24 @@ type Zakazka = {
   videohovor_datum: string | null
 }
 
+// ── Stat Box ────────────────────────────────────────────────────────────────
+function StatBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{
+      background: "var(--surface)", border: "1px solid var(--line)",
+      borderRadius: "var(--radius-md)", padding: "14px 16px 16px",
+      boxShadow: "var(--shadow-1)",
+    }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 30, fontWeight: 400, color: "var(--ink)", lineHeight: 1 }}>
+        {value}
+      </div>
+    </div>
+  )
+}
+
 // ── KPI Card ────────────────────────────────────────────────────────────────
 function KpiCard({ tone, label, value, foot }: { tone: "rose" | "coral" | "plum" | "slate" | "mint" | "sky"; label: string; value: string; foot: React.ReactNode }) {
   const GRADS: Record<string, string> = {
@@ -480,10 +498,8 @@ export default function Home() {
           />
         </div>
 
-        {/* ── Row 1: Map + Heatmap ── */}
-        <div className="grid grid-cols-1 md:grid-cols-[7fr_5fr] gap-4 mt-4">
-
-          {/* Map */}
+        {/* ── Row 1: Map full-width ── */}
+        <div className="mt-4">
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Mapa obřadů</h3>
@@ -494,82 +510,22 @@ export default function Home() {
               {loading && <div style={{ height: 280, background: "#f4f3ee", borderRadius: 14, display: "grid", placeItems: "center", color: "var(--muted)", fontSize: 13 }}>Načítám…</div>}
             </div>
           </div>
-
-          {/* Heatmap */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Heatmapa obsazenosti</h3>
-              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>Pá/So/Ne × 12 měsíců</span>
-            </div>
-            <div style={{ padding: "18px 20px", overflowX: "auto" }}>
-              <div style={{ display: "grid", gap: 3, minWidth: 280 }}>
-                {/* Month headers */}
-                <div style={{ display: "grid", gridTemplateColumns: "28px repeat(12, 1fr)", gap: 3 }}>
-                  <div />
-                  {HM_MONTHS.map(m => (
-                    <div key={m} style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "var(--muted)", textAlign: "center" }}>{m}</div>
-                  ))}
-                </div>
-                {/* Rows */}
-                {HM_DAY_LABELS.map((wd, wi) => (
-                  <div key={wd} style={{ display: "grid", gridTemplateColumns: "28px repeat(12, 1fr)", gap: 3, alignItems: "center" }}>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "var(--muted)" }}>{wd}</div>
-                    {hmGrid[wi].map((v, mi) => {
-                      const alpha = v === 0 ? 0 : 0.15 + (v / hmMax) * 0.85
-                      return (
-                        <div key={mi} style={{
-                          aspectRatio: "1/1", borderRadius: 4,
-                          background: v === 0 ? "#f2f1ec" : `rgba(255,77,126,${alpha})`,
-                        }} title={`${HM_MONTHS[mi]} ${wd}: ${v}`} />
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* ── Kanban ── */}
-        <div style={{ marginTop: 16 }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kanban zakázek</h3>
-              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>Poptávka → Potvrzeno → Realizace → Sestřih</span>
-            </div>
-            <div style={{ padding: "18px 20px" }}>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {KANBAN_COLS.map(col => (
-                  <div key={col.key} style={{ background: "#fbfaf6", border: "1px dashed var(--line-strong)", borderRadius: 14, padding: 10, minHeight: 120 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 4px 10px", fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 99, background: col.color }} />
-                      {col.label}
-                      <span style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--muted)" }}>{col.items.length}</span>
-                    </div>
-                    {col.items.slice(0, 5).map(z => (
-                      <Link key={z.id} href={`/svatby/zakazky/${z.id}`} style={{ display: "block", textDecoration: "none" }}>
-                        <div style={{ background: "white", border: "1px solid var(--line)", borderRadius: 12, padding: 12, marginBottom: 8, boxShadow: "var(--shadow-1)", cursor: "pointer" }}>
-                          <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--ink)" }}>{z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}</div>
-                          <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>
-                            {z.adresa_obradu ? z.adresa_obradu.split(",")[0] : "—"}
-                            {z.datum_svatby && <> · <span style={{ fontFamily: "var(--font-mono)" }}>{new Date(z.datum_svatby).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" })}</span></>}
-                          </div>
-                          <div style={{ marginTop: 8 }}>
-                            <span style={{ display: "inline-flex", padding: "3px 8px", borderRadius: 99, background: "#f2f1ec", fontSize: 11.5, color: "var(--ink-2)" }}>
-                              {typLabel(z.typ_sluzby)}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                    {col.items.length > 5 && (
-                      <div style={{ fontSize: 12, color: "var(--muted)", textAlign: "center", padding: "4px 0" }}>+{col.items.length - 5} dalších</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        {/* ── Stat boxes ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+          <StatBox label="Letos celkem"           value={String(letoscelkem.length)} />
+          <StatBox label="Nadcházející svatby"     value={String(nadchazejici.length)} />
+          <StatBox label="Realizováno svateb"      value={String(realizovano.length)} />
+          <StatBox label="Čeká na sestřihání"      value={String(cekaNaSestrizani.length)} />
+          <StatBox label="Celkem km (tam+zpět)"    value={celkemKm > 0 ? `${celkemKm.toLocaleString("cs-CZ")} km` : "—"} />
+          <StatBox label="Celková doba jízdy"      value={celkovaCasJizdy} />
+          <StatBox label="Již ujeto km"            value={ujetoKm > 0 ? `${ujetoKm.toLocaleString("cs-CZ")} km` : "0 km"} />
+          <StatBox label="Zbývá ujet km"           value={`${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
+          <StatBox label="Celkem obrat"            value={celkemObrat > 0 ? formatCena(celkemObrat) : "—"} />
+          <StatBox label="Uhrazené zálohy"         value={uhrazeneZalohy > 0 ? formatCena(uhrazeneZalohy) : "—"} />
+          <StatBox label="Zbývá doplatit"          value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"} />
+          <StatBox label="Náklady na benzín"       value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
         </div>
 
         {/* ── Upcoming list ── */}
