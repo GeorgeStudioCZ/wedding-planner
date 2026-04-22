@@ -52,7 +52,7 @@ const DNY_NAZVY    = ["Po","Út","St","Čt","Pá","So","Ne"]
 function typSvatbyBarva(typ: string): string {
   if (typ === "foto")       return "#3b82f6"  // modrá
   if (typ === "video")      return "#f43f5e"  // růžová
-  if (typ === "foto+video") return "#8b5cf6"  // fialová
+  if (typ === "foto+video") return "#f97316"  // fialová
   return "#94a3b8"                            // šedá (nezadáno)
 }
 
@@ -633,7 +633,7 @@ export default function Home() {
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kalendář</h3>
                 <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>3 měsíce</span>
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
-                  {([["foto", "#3b82f6"], ["video", "#f43f5e"], ["foto+video", "#8b5cf6"]] as const).map(([label, color]) => (
+                  {([["foto", "#3b82f6"], ["video", "#f43f5e"], ["foto+video", "#f97316"]] as const).map(([label, color]) => (
                     <span key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: "inline-block", flexShrink: 0 }} />
                       {label}
