@@ -206,11 +206,11 @@ export default function PujcovnaDashboard() {
     const cena = celkovaCenaRezervace(r)
 
     function countdownMobile() {
-      if (r.stav === "vypujceno") return <span className="text-blue-500 font-semibold">vrácení za {Math.max(0, dniZbývá)} dní</span>
+      if (r.stav === "vypujceno") return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">vrácení za {Math.max(0, dniZbývá)} dní</span>
       if (r.stav === "dokonceno" || r.stav === "storno") return null
-      if (dniDo === 0) return <span className="text-emerald-500 font-semibold">Dnes!</span>
+      if (dniDo === 0) return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">Dnes!</span>
       if (dniDo < 0) return null
-      return <span className="text-emerald-600 font-semibold">za {dniDo} dní</span>
+      return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">za {dniDo} dní</span>
     }
 
     const cdMobile = countdownMobile()
@@ -219,32 +219,26 @@ export default function PujcovnaDashboard() {
       <Link href={`/pujcovna/rezervace/${r.id}`} className="block hover:bg-gray-50 transition-colors">
 
         {/* ── Mobilní karta ── */}
-        <div className="flex flex-col px-4 py-3 gap-1 md:hidden">
+        <div className="flex flex-col pl-4 pr-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor: r.color }}>
           {/* Řádek 1: jméno zákazníka + stav */}
           <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
             <p className="font-semibold text-gray-900 flex-1 truncate text-sm">{r.customer}</p>
-            <span className={`text-xs font-medium px-2 py-1 rounded-lg whitespace-nowrap ${info.barva}`}>{info.label}</span>
+            <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${info.barva}`}>{info.label}</span>
           </div>
-          {/* Řádek 2: datum · stan · délka · cena · countdown */}
-          <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-xs text-gray-500 ml-4">
+          {/* Řádek 2: datum · stan · délka · cena */}
+          <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-xs text-gray-500">
             <span className="font-medium text-gray-700">{formatDatum(r.start_date)}</span>
-            <span>·</span>
+            <span className="text-gray-300">·</span>
             <span>{stanLabel(r.item_id, r.unit_index)}</span>
-            <span>·</span>
+            <span className="text-gray-300">·</span>
             <span>{dni} {dni === 1 ? "den" : dni < 5 ? "dny" : "dní"}</span>
             {cena !== null && (
               <>
-                <span>·</span>
+                <span className="text-gray-300">·</span>
                 <span className="font-semibold text-gray-700">{cena.toLocaleString("cs-CZ")} Kč</span>
               </>
             )}
-            {cdMobile && (
-              <>
-                <span>·</span>
-                {cdMobile}
-              </>
-            )}
+            {cdMobile && <span className="ml-auto">{cdMobile}</span>}
           </div>
         </div>
 

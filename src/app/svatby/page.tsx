@@ -256,24 +256,39 @@ export default function Home() {
       )
     }
 
-    // Countdown pro mobil (kompaktní, inline)
+    // Barva levého okraje podle stavu
+    const STAV_BORDER: Record<string, string> = {
+      "poptavka":     "#9ca3af",
+      "rozhoduje-se": "#fbbf24",
+      "objednavka":   "#60a5fa",
+      "cekam-platbu": "#fb923c",
+      "zaplaceno":    "#4ade80",
+      "ve-strizne":   "#c084fc",
+      "po-svatbe":    "#38bdf8",
+      "ukonceno":     "#94a3b8",
+    }
+    const borderColor = STAV_BORDER[z.stav] ?? "#9ca3af"
+
+    // Countdown pro mobil (kompaktní pill)
     function countdownMobile() {
       if (dniDo === null) return null
-      if (dniDo === 0) return <span className="text-rose-500 font-semibold">Dnes!</span>
+      if (dniDo === 0) return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">Dnes!</span>
       if (probehlo && z.vystup_odevzdan) return (
         <button
           onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
-          className="text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700"
+          className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200"
         >
           ✓ Odevzdáno
         </button>
       )
       if (probehlo && !z.vystup_odevzdan) {
         const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
-        const barva = zbyvaDni !== null && zbyvaDni <= 3 ? "text-red-500" : "text-orange-500"
-        return <span className={`font-semibold ${barva}`}>odevzdat za {zbyvaDni !== null && zbyvaDni <= 0 ? "!" : `${zbyvaDni} dní`}</span>
+        const cls = zbyvaDni !== null && zbyvaDni <= 3
+          ? "bg-red-50 text-red-700 border border-red-200"
+          : "bg-orange-50 text-orange-700 border border-orange-200"
+        return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${cls}`}>odevzdat za {zbyvaDni !== null && zbyvaDni <= 0 ? "!" : `${zbyvaDni} dní`}</span>
       }
-      return <span className="text-rose-500 font-semibold">za {dniDo} dní</span>
+      return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">za {dniDo} dní</span>
     }
 
     const cdMobile = countdownMobile()
@@ -282,30 +297,30 @@ export default function Home() {
       <Link href={`/svatby/zakazky/${z.id}`} className="block hover:bg-gray-50 transition-colors">
 
         {/* ── Mobilní karta ── */}
-        <div className="flex flex-col px-4 py-3 gap-1 md:hidden">
+        <div className="flex flex-col pl-4 pr-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor }}>
           {/* Řádek 1: jména + stav */}
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-900 flex-1 truncate text-sm">
               {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
             </p>
-            <span className={`text-xs font-medium px-2 py-1 rounded-lg whitespace-nowrap ${stavInfo(z.stav).barva}`}>
+            <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${stavInfo(z.stav).barva}`}>
               {stavInfo(z.stav).label}
             </span>
           </div>
           {/* Řádek 2: datum + adresa + videohovor */}
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <span className="font-medium text-gray-700">
+            <span className="font-medium text-gray-700 shrink-0">
               {z.datum_svatby
                 ? `${String(new Date(z.datum_svatby).getDate()).padStart(2, "0")}.${String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}. ${new Date(z.datum_svatby).getFullYear()}`
                 : "—"}
             </span>
-            {z.adresa_obradu && <><span>·</span><span className="truncate">{z.adresa_obradu}</span></>}
+            {z.adresa_obradu && <><span className="text-gray-300">·</span><span className="truncate">{z.adresa_obradu}</span></>}
             {z.videohovor_datum && <span className="shrink-0">📹</span>}
           </div>
           {/* Řádek 3: typ + cena + countdown */}
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <span>{typLabel(z.typ_sluzby)}</span>
-            {z.cena > 0 && <><span>·</span><span className="font-semibold text-gray-700">{formatCena(z.cena)}</span></>}
+            {z.cena > 0 && <><span className="text-gray-300">·</span><span className="font-semibold text-gray-700">{formatCena(z.cena)}</span></>}
             {cdMobile && <span className="ml-auto">{cdMobile}</span>}
           </div>
         </div>
