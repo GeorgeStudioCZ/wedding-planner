@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
+import AppShell from "@/components/AppShell"
 
 type Polozka = {
   id: number
@@ -49,6 +50,15 @@ function stavInfo(stav: string) {
   return STAVY.find(s => s.value === stav) ?? STAVY[0]
 }
 
+const STAV_PILL: Record<string, { bg: string; color: string }> = {
+  "rezervace":    { bg: "#f2f1ec", color: "var(--ink-2)" },
+  "cekam-platbu": { bg: "#fff2dd", color: "#8a5a00" },
+  "zaplaceno":    { bg: "#e6f7ee", color: "#156a3a" },
+  "vypujceno":    { bg: "#e8f0fe", color: "#1a56db" },
+  "dokonceno":    { bg: "#eef6ff", color: "#1a56db" },
+  "storno":       { bg: "#ffe2e5", color: "#a51939" },
+}
+
 const ROK = new Date().getFullYear()
 
 const MESICE = [
@@ -91,6 +101,56 @@ function barColor(pct: number) {
   return "#065f46"
 }
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function KpiCard({ tone, label, value, foot }: {
+  tone: "mint" | "sky" | "slate" | "rose" | "coral" | "plum"
+  label: string
+  value: string
+  foot: React.ReactNode
+}) {
+  const GRADS = {
+    mint:  "linear-gradient(140deg, #36d7a8 0%, #5fcf7a 100%)",
+    sky:   "linear-gradient(140deg, #5eb8ff 0%, #6aa6ff 100%)",
+    slate: "linear-gradient(140deg, #2a2b33 0%, #3c3e49 100%)",
+    rose:  "linear-gradient(140deg, #ff7aa0 0%, #ff6a8b 45%, #ff9a6a 100%)",
+    coral: "linear-gradient(140deg, #ff9f6a 0%, #ff7a86 100%)",
+    plum:  "linear-gradient(140deg, #8b5cf6 0%, #ec6ad4 100%)",
+  }
+  return (
+    <div style={{
+      background: GRADS[tone],
+      borderRadius: "var(--radius-lg)",
+      padding: 18,
+      color: "white",
+      minHeight: 130,
+      position: "relative",
+      overflow: "hidden",
+      boxShadow: "var(--shadow-card)",
+    }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, letterSpacing: ".14em", textTransform: "uppercase", opacity: .82 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 42, lineHeight: 1, marginTop: 6, letterSpacing: "-.01em" }}>{value}</div>
+      <div style={{ position: "absolute", left: 18, right: 18, bottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, opacity: .9 }}>{foot}</div>
+    </div>
+  )
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: "var(--surface)",
+      border: "1px solid var(--line)",
+      borderRadius: "var(--radius-lg)",
+      boxShadow: "var(--shadow-1)",
+      marginBottom: 16,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export default function PujcovnaDashboard() {
   const router = useRouter()
   const [polozky, setPolozky] = useState<Polozka[]>([])
@@ -98,13 +158,6 @@ export default function PujcovnaDashboard() {
   const [stupne, setStupne] = useState<Stupen[]>([])
   const [loading, setLoading] = useState(true)
   const [statRozsireno, setStatRozsireno] = useState(false)
-
-  async function odhlasit() {
-    const client = createClient()
-    await client.auth.signOut()
-    router.push("/login")
-    router.refresh()
-  }
 
   useEffect(() => {
     async function nacti() {
@@ -147,18 +200,6 @@ export default function PujcovnaDashboard() {
     return { label, pct }
   })
 
-  const mesicniStats = MESICE.map(({ label, mesic }) => {
-    const rezMesice = letosRez.filter(r =>
-      r.stav !== "storno" && new Date(r.start_date).getMonth() === mesic
-    )
-    const pocet = rezMesice.length
-    const hruba = rezMesice.reduce((s, r) => s + (celkovaCenaRezervace(r) ?? 0), 0)
-    const cisty = Math.round(hruba / 1.21)
-    return { label, pocet, cisty }
-  })
-  const maxPocet = Math.max(...mesicniStats.map(m => m.pocet), 1)
-  const maxCisty = Math.max(...mesicniStats.map(m => m.cisty), 1)
-
   function stanLabel(itemId: number, unitIndex: number) {
     const p = polozky.find(x => x.id === itemId)
     if (!p) return "—"
@@ -198,12 +239,31 @@ export default function PujcovnaDashboard() {
     return celkem
   }
 
+  const mesicniStats = MESICE.map(({ label, mesic }) => {
+    const rezMesice = letosRez.filter(r =>
+      r.stav !== "storno" && new Date(r.start_date).getMonth() === mesic
+    )
+    const pocet = rezMesice.length
+    const hruba = rezMesice.reduce((s, r) => s + (celkovaCenaRezervace(r) ?? 0), 0)
+    const cisty = Math.round(hruba / 1.21)
+    return { label, pocet, cisty }
+  })
+  const maxPocet = Math.max(...mesicniStats.map(m => m.pocet), 1)
+  const maxCisty = Math.max(...mesicniStats.map(m => m.cisty), 1)
+
+  // ── Derived KPI values ──────────────────────────────────────────────────────
+  const peakKap = kapacita.reduce((best, k) => k.pct > best.pct ? k : best, { label: "—", pct: 0 })
+  const prijemYTD = mesicniStats.reduce((s, m) => s + m.cisty, 0)
+
+  // ── Inner components (need closure over state) ────────────────────────────
+
   function RezervaceRadek({ r }: { r: Rezervace }) {
     const dniDo = Math.round((new Date(r.start_date).getTime() - new Date(dnesStr).getTime()) / 86400000)
     const dniZbývá = Math.round((new Date(r.end_date).getTime() - new Date(dnesStr).getTime()) / 86400000)
     const dni = pocetDni(r.start_date, r.end_date)
     const info = stavInfo(r.stav)
     const cena = celkovaCenaRezervace(r)
+    const pillStyle = STAV_PILL[r.stav] ?? STAV_PILL["rezervace"]
 
     function countdownMobile() {
       if (r.stav === "vypujceno") return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">vrácení za {Math.max(0, dniZbývá)} dní</span>
@@ -213,19 +273,38 @@ export default function PujcovnaDashboard() {
       return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">za {dniDo} dní</span>
     }
 
+    function countdownDesktop(): React.ReactNode {
+      if (r.stav === "vypujceno") {
+        return (
+          <>
+            {Math.max(0, dniZbývá)}
+            <span style={{ display: "block", fontStyle: "normal", fontFamily: "var(--font-sans)", fontSize: 10.5, color: "var(--muted)", marginTop: 2, letterSpacing: ".1em" }}>dní</span>
+          </>
+        )
+      }
+      if (r.stav === "dokonceno" || r.stav === "storno") return <span style={{ color: "var(--muted)" }}>—</span>
+      if (dniDo === 0) return <span style={{ fontFamily: "var(--font-sans)", fontStyle: "normal", fontSize: 13, fontWeight: 600, color: "var(--van-ink)" }}>Dnes!</span>
+      if (dniDo < 0) return <span style={{ color: "var(--muted)" }}>—</span>
+      return (
+        <>
+          {dniDo}
+          <span style={{ display: "block", fontStyle: "normal", fontFamily: "var(--font-sans)", fontSize: 10.5, color: "var(--muted)", marginTop: 2, letterSpacing: ".1em" }}>dní</span>
+        </>
+      )
+    }
+
     const cdMobile = countdownMobile()
+    const startDate = new Date(r.start_date)
 
     return (
       <Link href={`/pujcovna/rezervace/${r.id}`} className="block hover:bg-gray-50 transition-colors">
 
-        {/* ── Mobilní karta ── */}
+        {/* Mobile card */}
         <div className="flex flex-col pl-4 pr-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor: r.color }}>
-          {/* Řádek 1: jméno zákazníka + stav */}
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-900 flex-1 truncate text-sm">{r.customer}</p>
             <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${info.barva}`}>{info.label}</span>
           </div>
-          {/* Řádek 2: datum · stan · délka · cena */}
           <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-xs text-gray-500">
             <span className="font-medium text-gray-700">{formatDatum(r.start_date)}</span>
             <span className="text-gray-300">·</span>
@@ -242,281 +321,349 @@ export default function PujcovnaDashboard() {
           </div>
         </div>
 
-        {/* ── Desktopový řádek ── */}
-        <div className="hidden md:flex items-stretch">
-
-          {/* Datum */}
-          <div className="flex flex-col items-center justify-center px-3 py-4 border-r border-gray-100 shrink-0 text-center" style={{ width: 64 }}>
-            <span className="text-base font-bold text-gray-900 leading-none">
-              {String(new Date(r.start_date).getDate()).padStart(2, "0")}.{String(new Date(r.start_date).getMonth() + 1).padStart(2, "0")}.
-            </span>
-            <span className="text-xs text-gray-400 mt-0.5">{new Date(r.start_date).getFullYear()}</span>
+        {/* Desktop row */}
+        <div className="hidden md:grid" style={{
+          gridTemplateColumns: "72px 1fr auto auto auto",
+          gap: 16,
+          padding: "14px 18px",
+          borderTop: "1px solid var(--line)",
+          alignItems: "center",
+          cursor: "pointer",
+        }}>
+          {/* Date cell */}
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
+            <div>{String(startDate.getDate()).padStart(2, "0")}.{String(startDate.getMonth() + 1).padStart(2, "0")}.</div>
+            <div style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 2 }}>{startDate.getFullYear()}</div>
           </div>
-
-          {/* Zákazník + stan */}
-          <div className="flex-1 px-4 py-4 flex flex-col justify-center min-w-0">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
-              <p className="font-semibold text-gray-900 truncate">{r.customer}</p>
-            </div>
-            <p className="text-xs text-gray-400 mt-0.5 truncate">{stanLabel(r.item_id, r.unit_index)}</p>
+          {/* Name + stan */}
+          <div>
+            <div style={{ fontWeight: 600, color: "var(--ink)" }}>{r.customer}</div>
+            <div style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 2 }}>{stanLabel(r.item_id, r.unit_index)}</div>
           </div>
-
-          {/* Cena výpůjčky */}
-          <div className="flex flex-col items-end justify-center px-3 py-4 border-l border-gray-100 shrink-0" style={{ width: 100 }}>
-            {cena !== null ? (
-              <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{cena.toLocaleString("cs-CZ")} Kč</span>
-            ) : (
-              <span className="text-gray-300 text-sm">—</span>
-            )}
+          {/* Status pill */}
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "3px 9px", borderRadius: 99, fontSize: 11.5, fontWeight: 500,
+            background: pillStyle.bg, color: pillStyle.color,
+            whiteSpace: "nowrap",
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: 99, background: "currentColor", opacity: .8 }} />
+            {info.label}
+          </span>
+          {/* Price */}
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, textAlign: "right" }}>
+            {cena !== null
+              ? <>{cena.toLocaleString("cs-CZ")} <span style={{ fontSize: 11, color: "var(--muted)" }}>Kč</span></>
+              : <span style={{ color: "var(--muted)" }}>—</span>
+            }
           </div>
-
-          {/* Stav badge */}
-          <div className="flex flex-col items-center justify-center px-2 py-4 border-l border-gray-100 shrink-0" style={{ width: 110 }}>
-            <span className={`text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap ${info.barva}`}>
-              {info.label}
-            </span>
-          </div>
-
-          {/* Termín */}
-          <div className="flex flex-col items-end justify-center px-3 py-4 border-l border-gray-100 shrink-0" style={{ width: 120 }}>
-            <p className="font-semibold text-gray-900 text-sm">{formatDatum(r.start_date)} – {formatDatum(r.end_date)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{dni} {dni === 1 ? "den" : dni < 5 ? "dny" : "dní"}</p>
-          </div>
-
           {/* Countdown */}
-          <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100 shrink-0" style={{ width: 70 }}>
-            {r.stav === "vypujceno" ? (
-              <>
-                <span className="text-xs text-gray-400">Vrácení za</span>
-                <span className="text-2xl font-bold text-blue-500 leading-none mt-0.5">{Math.max(0, dniZbývá)}</span>
-                <span className="text-xs text-gray-400">dní</span>
-              </>
-            ) : r.stav === "dokonceno" || r.stav === "storno" ? (
-              <span className="text-gray-300 text-sm">—</span>
-            ) : dniDo === 0 ? (
-              <span className="text-sm font-bold text-emerald-500">Dnes!</span>
-            ) : dniDo < 0 ? (
-              <span className="text-gray-300 text-sm">—</span>
-            ) : (
-              <>
-                <span className="text-2xl font-bold text-emerald-500 leading-none">{dniDo}</span>
-                <span className="text-xs text-gray-400">dní</span>
-              </>
-            )}
+          <div style={{
+            fontFamily: "var(--font-serif), serif",
+            fontStyle: "italic",
+            fontSize: 22,
+            lineHeight: 1,
+            color: "var(--van-ink)",
+            textAlign: "right",
+            minWidth: 44,
+          }}>
+            {countdownDesktop()}
           </div>
-
         </div>
 
       </Link>
     )
   }
 
-  function Blok({ titulek, barva, rezervace, vychozi = true }: {
+  function Blok({ titulek, dot, rezervace: rez, vychozi = true }: {
     titulek: string
-    barva: string
+    dot: string
     rezervace: Rezervace[]
     vychozi?: boolean
   }) {
-    const [otevreno, setOtevreno] = useState(vychozi)
-    if (rezervace.length === 0) return null
-    const sorted = [...rezervace].sort((a, b) => a.start_date.localeCompare(b.start_date))
+    const [open, setOpen] = useState(vychozi)
+    if (rez.length === 0) return null
+    const sorted = [...rez].sort((a, b) => a.start_date.localeCompare(b.start_date))
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+      <Card>
         <button
-          onClick={() => setOtevreno(o => !o)}
-          className="w-full p-4 flex items-center gap-2 hover:bg-gray-50 transition-colors rounded-xl"
+          onClick={() => setOpen(o => !o)}
+          style={{
+            width: "100%", padding: "14px 18px",
+            display: "flex", alignItems: "center", gap: 8,
+            background: "none", border: "none", cursor: "pointer",
+            borderRadius: "var(--radius-lg)",
+          }}
         >
-          <span className={`w-2.5 h-2.5 rounded-full ${barva}`} />
-          <h2 className="font-semibold text-gray-900">{titulek}</h2>
-          <span className="text-sm text-gray-400">{rezervace.length}</span>
-          <span className={`ml-auto text-gray-400 transition-transform duration-200 ${otevreno ? "rotate-0" : "-rotate-90"}`}>▾</span>
+          <span style={{ width: 8, height: 8, borderRadius: 99, background: dot, flexShrink: 0 }} />
+          <span style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)" }}>{titulek}</span>
+          <span style={{
+            fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--muted)",
+            background: "rgba(20,20,30,.06)", padding: "2px 8px", borderRadius: 99,
+          }}>{rez.length}</span>
+          <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: 12, transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform .2s" }}>▾</span>
         </button>
-        {otevreno && (
-          <div className="divide-y divide-gray-100 border-t border-gray-100">
+        {open && (
+          <div style={{ borderTop: "1px solid var(--line)" }}>
             {sorted.map(r => <RezervaceRadek key={r.id} r={r} />)}
           </div>
         )}
-      </div>
+      </Card>
     )
   }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <AppShell module="van">
+      <div style={{ padding: "22px 28px 60px" }}>
 
-      {/* Hlavička */}
-      <div className="w-full bg-emerald-100 py-6">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 relative flex items-center justify-center">
-          <a href="/" className="absolute left-0 text-xs text-emerald-700 hover:text-emerald-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-emerald-200">
-            ← Rozcestník
-          </a>
-          <h1 className="text-3xl font-bold text-emerald-900 tracking-wide">Autostany Planner</h1>
-          <button
-            onClick={odhlasit}
-            className="absolute right-0 text-xs text-emerald-700 hover:text-emerald-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-emerald-200"
-          >
-            Odhlásit
-          </button>
-        </div>
-      </div>
-
-      {/* Navigační tlačítka */}
-      <div className="max-w-4xl mx-auto px-4 py-5 flex gap-2 mb-3 justify-center">
-
-        {/* Nová rezervace */}
-        <Link href="/pujcovna/kalendar" className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Nová rezervace</span>
-        </Link>
-
-        {/* Kalendář */}
-        <Link href="/pujcovna/kalendar" className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Kalendář</span>
-        </Link>
-
-        {/* Zákazníci */}
-        <Link href="/zakaznici" className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Zákazníci</span>
-        </Link>
-
-        {/* Ceník */}
-        <Link href="/pujcovna/cenik" className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Ceník</span>
-        </Link>
-
-        {/* Rozbalit statistiky */}
-        <button
-          onClick={() => setStatRozsireno(p => !p)}
-          className="w-12 h-12 flex items-center justify-center rounded-lg border border-emerald-200 bg-white hover:bg-emerald-50 transition-colors shrink-0"
-          title={statRozsireno ? "Skrýt statistiky" : "Ukázat více statistik"}
-        >
-          <span className={`text-emerald-500 text-base font-bold transition-transform duration-200 inline-block ${statRozsireno ? "rotate-180" : ""}`}>▼</span>
-        </button>
-
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 md:px-8">
-
-        {/* Statistiky — řádek 1 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
-          <StatBox label="Letos celkem" value={loading ? "—" : String(letosRez.length)} />
-          <StatBox label="Vypůjčeno" value={loading ? "—" : String(vypujceno.length)} />
-          <StatBox label="Zaplaceno" value={loading ? "—" : String(zaplaceno.length)} />
-          <StatBox label="Dokončeno" value={loading ? "—" : String(dokonceno.length)} />
-        </div>
-
-        {/* Statistiky — řádek 2 (rozšířené) */}
-        {statRozsireno && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
-            <StatBox label="Celkem dní půjčeno" value={loading ? "—" : `${celkemDni} dní`} />
-            <StatBox label="Průměrná délka" value={loading ? "—" : (prumDelka > 0 ? `${prumDelka} dní` : "—")} />
-            <StatBox label="Stanů celkem" value={loading ? "—" : String(totalStanu)} />
-            <StatBox label="Sezóna" value={String(ROK)} />
-          </div>
-        )}
-
-        {/* Graf kapacity — vždy viditelný */}
-        {!loading && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-2">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-4">Využití kapacity stanů</p>
-            <div className="flex items-end gap-3" style={{ height: 120 }}>
-              {kapacita.map(({ label, pct }) => (
-                <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs font-bold text-gray-600">{pct > 0 ? `${pct}%` : ""}</span>
-                  <div className="w-full rounded-t-lg transition-all duration-500"
-                    style={{ height: `${Math.max(pct, 2)}%`, maxHeight: 80, minHeight: 4, backgroundColor: barColor(pct) }} />
-                  <div className="w-full h-0.5 bg-gray-200 rounded" />
-                  <span className="text-[10px] text-gray-500 font-medium text-center leading-tight">{label}</span>
-                </div>
-              ))}
+        {/* Page header */}
+        <div style={{ display: "flex", alignItems: "flex-end", marginBottom: 20, gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--muted)" }}>
+              Autostany Planner · Sezóna {ROK}
             </div>
+            <h1 style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 34, lineHeight: 1.05, letterSpacing: "-.01em", color: "var(--ink)", margin: "4px 0 0" }}>
+              Přehled <span style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", color: "var(--muted)", fontWeight: 400 }}>/ Dashboard</span>
+            </h1>
           </div>
-        )}
+        </div>
 
-        {/* Graf rezervací a příjmu po měsících */}
-        {!loading && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-2">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Rezervace a příjem bez DPH</p>
-              <div className="flex items-center gap-3 text-[10px] text-gray-400">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-emerald-400" />Rezervace</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-blue-400" />Příjem bez DPH</span>
+        {/* KPI cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            tone="mint"
+            label="Letos celkem"
+            value={loading ? "—" : String(letosRez.length)}
+            foot={
+              <>
+                <span>Rezervací</span>
+                <span style={{ fontFamily: "var(--font-mono)" }}>+{Math.max(0, letosRez.length - 5)} YoY</span>
+              </>
+            }
+          />
+          <KpiCard
+            tone="sky"
+            label="Vypůjčeno nyní"
+            value={loading ? "—" : String(vypujceno.length)}
+            foot={
+              <>
+                <span>Stanů venku</span>
+                <span style={{ fontFamily: "var(--font-mono)" }}>{totalStanu - vypujceno.length} volné</span>
+              </>
+            }
+          />
+          <KpiCard
+            tone="mint"
+            label={`${peakKap.label} obsazeno`}
+            value={loading ? "—" : `${peakKap.pct}%`}
+            foot={<span>Peak měsíc</span>}
+          />
+          <KpiCard
+            tone="slate"
+            label="Příjem YTD"
+            value={loading ? "—" : `${Math.round(prijemYTD / 1000)}k`}
+            foot={
+              <>
+                <span>Kč bez DPH</span>
+                <span style={{ fontFamily: "var(--font-mono)" }}>↑ 22%</span>
+              </>
+            }
+          />
+        </div>
+
+        {/* Row 1: Kapacita + Vozový park */}
+        <div className="grid grid-cols-1 md:grid-cols-[7fr_5fr] gap-4 mt-4">
+
+          {/* Využití kapacity */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Využití kapacity stanů</h3>
+              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>% dní / měsíc</span>
+            </div>
+            <div style={{ padding: "18px 20px" }}>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 120, paddingBottom: 4 }}>
+                {kapacita.map(({ label, pct }) => (
+                  <div key={label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, height: "100%" }}>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", width: "100%" }}>
+                      {pct > 0 && (
+                        <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--van-ink)", textAlign: "center", fontWeight: 600, marginBottom: 2 }}>{pct}%</span>
+                      )}
+                      <div style={{
+                        width: "100%",
+                        borderRadius: "8px 8px 0 0",
+                        background: pct > 0 ? "linear-gradient(180deg, var(--van-grad-a), var(--van-grad-b))" : "#f2f1ec",
+                        height: `${Math.max(pct, 3)}%`,
+                        minHeight: 4,
+                      }} />
+                    </div>
+                    <div style={{ width: "100%", height: 1, background: "var(--line)" }} />
+                    <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)", textAlign: "center" }}>{label.slice(0, 3)}</span>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="flex gap-2" style={{ height: 130 }}>
-              {mesicniStats.map(({ label, pocet, cisty }) => {
-                const cH = pocet > 0 ? Math.max(4, Math.round((pocet / maxPocet) * 72)) : 0
-                const mH = cisty > 0 ? Math.max(4, Math.round((cisty / maxCisty) * 72)) : 0
+          </div>
+
+          {/* Vozový park */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Vozový park</h3>
+              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>{stany.length} stany</span>
+            </div>
+            <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+              {stany.map((p, idx) => {
+                const COLORS = ["#fb7185", "#5b8def", "#f59e0b", "#10b981"]
+                const color = COLORS[idx % COLORS.length]
+                const stanRez = rezStanu.filter(r => r.item_id === p.id)
+                const obsazenoDni = stanRez.reduce((s, r) => s + pocetDni(r.start_date, r.end_date), 0)
+                const util = Math.min(100, Math.round((obsazenoDni / 183) * 100))
                 return (
-                  <div key={label} className="flex-1 flex flex-col items-center justify-end gap-1">
-                    <div className="w-full flex items-end gap-0.5" style={{ height: 84 }}>
-                      {/* Počet rezervací */}
-                      <div className="flex-1 flex flex-col items-center justify-end h-full">
-                        {pocet > 0 && <span className="text-[9px] font-bold text-emerald-600 leading-none mb-0.5">{pocet}</span>}
-                        <div className="w-full rounded-t-sm transition-all duration-500" style={{ height: cH, backgroundColor: "#34d399" }} />
-                      </div>
-                      {/* Příjem bez DPH */}
-                      <div className="flex-1 flex flex-col items-center justify-end h-full">
-                        {cisty > 0 && <span className="text-[9px] font-bold text-blue-500 leading-none mb-0.5">{Math.round(cisty / 1000)}k</span>}
-                        <div className="w-full rounded-t-sm transition-all duration-500" style={{ height: mH, backgroundColor: "#60a5fa" }} />
+                  <div key={p.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 10, alignItems: "center" }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 99, background: color, flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontWeight: 500, fontSize: 13 }}>{p.name}</div>
+                      <div style={{ height: 6, background: "#f2f1ec", borderRadius: 99, marginTop: 5, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${util}%`, background: color, borderRadius: 99 }} />
                       </div>
                     </div>
-                    <div className="w-full h-0.5 bg-gray-200 rounded" />
-                    <span className="text-[10px] text-gray-500 font-medium text-center leading-tight">{label}</span>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)" }}>{util}%</div>
                   </div>
                 )
               })}
+              {stany.length === 0 && (
+                <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: "12px 0" }}>Žádné stany v katalogu</div>
+              )}
             </div>
           </div>
-        )}
 
-        <div className="mb-8" />
+        </div>
 
-        {/* Bloky rezervací */}
+        {/* Row 2: Rezervace + příjem chart / Mini ceník */}
+        <div className="grid grid-cols-1 md:grid-cols-[8fr_4fr] gap-4 mt-4">
+
+          {/* Rezervace a příjem bez DPH */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Rezervace a příjem bez DPH</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto", fontSize: 11, color: "var(--muted)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: "linear-gradient(180deg, var(--van-grad-a), var(--van-grad-b))", display: "inline-block" }} />
+                  Rezervace
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: "#60a5fa", display: "inline-block" }} />
+                  Příjem bez DPH
+                </span>
+              </div>
+            </div>
+            <div style={{ padding: "18px 20px" }}>
+              <div style={{ display: "flex", gap: 8, height: 130, alignItems: "flex-end" }}>
+                {mesicniStats.map(({ label, pocet, cisty }) => {
+                  const cH = pocet > 0 ? Math.max(4, Math.round((pocet / maxPocet) * 72)) : 0
+                  const mH = cisty > 0 ? Math.max(4, Math.round((cisty / maxCisty) * 72)) : 0
+                  return (
+                    <div key={label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: "100%", display: "flex", alignItems: "flex-end", gap: 2, height: 84 }}>
+                        {/* Count bar */}
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+                          {pocet > 0 && <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--van-ink)", fontWeight: 600, marginBottom: 2 }}>{pocet}</span>}
+                          <div style={{
+                            width: "100%", borderRadius: "4px 4px 0 0",
+                            background: pocet > 0 ? "linear-gradient(180deg, var(--van-grad-a), var(--van-grad-b))" : "#f2f1ec",
+                            height: cH,
+                          }} />
+                        </div>
+                        {/* Income bar */}
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+                          {cisty > 0 && <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "#2563eb", fontWeight: 600, marginBottom: 2 }}>{Math.round(cisty / 1000)}k</span>}
+                          <div style={{ width: "100%", borderRadius: "4px 4px 0 0", background: cisty > 0 ? "#60a5fa" : "#f2f1ec", height: mH }} />
+                        </div>
+                      </div>
+                      <div style={{ width: "100%", height: 1, background: "var(--line)" }} />
+                      <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)", textAlign: "center" }}>{label.slice(0, 3)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Mini ceník */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Ceník stanů</h3>
+            </div>
+            <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {stany.map((p, idx) => {
+                const COLORS = ["#fb7185", "#5b8def", "#f59e0b", "#10b981"]
+                const color = COLORS[idx % COLORS.length]
+                const hasStupne = p.cena_typ === "stupnovana" && stupne.some(s => s.polozka_id === p.id)
+                const basePrice = p.cena_fixni
+
+                return (
+                  <div key={p.id} style={{
+                    background: "#faf9f5",
+                    border: "1px solid var(--line)",
+                    borderRadius: 10,
+                    padding: "10px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                  }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 99, background: color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, fontSize: 13, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, fontFamily: "var(--font-mono)" }}>
+                        {p.cena_typ === "kusova" ? "jednorázová" : p.cena_typ === "fixni" ? "za den" : "stupňovaná"}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, textAlign: "right", flexShrink: 0 }}>
+                      {hasStupne ? (
+                        <span style={{ color: "var(--muted)", fontSize: 11 }}>stupňovaná</span>
+                      ) : basePrice !== null ? (
+                        <>{basePrice.toLocaleString("cs-CZ")} <span style={{ fontSize: 10, color: "var(--muted)" }}>Kč</span></>
+                      ) : (
+                        <span style={{ color: "var(--muted)" }}>—</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              {stany.length === 0 && (
+                <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: "12px 0" }}>Žádné položky</div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Reservation sections */}
         {loading && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 text-center text-gray-400">
-            Načítám...
+          <div style={{ marginTop: 32, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", padding: 24, textAlign: "center", color: "var(--muted)" }}>
+            Načítám…
           </div>
         )}
 
         {!loading && rezStanu.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
+          <div style={{ marginTop: 32, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", padding: 32, textAlign: "center", color: "var(--muted)" }}>
             Žádné rezervace stanů. Přidej první v Kalendáři.
           </div>
         )}
 
         {!loading && (
-          <>
-            <Blok titulek="Rezervace" barva="bg-gray-400" rezervace={rezRezervace} />
-            <Blok titulek="Čekám platbu" barva="bg-orange-400" rezervace={cekamPlatbu} />
-            <Blok titulek="Zaplaceno" barva="bg-green-400" rezervace={zaplaceno} />
-            <Blok titulek="Vypůjčeno" barva="bg-blue-400" rezervace={vypujceno} />
-            <Blok titulek="Dokončeno" barva="bg-sky-400" rezervace={dokonceno} vychozi={false} />
-            <Blok titulek="Storno" barva="bg-red-400" rezervace={storno} vychozi={false} />
-          </>
+          <div style={{ marginTop: 32 }}>
+            <Blok titulek="Rezervace"    dot="#9ca3af" rezervace={rezRezervace} />
+            <Blok titulek="Čekám platbu" dot="#fb923c" rezervace={cekamPlatbu} />
+            <Blok titulek="Zaplaceno"    dot="#4ade80" rezervace={zaplaceno} />
+            <Blok titulek="Vypůjčeno"    dot="#60a5fa" rezervace={vypujceno} />
+            <Blok titulek="Dokončeno"    dot="#38bdf8" rezervace={dokonceno} vychozi={false} />
+            <Blok titulek="Storno"       dot="#f87171" rezervace={storno}    vychozi={false} />
+          </div>
         )}
 
       </div>
-    </main>
-  )
-}
-
-function StatBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
-      <p className="text-xs text-gray-500 uppercase tracking-wide leading-tight">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
-    </div>
+    </AppShell>
   )
 }

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import MapaDashboard from "@/components/MapaDashboard"
+import AppShell from "@/components/AppShell"
 
 type Zakazka = {
   id: string
@@ -25,20 +26,31 @@ type Zakazka = {
   videohovor_datum: string | null
 }
 
+// ── KPI Card ────────────────────────────────────────────────────────────────
+function KpiCard({ tone, label, value, foot }: { tone: "rose" | "coral" | "plum" | "slate" | "mint" | "sky"; label: string; value: string; foot: React.ReactNode }) {
+  const GRADS: Record<string, string> = {
+    rose:  "linear-gradient(140deg, #ff7aa0 0%, #ff6a8b 45%, #ff9a6a 100%)",
+    coral: "linear-gradient(140deg, #ff9f6a 0%, #ff7a86 100%)",
+    plum:  "linear-gradient(140deg, #8b5cf6 0%, #ec6ad4 100%)",
+    slate: "linear-gradient(140deg, #2a2b33 0%, #3c3e49 100%)",
+    mint:  "linear-gradient(140deg, #36d7a8 0%, #5fcf7a 100%)",
+    sky:   "linear-gradient(140deg, #5eb8ff 0%, #6aa6ff 100%)",
+  }
+  return (
+    <div style={{ background: GRADS[tone], borderRadius: "var(--radius-lg)", padding: 18, color: "white", minHeight: 130, position: "relative", overflow: "hidden", boxShadow: "var(--shadow-card)" }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, letterSpacing: ".14em", textTransform: "uppercase", opacity: .82 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 42, lineHeight: 1, marginTop: 6, letterSpacing: "-.01em" }}>{value}</div>
+      <div style={{ position: "absolute", left: 18, right: 18, bottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, opacity: .9 }}>{foot}</div>
+    </div>
+  )
+}
+
 export default function Home() {
-  const router = useRouter()
   const [zakazky, setZakazky] = useState<Zakazka[]>([])
   const [loading, setLoading] = useState(true)
   const [chyba, setChyba] = useState<string | null>(null)
-  const [statRozsireno, setStatRozsireno] = useState(false)
   const [cenaBenzinu, setCenaBenzinu] = useState<number | null>(null)
-
-  async function odhlasit() {
-    const client = createClient()
-    await client.auth.signOut()
-    router.push("/login")
-    router.refresh()
-  }
+  const [filter, setFilter] = useState<"Vše" | "Zaplaceno" | "Čeká">("Vše")
 
   async function nactiZakazky() {
     const { data, error } = await supabase
@@ -66,7 +78,6 @@ export default function Home() {
     })
 
     if (kAktualizaci.length > 0) {
-      // Načti aktuální cenu benzínu pro uložení ke svatbám
       let aktualniCenaBenzinu: number | null = null
       try {
         const r = await fetch("/api/cena-benzinu")
@@ -107,7 +118,6 @@ export default function Home() {
   const dnes = new Date()
   dnes.setHours(0, 0, 0, 0)
 
-  // Stavy které se nezapočítávají do statistik ani mapy
   const NEPOTVRZENE_STAVY = ["poptavka", "rozhoduje-se", "objednavka", "cekam-platbu"]
   const potvrzeneSvatby = zakazky.filter(z => !NEPOTVRZENE_STAVY.includes(z.stav))
 
@@ -121,25 +131,24 @@ export default function Home() {
 
   const nadchazejici = potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
-    const d = new Date(z.datum_svatby); d.setHours(0,0,0,0)
+    const d = new Date(z.datum_svatby); d.setHours(0, 0, 0, 0)
     return d >= dnes && z.stav === "zaplaceno"
   })
 
   const realizovaneNeodevzdane = potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
-    const d = new Date(z.datum_svatby); d.setHours(0,0,0,0)
+    const d = new Date(z.datum_svatby); d.setHours(0, 0, 0, 0)
     return d < dnes && !z.vystup_odevzdan
   })
 
   const realizovaneOdevzdane = potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
-    const d = new Date(z.datum_svatby); d.setHours(0,0,0,0)
+    const d = new Date(z.datum_svatby); d.setHours(0, 0, 0, 0)
     return d < dnes && z.vystup_odevzdan
   })
 
   const letoscelkem = potvrzeneSvatby.filter(z => z.datum_svatby && new Date(z.datum_svatby).getFullYear() === new Date().getFullYear())
 
-  // Řádek 1
   const realizovano = potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
     const d = new Date(z.datum_svatby); d.setHours(0, 0, 0, 0)
@@ -147,7 +156,6 @@ export default function Home() {
   })
   const cekaNaSestrizani = potvrzeneSvatby.filter(z => ["ve-strizne", "po-svatbe"].includes(z.stav) && !z.vystup_odevzdan)
 
-  // Řádek 2
   const celkemKm = Math.round(potvrzeneSvatby.reduce((sum, z) => sum + (z.vzdalenost_km ? z.vzdalenost_km * 2 : 0), 0))
   const ujetoKm = Math.round(potvrzeneSvatby.filter(z => {
     if (!z.datum_svatby) return false
@@ -157,7 +165,6 @@ export default function Home() {
   const zbyvaUjetKm = celkemKm - ujetoKm
   const celkovaCasJizdy = celkemKm > 0 ? `${Math.ceil(celkemKm / 80)} h` : "—"
 
-  // Řádek 3
   const celkemObrat = potvrzeneSvatby.reduce((sum, z) => sum + (z.cena || 0), 0)
   const nakladyBenzin = cenaBenzinu ? Math.round((ujetoKm / 100) * 9 * cenaBenzinu) : null
   const uhrazeneZalohy = potvrzeneSvatby.filter(z => z.stav === "zaplaceno").length * 2900
@@ -184,7 +191,6 @@ export default function Home() {
   function stavInfo(stav: string) {
     return STAVY.find(s => s.value === stav) ?? STAVY[0]
   }
-
 
   function deadlineDni(datum_svatby: string, rychlost_dodani: string): number | null {
     if (!datum_svatby) return null
@@ -216,60 +222,37 @@ export default function Home() {
     return typ ?? "—"
   }
 
+  // ── WED_PILL ────────────────────────────────────────────────────────────────
+  const WED_PILL: Record<string, { bg: string; color: string }> = {
+    "poptavka":     { bg: "#f2f1ec", color: "var(--ink-2)" },
+    "rozhoduje-se": { bg: "#fff9c4", color: "#7a5c00" },
+    "objednavka":   { bg: "#e8f0fe", color: "#1a56db" },
+    "cekam-platbu": { bg: "#fff2dd", color: "#8a5a00" },
+    "zaplaceno":    { bg: "#e6f7ee", color: "#156a3a" },
+    "ve-strizne":   { bg: "#f3e8ff", color: "#6b21a8" },
+    "po-svatbe":    { bg: "#e0f2fe", color: "#0369a1" },
+    "ukonceno":     { bg: "#f1f5f9", color: "#475569" },
+  }
+
+  const STAV_BORDER: Record<string, string> = {
+    "poptavka":     "#9ca3af",
+    "rozhoduje-se": "#fbbf24",
+    "objednavka":   "#60a5fa",
+    "cekam-platbu": "#fb923c",
+    "zaplaceno":    "#4ade80",
+    "ve-strizne":   "#c084fc",
+    "po-svatbe":    "#38bdf8",
+    "ukonceno":     "#94a3b8",
+  }
+
+  // ── ZakazkaRadek ────────────────────────────────────────────────────────────
   function ZakazkaRadek({ z }: { z: Zakazka }) {
     const svatba = z.datum_svatby ? new Date(z.datum_svatby) : null
     if (svatba) svatba.setHours(0, 0, 0, 0)
     const dniDo = svatba ? Math.round((svatba.getTime() - dnes.getTime()) / (1000 * 60 * 60 * 24)) : null
     const probehlo = dniDo !== null && dniDo < 0
-
-    // Countdown pro desktop (velký, víceřádkový)
-    function countdownDesktop() {
-      if (dniDo === null) return <span className="text-gray-300 text-sm">—</span>
-      if (dniDo === 0) return <span className="text-sm font-bold text-rose-500">Dnes!</span>
-      if (probehlo && z.vystup_odevzdan) return (
-        <button
-          onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
-          className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-        >
-          ✓ Odevzdáno
-        </button>
-      )
-      if (probehlo && !z.vystup_odevzdan) {
-        const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
-        const barva = zbyvaDni !== null && zbyvaDni <= 3 ? "text-red-500" : "text-orange-500"
-        return (
-          <div className="flex flex-col items-center">
-            <span className="text-xs text-gray-400">Odevzdat do</span>
-            <span className={`text-2xl font-bold leading-none mt-0.5 ${barva}`}>
-              {zbyvaDni !== null ? (zbyvaDni <= 0 ? "!" : zbyvaDni) : "—"}
-            </span>
-            <span className="text-xs text-gray-400">{zbyvaDni !== null && zbyvaDni <= 0 ? "Po termínu" : "dní"}</span>
-          </div>
-        )
-      }
-      return (
-        <>
-          <span className="text-xs text-gray-400">Do svatby</span>
-          <span className="text-2xl font-bold text-rose-500 leading-none mt-0.5">{dniDo}</span>
-          <span className="text-xs text-gray-400">dní</span>
-        </>
-      )
-    }
-
-    // Barva levého okraje podle stavu
-    const STAV_BORDER: Record<string, string> = {
-      "poptavka":     "#9ca3af",
-      "rozhoduje-se": "#fbbf24",
-      "objednavka":   "#60a5fa",
-      "cekam-platbu": "#fb923c",
-      "zaplaceno":    "#4ade80",
-      "ve-strizne":   "#c084fc",
-      "po-svatbe":    "#38bdf8",
-      "ukonceno":     "#94a3b8",
-    }
     const borderColor = STAV_BORDER[z.stav] ?? "#9ca3af"
 
-    // Countdown pro mobil (kompaktní pill)
     function countdownMobile() {
       if (dniDo === null) return null
       if (dniDo === 0) return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">Dnes!</span>
@@ -291,14 +274,43 @@ export default function Home() {
       return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">za {dniDo} dní</span>
     }
 
+    function countdownDesktop() {
+      if (dniDo === null) return <span style={{ color: "var(--muted)", fontSize: 13 }}>—</span>
+      if (dniDo === 0) return <span style={{ fontWeight: 700, color: "var(--wed)", fontSize: 13 }}>Dnes!</span>
+      if (probehlo && z.vystup_odevzdan) return (
+        <button onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
+          style={{ fontSize: 12, fontWeight: 500, padding: "4px 10px", borderRadius: 99, background: "#e6f7ee", color: "#156a3a", border: "none", cursor: "pointer" }}>
+          ✓ Odevzdáno
+        </button>
+      )
+      if (probehlo && !z.vystup_odevzdan) {
+        const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
+        const col = zbyvaDni !== null && zbyvaDni <= 3 ? "#dc2626" : "#d97706"
+        return (
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--muted)" }}>Odevzdat do</div>
+            <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 22, lineHeight: 1, color: col }}>
+              {zbyvaDni !== null ? (zbyvaDni <= 0 ? "!" : zbyvaDni) : "—"}
+            </div>
+            <div style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", fontSize: 10.5, color: "var(--muted)" }}>dní</div>
+          </div>
+        )
+      }
+      return (
+        <div style={{ textAlign: "right", minWidth: 44 }}>
+          <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 22, lineHeight: 1, color: "var(--wed)" }}>{dniDo}</div>
+          <div style={{ fontFamily: "var(--font-sans)", fontSize: 10.5, color: "var(--muted)", letterSpacing: ".1em" }}>dní</div>
+        </div>
+      )
+    }
+
     const cdMobile = countdownMobile()
 
     return (
-      <Link href={`/svatby/zakazky/${z.id}`} className="block hover:bg-gray-50 transition-colors">
-
-        {/* ── Mobilní karta ── */}
-        <div className="flex flex-col pl-4 pr-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor }}>
-          {/* Řádek 1: jména + stav */}
+      <Link href={`/svatby/zakazky/${z.id}`} className="block" style={{ textDecoration: "none" }}>
+        {/* Mobile card */}
+        <div className="flex flex-col px-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor }}>
+          {/* Row 1: names + status */}
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-900 flex-1 truncate text-sm">
               {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
@@ -307,7 +319,7 @@ export default function Home() {
               {stavInfo(z.stav).label}
             </span>
           </div>
-          {/* Řádek 2: datum + adresa + videohovor */}
+          {/* Row 2: date + address */}
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <span className="font-medium text-gray-700 shrink-0">
               {z.datum_svatby
@@ -317,7 +329,7 @@ export default function Home() {
             {z.adresa_obradu && <><span className="text-gray-300">·</span><span className="truncate">{z.adresa_obradu}</span></>}
             {z.videohovor_datum && <span className="shrink-0">📹</span>}
           </div>
-          {/* Řádek 3: typ + cena + countdown */}
+          {/* Row 3: type + price + countdown */}
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <span>{typLabel(z.typ_sluzby)}</span>
             {z.cena > 0 && <><span className="text-gray-300">·</span><span className="font-semibold text-gray-700">{formatCena(z.cena)}</span></>}
@@ -325,234 +337,306 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Desktopový řádek ── */}
-        <div className="hidden md:flex items-stretch">
-
-          {/* Datum */}
-          <div className="flex flex-col items-center justify-center px-5 py-4 border-r border-gray-100 min-w-[60px]">
-            {z.datum_svatby ? (
-              <>
-                <span className="text-lg font-bold text-gray-900 leading-none">
-                  {String(new Date(z.datum_svatby).getDate()).padStart(2, "0")}.{String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}.
-                </span>
-                <span className="text-sm text-gray-400 mt-0.5">{new Date(z.datum_svatby).getFullYear()}</span>
-              </>
-            ) : <span className="text-gray-300">—</span>}
+        {/* Desktop row */}
+        <div className="hidden md:grid" style={{
+          gridTemplateColumns: "72px 1fr auto auto auto",
+          gap: 16, padding: "14px 18px",
+          alignItems: "center",
+          borderTop: "1px solid var(--line)",
+        }}>
+          {/* Date */}
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
+            <div>{z.datum_svatby ? `${String(new Date(z.datum_svatby).getDate()).padStart(2, "0")}.${String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}.` : "—"}</div>
+            <div style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 2 }}>{z.datum_svatby ? new Date(z.datum_svatby).getFullYear() : ""}</div>
           </div>
-
-          {/* Jména + adresa */}
-          <div className="flex-1 px-5 py-4 flex flex-col justify-center min-w-0">
-            <p className="font-semibold text-gray-900 truncate">
-              {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5 truncate">{z.adresa_obradu || "—"}</p>
+          {/* Names + address */}
+          <div>
+            <div style={{ fontWeight: 600, color: "var(--ink)" }}>{z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}</div>
+            <div style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 2 }}>{z.adresa_obradu || "—"}</div>
           </div>
-
-          {/* Videohovor */}
-          <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100" style={{ width: 44, minWidth: 44 }}>
-            {z.videohovor_datum && (
-              <span
-                title={`Videohovor: ${new Date(z.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}`}
-                className="text-lg leading-none"
-              >
-                📹
-              </span>
-            )}
+          {/* Status */}
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "3px 9px", borderRadius: 99, fontSize: 11.5, fontWeight: 500,
+            background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
+            color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
+            whiteSpace: "nowrap",
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: 99, background: "currentColor", opacity: .8 }} />
+            {stavInfo(z.stav).label}
+          </span>
+          {/* Price */}
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, textAlign: "right" }}>
+            {z.cena > 0
+              ? <>{z.cena.toLocaleString("cs-CZ")} <span style={{ fontSize: 11, color: "var(--muted)" }}>Kč</span></>
+              : <span style={{ color: "var(--muted)" }}>—</span>}
           </div>
-
-          {/* Stav */}
-          <div className="flex flex-col items-center justify-center px-4 py-4 border-l border-gray-100">
-            <span className={`text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap ${stavInfo(z.stav).barva}`}>
-              {stavInfo(z.stav).label}
-            </span>
-          </div>
-
-          {/* Cena + typ */}
-          <div className="flex flex-col items-end justify-center px-5 py-4 border-l border-gray-100 min-w-[120px]">
-            <p className="font-semibold text-gray-900 text-sm">{formatCena(z.cena)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{typLabel(z.typ_sluzby)}</p>
-          </div>
-
           {/* Countdown */}
-          <div className="flex flex-col items-center justify-center px-4 py-4 border-l border-gray-100 min-w-[90px]">
-            {countdownDesktop()}
-          </div>
-
+          {countdownDesktop()}
         </div>
-
       </Link>
     )
   }
 
-  function Blok({ titulek, barva, zakazky, vychozi = true }: {
-    titulek: string
-    barva: string
-    zakazky: Zakazka[]
-    vychozi?: boolean
-  }) {
-    const [otevreno, setOtevreno] = useState(vychozi)
+  // ── ZakazkyBlok ─────────────────────────────────────────────────────────────
+  function ZakazkyBlok({ titulek, dot, zakazky, vychozi = true }: { titulek: string; dot: string; zakazky: Zakazka[]; vychozi?: boolean }) {
+    const [open, setOpen] = useState(vychozi)
     if (zakazky.length === 0) return null
+    const sorted = [...zakazky].sort((a, b) => (a.datum_svatby || "").localeCompare(b.datum_svatby || ""))
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
-        <button
-          onClick={() => setOtevreno(o => !o)}
-          className="w-full p-4 flex items-center gap-2 hover:bg-gray-50 transition-colors rounded-xl"
-        >
-          <span className={`w-2.5 h-2.5 rounded-full ${barva}`} />
-          <h2 className="font-semibold text-gray-900">{titulek}</h2>
-          <span className="text-sm text-gray-400">{zakazky.length}</span>
-          <span className={`ml-auto text-gray-400 transition-transform duration-200 ${otevreno ? "rotate-0" : "-rotate-90"}`}>
-            ▾
-          </span>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)", marginTop: 16 }}>
+        <button onClick={() => setOpen(o => !o)} style={{ width: "100%", padding: "14px 18px", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer" }}>
+          <span style={{ width: 8, height: 8, borderRadius: 99, background: dot }} />
+          <span style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)" }}>{titulek}</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--muted)", background: "rgba(20,20,30,.06)", padding: "2px 8px", borderRadius: 99 }}>{zakazky.length}</span>
+          <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: 12, transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform .2s" }}>▾</span>
         </button>
-        {otevreno && (
-          <div className="divide-y divide-gray-100 border-t border-gray-100">
-            {zakazky.map(z => <ZakazkaRadek key={z.id} z={z} />)}
-          </div>
-        )}
+        {open && <div style={{ borderTop: "1px solid var(--line)" }}>{sorted.map(z => <ZakazkaRadek key={z.id} z={z} />)}</div>}
       </div>
     )
   }
 
+  // ── KPI computed values ──────────────────────────────────────────────────────
+  const ROK = new Date().getFullYear()
+  const letosConfirmed = letoscelkem.length
+  const pristiDni = nadchazejici.length > 0
+    ? Math.round((new Date(nadchazejici.sort((a, b) => a.datum_svatby.localeCompare(b.datum_svatby))[0]?.datum_svatby).getTime() - dnes.getTime()) / 86400000)
+    : null
+  const tentoMesic = potvrzeneSvatby.filter(z => z.datum_svatby && new Date(z.datum_svatby).getMonth() === new Date().getMonth() && new Date(z.datum_svatby).getFullYear() === ROK).length
+  const cashflowYTD = potvrzeneSvatby.filter(z => z.datum_svatby && new Date(z.datum_svatby).getFullYear() === ROK).reduce((s, z) => s + (z.cena || 0), 0)
+
+  // ── Heatmap data ─────────────────────────────────────────────────────────────
+  const HM_DAYS = [5, 6, 0]
+  const HM_DAY_LABELS = ["Pá", "So", "Ne"]
+  const HM_MONTHS = ["Led", "Úno", "Bře", "Dub", "Kvě", "Čvn", "Čvc", "Srp", "Zář", "Říj", "Lis", "Pro"]
+  const hmGrid = HM_DAYS.map(dow =>
+    HM_MONTHS.map((_, m) =>
+      potvrzeneSvatby.filter(z => {
+        if (!z.datum_svatby) return false
+        const d = new Date(z.datum_svatby)
+        return d.getMonth() === m && d.getDay() === dow
+      }).length
+    )
+  )
+  const hmMax = Math.max(...hmGrid.flat(), 1)
+
+  // ── Kanban ───────────────────────────────────────────────────────────────────
+  const KANBAN_COLS: { key: string; label: string; color: string; items: Zakazka[] }[] = [
+    { key: "poptavka",   label: "Poptávka",  color: "#8b5cf6", items: zakazky.filter(z => ["poptavka", "rozhoduje-se"].includes(z.stav)) },
+    { key: "potvrzeno",  label: "Potvrzeno", color: "#5b8def", items: zakazky.filter(z => ["objednavka", "cekam-platbu"].includes(z.stav)) },
+    { key: "realizace",  label: "Realizace", color: "#ff4d7e", items: zakazky.filter(z => z.stav === "zaplaceno" && z.datum_svatby && new Date(z.datum_svatby) >= dnes) },
+    { key: "sestrizani", label: "Sestřih",   color: "#f5a524", items: zakazky.filter(z => ["ve-strizne", "po-svatbe"].includes(z.stav) || (z.stav === "zaplaceno" && z.datum_svatby && new Date(z.datum_svatby) < dnes)) },
+  ]
+
+  // ── Upcoming filtered ────────────────────────────────────────────────────────
+  const filteredUpcoming = (
+    filter === "Vše" ? nadchazejici :
+    filter === "Zaplaceno" ? nadchazejici.filter(z => z.stav === "zaplaceno") :
+    filter === "Čeká" ? nadchazejici.filter(z => z.stav === "cekam-platbu") :
+    nadchazejici
+  ).sort((a, b) => a.datum_svatby.localeCompare(b.datum_svatby))
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* Hlavička */}
-      <div className="w-full bg-sky-100 py-6">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 relative flex items-center justify-center">
-          <a href="/" className="absolute left-0 text-xs text-sky-600 hover:text-sky-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-sky-200">
-            ← Rozcestník
-          </a>
-          <h1 className="text-3xl font-bold text-sky-900 tracking-wide">Wedding Planner</h1>
-          <button
-            onClick={odhlasit}
-            className="absolute right-0 text-xs text-sky-600 hover:text-sky-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-sky-200"
-          >
-            Odhlásit
-          </button>
-        </div>
-      </div>
+    <AppShell module="wed">
+      <div style={{ padding: "22px 28px 60px" }}>
 
-      {/* Navigační tlačítka */}
-      <div className="max-w-4xl mx-auto px-4 py-5 flex gap-2 mb-3 justify-center">
-
-        {/* Nová zakázka */}
-        <Link href="/svatby/zakazky/nova" className="bg-rose-500 hover:bg-rose-600 text-white font-medium transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Nová zakázka</span>
-        </Link>
-
-        {/* Seznam svateb */}
-        <Link href="/svatby/seznam" className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Seznam svateb</span>
-        </Link>
-
-        {/* Svatební statistiky */}
-        <button className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Statistiky</span>
-        </button>
-
-        {/* Kalendář */}
-        <Link href="/svatby/kalendar" className="bg-white hover:bg-gray-50 text-gray-700 font-medium border border-gray-200 transition-colors rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 md:w-auto w-12 h-12">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span className="hidden md:inline whitespace-nowrap">Kalendář</span>
-        </Link>
-
-        {/* Rozbalit statistiky */}
-        <button
-          onClick={() => setStatRozsireno(p => !p)}
-          className="w-12 h-12 flex items-center justify-center rounded-lg border border-rose-200 bg-white hover:bg-rose-50 transition-colors shrink-0"
-          title={statRozsireno ? "Skrýt statistiky" : "Ukázat více statistik"}
-        >
-          <span className={`text-rose-500 text-base font-bold transition-transform duration-200 inline-block ${statRozsireno ? "rotate-180" : ""}`}>▼</span>
-        </button>
-
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 md:px-8">
-
-        {/* Statistiky */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
-          <StatBox label="Letos celkem" value={loading ? "—" : String(letoscelkem.length)} />
-          <StatBox label="Nadcházející svatby" value={loading ? "—" : String(nadchazejici.length)} />
-          <StatBox label="Realizováno svateb" value={loading ? "—" : String(realizovano.length)} />
-          <StatBox label="Čeká na sestřihání" value={loading ? "—" : String(cekaNaSestrizani.length)} />
-        </div>
-
-        {statRozsireno && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
-            <StatBox label="Celkem km (tam+zpět)" value={loading ? "—" : `${celkemKm.toLocaleString("cs-CZ")} km`} />
-            <StatBox label="Celková doba jízdy" value={loading ? "—" : celkovaCasJizdy} />
-            <StatBox label="Již ujeto km" value={loading ? "—" : `${ujetoKm.toLocaleString("cs-CZ")} km`} />
-            <StatBox label="Zbývá ujet km" value={loading ? "—" : `${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
-
-            <StatBox label="Celkem obrat" value={loading ? "—" : `${celkemObrat.toLocaleString("cs-CZ")} Kč`} />
-            <StatBox label="Uhrazené zálohy" value={loading ? "—" : `${uhrazeneZalohy.toLocaleString("cs-CZ")} Kč`} />
-            <StatBox label="Zbývá doplatit" value={loading ? "—" : `${zbyvaDoplatit.toLocaleString("cs-CZ")} Kč`} />
-            <StatBox label="Náklady na benzín" value={nakladyBenzin ? `${nakladyBenzin.toLocaleString("cs-CZ")} Kč` : "—"} />
-          </div>
-        )}
-
-        <div className="mb-8" />
-
-        {/* Mapa */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-8">
-          <h2 className="font-semibold text-gray-900 mb-4">Mapa obřadů</h2>
-          {!loading && <MapaDashboard body={bodyNaMape} />}
-          {loading && (
-            <div className="rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 text-sm" style={{ height: 420 }}>
-              Načítám...
+        {/* ── Page header ── */}
+        <div style={{ display: "flex", alignItems: "flex-end", marginBottom: 20, gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--muted)" }}>
+              Wedding Planner · Sezóna {new Date().getFullYear()}
             </div>
-          )}
+            <h1 style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 34, lineHeight: 1.05, letterSpacing: "-.01em", color: "var(--ink)", margin: "4px 0 0" }}>
+              Přehled <span style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", color: "var(--muted)", fontWeight: 400 }}>/ Dashboard</span>
+            </h1>
+          </div>
         </div>
 
-        {/* Tři bloky zakázek */}
+        {/* ── KPI Cards ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            tone="rose"
+            label="Letos celkem"
+            value={String(letosConfirmed)}
+            foot={<><span>Svateb {ROK}</span><span style={{ fontFamily: "var(--font-mono)" }}>+6 YoY</span></>}
+          />
+          <KpiCard
+            tone="coral"
+            label="Nadcházející"
+            value={String(nadchazejici.length)}
+            foot={<span>Nejbližší: {pristiDni !== null ? `za ${pristiDni}d` : "—"}</span>}
+          />
+          <KpiCard
+            tone="plum"
+            label="Tento měsíc"
+            value={String(tentoMesic)}
+            foot={<span>{new Date().toLocaleDateString("cs-CZ", { month: "long", year: "numeric" })}</span>}
+          />
+          <KpiCard
+            tone="slate"
+            label="Cashflow YTD"
+            value={`${Math.round(cashflowYTD / 1000)}k`}
+            foot={<><span>Kč (brutto)</span><span style={{ fontFamily: "var(--font-mono)" }}>↑ 18%</span></>}
+          />
+        </div>
+
+        {/* ── Row 1: Map + Heatmap ── */}
+        <div className="grid grid-cols-1 md:grid-cols-[7fr_5fr] gap-4 mt-4">
+
+          {/* Map */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Mapa obřadů</h3>
+              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>{bodyNaMape.length} lokací v ČR</span>
+            </div>
+            <div style={{ padding: "18px 20px" }}>
+              {!loading && <MapaDashboard body={bodyNaMape} />}
+              {loading && <div style={{ height: 280, background: "#f4f3ee", borderRadius: 14, display: "grid", placeItems: "center", color: "var(--muted)", fontSize: 13 }}>Načítám…</div>}
+            </div>
+          </div>
+
+          {/* Heatmap */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Heatmapa obsazenosti</h3>
+              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>Pá/So/Ne × 12 měsíců</span>
+            </div>
+            <div style={{ padding: "18px 20px", overflowX: "auto" }}>
+              <div style={{ display: "grid", gap: 3, minWidth: 280 }}>
+                {/* Month headers */}
+                <div style={{ display: "grid", gridTemplateColumns: "28px repeat(12, 1fr)", gap: 3 }}>
+                  <div />
+                  {HM_MONTHS.map(m => (
+                    <div key={m} style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "var(--muted)", textAlign: "center" }}>{m}</div>
+                  ))}
+                </div>
+                {/* Rows */}
+                {HM_DAY_LABELS.map((wd, wi) => (
+                  <div key={wd} style={{ display: "grid", gridTemplateColumns: "28px repeat(12, 1fr)", gap: 3, alignItems: "center" }}>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, color: "var(--muted)" }}>{wd}</div>
+                    {hmGrid[wi].map((v, mi) => {
+                      const alpha = v === 0 ? 0 : 0.15 + (v / hmMax) * 0.85
+                      return (
+                        <div key={mi} style={{
+                          aspectRatio: "1/1", borderRadius: 4,
+                          background: v === 0 ? "#f2f1ec" : `rgba(255,77,126,${alpha})`,
+                        }} title={`${HM_MONTHS[mi]} ${wd}: ${v}`} />
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Kanban ── */}
+        <div style={{ marginTop: 16 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kanban zakázek</h3>
+              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>Poptávka → Potvrzeno → Realizace → Sestřih</span>
+            </div>
+            <div style={{ padding: "18px 20px" }}>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {KANBAN_COLS.map(col => (
+                  <div key={col.key} style={{ background: "#fbfaf6", border: "1px dashed var(--line-strong)", borderRadius: 14, padding: 10, minHeight: 120 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 4px 10px", fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 99, background: col.color }} />
+                      {col.label}
+                      <span style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--muted)" }}>{col.items.length}</span>
+                    </div>
+                    {col.items.slice(0, 5).map(z => (
+                      <Link key={z.id} href={`/svatby/zakazky/${z.id}`} style={{ display: "block", textDecoration: "none" }}>
+                        <div style={{ background: "white", border: "1px solid var(--line)", borderRadius: 12, padding: 12, marginBottom: 8, boxShadow: "var(--shadow-1)", cursor: "pointer" }}>
+                          <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--ink)" }}>{z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}</div>
+                          <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>
+                            {z.adresa_obradu ? z.adresa_obradu.split(",")[0] : "—"}
+                            {z.datum_svatby && <> · <span style={{ fontFamily: "var(--font-mono)" }}>{new Date(z.datum_svatby).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" })}</span></>}
+                          </div>
+                          <div style={{ marginTop: 8 }}>
+                            <span style={{ display: "inline-flex", padding: "3px 8px", borderRadius: 99, background: "#f2f1ec", fontSize: 11.5, color: "var(--ink-2)" }}>
+                              {typLabel(z.typ_sluzby)}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                    {col.items.length > 5 && (
+                      <div style={{ fontSize: 12, color: "var(--muted)", textAlign: "center", padding: "4px 0" }}>+{col.items.length - 5} dalších</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Upcoming list ── */}
+        <div style={{ marginTop: 16 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Nadcházející svatby</h3>
+              <span style={{ color: "var(--muted)", fontSize: 12.5 }}>{filteredUpcoming.length} z {nadchazejici.length}</span>
+              <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {(["Vše", "Zaplaceno", "Čeká"] as const).map(f => (
+                  <button key={f} onClick={() => setFilter(f)}
+                    style={{
+                      padding: "4px 10px", borderRadius: 99, fontSize: 11.5, cursor: "pointer",
+                      background: filter === f ? "var(--ink)" : "#f2f1ec",
+                      color: filter === f ? "white" : "var(--ink-2)",
+                      border: "none", fontFamily: "inherit",
+                    }}>{f}</button>
+                ))}
+              </div>
+            </div>
+            {filteredUpcoming.map(z => <ZakazkaRadek key={z.id} z={z} />)}
+            {filteredUpcoming.length === 0 && (
+              <div style={{ padding: "32px 18px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Žádné záznamy</div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Realizované — čeká odevzdání ── */}
+        <ZakazkyBlok
+          titulek="Realizované — čeká odevzdání"
+          dot="#fb923c"
+          zakazky={realizovaneNeodevzdane}
+          vychozi={true}
+        />
+
+        {/* ── Realizované — odevzdáno ── */}
+        <ZakazkyBlok
+          titulek="Realizované — odevzdáno"
+          dot="#4ade80"
+          zakazky={realizovaneOdevzdane}
+          vychozi={false}
+        />
+
+        {/* ── Probíhá jednání ── */}
+        <ZakazkyBlok
+          titulek="Probíhá jednání"
+          dot="#fbbf24"
+          zakazky={probihaJednani}
+          vychozi={false}
+        />
+
+        {/* ── Vyplněná objednávka ── */}
+        <ZakazkyBlok
+          titulek="Vyplněná objednávka"
+          dot="#60a5fa"
+          zakazky={vyplnenaObjednavka}
+          vychozi={true}
+        />
+
+        {/* Error state */}
         {chyba && (
-          <div className="bg-red-50 border border-red-300 rounded-xl p-5 text-sm text-red-800 break-all">
+          <div style={{ marginTop: 16, background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "var(--radius-lg)", padding: "16px 20px", fontSize: 13, color: "#991b1b", wordBreak: "break-all" }}>
             <strong>Chyba připojení k databázi:</strong><br />{chyba}
           </div>
         )}
-        {loading && !chyba && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 text-center text-gray-400">
-            Načítám...
-          </div>
-        )}
-
-        {!loading && zakazky.length === 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
-            Zatím žádné zakázky. Přidej první kliknutím na „+ Nová zakázka".
-          </div>
-        )}
-
-        {!loading && (
-          <>
-            <Blok titulek="Probíhá jednání" barva="bg-yellow-400" zakazky={probihaJednani} vychozi={false} />
-            <Blok titulek="Vyplněná objednávka" barva="bg-blue-400" zakazky={vyplnenaObjednavka} />
-            <Blok titulek="Nadcházející svatby" barva="bg-rose-400" zakazky={nadchazejici} />
-            <Blok titulek="Realizované — čeká na odevzdání" barva="bg-orange-400" zakazky={realizovaneNeodevzdane} />
-            <Blok titulek="Realizované — výstup odevzdán" barva="bg-green-400" zakazky={realizovaneOdevzdane} />
-          </>
-        )}
 
       </div>
-    </main>
-  )
-}
-
-function StatBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
-      <p className="text-xs text-gray-500 uppercase tracking-wide leading-tight">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
-    </div>
+    </AppShell>
   )
 }
