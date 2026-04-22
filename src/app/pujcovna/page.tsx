@@ -205,68 +205,113 @@ export default function PujcovnaDashboard() {
     const info = stavInfo(r.stav)
     const cena = celkovaCenaRezervace(r)
 
+    function countdownMobile() {
+      if (r.stav === "vypujceno") return <span className="text-blue-500 font-semibold">vrácení za {Math.max(0, dniZbývá)} dní</span>
+      if (r.stav === "dokonceno" || r.stav === "storno") return null
+      if (dniDo === 0) return <span className="text-emerald-500 font-semibold">Dnes!</span>
+      if (dniDo < 0) return null
+      return <span className="text-emerald-600 font-semibold">za {dniDo} dní</span>
+    }
+
+    const cdMobile = countdownMobile()
+
     return (
-      <Link href={`/pujcovna/rezervace/${r.id}`} className="flex items-stretch hover:bg-gray-50 transition-colors">
+      <Link href={`/pujcovna/rezervace/${r.id}`} className="block hover:bg-gray-50 transition-colors">
 
-        {/* Datum */}
-        <div className="flex flex-col items-center justify-center px-3 py-4 border-r border-gray-100 shrink-0 text-center" style={{ width: 64 }}>
-          <span className="text-base font-bold text-gray-900 leading-none">
-            {String(new Date(r.start_date).getDate()).padStart(2, "0")}.{String(new Date(r.start_date).getMonth() + 1).padStart(2, "0")}.
-          </span>
-          <span className="text-xs text-gray-400 mt-0.5">{new Date(r.start_date).getFullYear()}</span>
-        </div>
-
-        {/* Zákazník + stan */}
-        <div className="flex-1 px-3 md:px-4 py-4 flex flex-col justify-center min-w-0">
+        {/* ── Mobilní karta ── */}
+        <div className="flex flex-col px-4 py-3 gap-1 md:hidden">
+          {/* Řádek 1: jméno zákazníka + stav */}
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
-            <p className="font-semibold text-gray-900 truncate">{r.customer}</p>
+            <p className="font-semibold text-gray-900 flex-1 truncate text-sm">{r.customer}</p>
+            <span className={`text-xs font-medium px-2 py-1 rounded-lg whitespace-nowrap ${info.barva}`}>{info.label}</span>
           </div>
-          <p className="text-xs text-gray-400 mt-0.5 truncate">{stanLabel(r.item_id, r.unit_index)}</p>
+          {/* Řádek 2: datum · stan · délka · cena · countdown */}
+          <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-xs text-gray-500 ml-4">
+            <span className="font-medium text-gray-700">{formatDatum(r.start_date)}</span>
+            <span>·</span>
+            <span>{stanLabel(r.item_id, r.unit_index)}</span>
+            <span>·</span>
+            <span>{dni} {dni === 1 ? "den" : dni < 5 ? "dny" : "dní"}</span>
+            {cena !== null && (
+              <>
+                <span>·</span>
+                <span className="font-semibold text-gray-700">{cena.toLocaleString("cs-CZ")} Kč</span>
+              </>
+            )}
+            {cdMobile && (
+              <>
+                <span>·</span>
+                {cdMobile}
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Cena výpůjčky */}
-        <div className="flex flex-col items-end justify-center px-3 py-4 border-l border-gray-100 shrink-0" style={{ width: 100 }}>
-          {cena !== null ? (
-            <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{cena.toLocaleString("cs-CZ")} Kč</span>
-          ) : (
-            <span className="text-gray-300 text-sm">—</span>
-          )}
-        </div>
+        {/* ── Desktopový řádek ── */}
+        <div className="hidden md:flex items-stretch">
 
-        {/* Stav badge */}
-        <div className="flex flex-col items-center justify-center px-2 py-4 border-l border-gray-100 shrink-0" style={{ width: 110 }}>
-          <span className={`text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap ${info.barva}`}>
-            {info.label}
-          </span>
-        </div>
+          {/* Datum */}
+          <div className="flex flex-col items-center justify-center px-3 py-4 border-r border-gray-100 shrink-0 text-center" style={{ width: 64 }}>
+            <span className="text-base font-bold text-gray-900 leading-none">
+              {String(new Date(r.start_date).getDate()).padStart(2, "0")}.{String(new Date(r.start_date).getMonth() + 1).padStart(2, "0")}.
+            </span>
+            <span className="text-xs text-gray-400 mt-0.5">{new Date(r.start_date).getFullYear()}</span>
+          </div>
 
-        {/* Termín */}
-        <div className="hidden md:flex flex-col items-end justify-center px-3 py-4 border-l border-gray-100 shrink-0" style={{ width: 120 }}>
-          <p className="font-semibold text-gray-900 text-sm">{formatDatum(r.start_date)} – {formatDatum(r.end_date)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{dni} {dni === 1 ? "den" : dni < 5 ? "dny" : "dní"}</p>
-        </div>
+          {/* Zákazník + stan */}
+          <div className="flex-1 px-4 py-4 flex flex-col justify-center min-w-0">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
+              <p className="font-semibold text-gray-900 truncate">{r.customer}</p>
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5 truncate">{stanLabel(r.item_id, r.unit_index)}</p>
+          </div>
 
-        {/* Countdown */}
-        <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100 shrink-0" style={{ width: 70 }}>
-          {r.stav === "vypujceno" ? (
-            <>
-              <span className="text-xs text-gray-400">Vrácení za</span>
-              <span className="text-2xl font-bold text-blue-500 leading-none mt-0.5">{Math.max(0, dniZbývá)}</span>
-              <span className="text-xs text-gray-400">dní</span>
-            </>
-          ) : r.stav === "dokonceno" || r.stav === "storno" ? (
-            <span className="text-gray-300 text-sm">—</span>
-          ) : dniDo === 0 ? (
-            <span className="text-sm font-bold text-emerald-500">Dnes!</span>
-          ) : dniDo < 0 ? (
-            <span className="text-gray-300 text-sm">—</span>
-          ) : (
-            <>
-              <span className="text-2xl font-bold text-emerald-500 leading-none">{dniDo}</span>
-              <span className="text-xs text-gray-400">dní</span>
-            </>
-          )}
+          {/* Cena výpůjčky */}
+          <div className="flex flex-col items-end justify-center px-3 py-4 border-l border-gray-100 shrink-0" style={{ width: 100 }}>
+            {cena !== null ? (
+              <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{cena.toLocaleString("cs-CZ")} Kč</span>
+            ) : (
+              <span className="text-gray-300 text-sm">—</span>
+            )}
+          </div>
+
+          {/* Stav badge */}
+          <div className="flex flex-col items-center justify-center px-2 py-4 border-l border-gray-100 shrink-0" style={{ width: 110 }}>
+            <span className={`text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap ${info.barva}`}>
+              {info.label}
+            </span>
+          </div>
+
+          {/* Termín */}
+          <div className="flex flex-col items-end justify-center px-3 py-4 border-l border-gray-100 shrink-0" style={{ width: 120 }}>
+            <p className="font-semibold text-gray-900 text-sm">{formatDatum(r.start_date)} – {formatDatum(r.end_date)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{dni} {dni === 1 ? "den" : dni < 5 ? "dny" : "dní"}</p>
+          </div>
+
+          {/* Countdown */}
+          <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100 shrink-0" style={{ width: 70 }}>
+            {r.stav === "vypujceno" ? (
+              <>
+                <span className="text-xs text-gray-400">Vrácení za</span>
+                <span className="text-2xl font-bold text-blue-500 leading-none mt-0.5">{Math.max(0, dniZbývá)}</span>
+                <span className="text-xs text-gray-400">dní</span>
+              </>
+            ) : r.stav === "dokonceno" || r.stav === "storno" ? (
+              <span className="text-gray-300 text-sm">—</span>
+            ) : dniDo === 0 ? (
+              <span className="text-sm font-bold text-emerald-500">Dnes!</span>
+            ) : dniDo < 0 ? (
+              <span className="text-gray-300 text-sm">—</span>
+            ) : (
+              <>
+                <span className="text-2xl font-bold text-emerald-500 leading-none">{dniDo}</span>
+                <span className="text-xs text-gray-400">dní</span>
+              </>
+            )}
+          </div>
+
         </div>
 
       </Link>

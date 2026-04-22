@@ -222,88 +222,147 @@ export default function Home() {
     const dniDo = svatba ? Math.round((svatba.getTime() - dnes.getTime()) / (1000 * 60 * 60 * 24)) : null
     const probehlo = dniDo !== null && dniDo < 0
 
-    return (
-      <Link href={`/svatby/zakazky/${z.id}`} className="flex items-stretch hover:bg-gray-50 transition-colors">
-
-        {/* Datum */}
-        <div className="flex flex-col items-center justify-center px-3 md:px-5 py-4 border-r border-gray-100 min-w-[60px]">
-          {z.datum_svatby ? (
-            <>
-              <span className="text-base md:text-lg font-bold text-gray-900 leading-none">
-                {String(new Date(z.datum_svatby).getDate()).padStart(2, "0")}.{String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}.
-              </span>
-              <span className="text-xs md:text-sm text-gray-400 mt-0.5">{new Date(z.datum_svatby).getFullYear()}</span>
-            </>
-          ) : <span className="text-gray-300">—</span>}
-        </div>
-
-        {/* Jména + adresa */}
-        <div className="flex-1 px-3 md:px-5 py-4 flex flex-col justify-center min-w-0">
-          {/* Desktop: jedno řádky */}
-          <p className="hidden md:block font-semibold text-gray-900 truncate">
-            {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
-          </p>
-          <p className="hidden md:block text-xs text-gray-400 mt-0.5 truncate">{z.adresa_obradu || "—"}</p>
-          {/* Mobil: tři řádky */}
-          <p className="md:hidden font-semibold text-gray-900 text-sm truncate">{z.jmeno_nevesty || "—"}</p>
-          <p className="md:hidden font-semibold text-gray-900 text-sm truncate">{z.jmeno_zenicha || "—"}</p>
-          <p className="md:hidden text-xs text-gray-400 mt-0.5 truncate">{z.adresa_obradu || "—"}</p>
-        </div>
-
-        {/* Videohovor */}
-        <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100" style={{ width: 44, minWidth: 44 }}>
-          {z.videohovor_datum && (
-            <span title={`Videohovor: ${new Date(z.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}`} className="text-lg leading-none">
-              📹
+    // Countdown pro desktop (velký, víceřádkový)
+    function countdownDesktop() {
+      if (dniDo === null) return <span className="text-gray-300 text-sm">—</span>
+      if (dniDo === 0) return <span className="text-sm font-bold text-rose-500">Dnes!</span>
+      if (probehlo && z.vystup_odevzdan) return (
+        <button
+          onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
+          className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+        >
+          ✓ Odevzdáno
+        </button>
+      )
+      if (probehlo && !z.vystup_odevzdan) {
+        const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
+        const barva = zbyvaDni !== null && zbyvaDni <= 3 ? "text-red-500" : "text-orange-500"
+        return (
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-gray-400">Odevzdat do</span>
+            <span className={`text-2xl font-bold leading-none mt-0.5 ${barva}`}>
+              {zbyvaDni !== null ? (zbyvaDni <= 0 ? "!" : zbyvaDni) : "—"}
             </span>
-          )}
+            <span className="text-xs text-gray-400">{zbyvaDni !== null && zbyvaDni <= 0 ? "Po termínu" : "dní"}</span>
+          </div>
+        )
+      }
+      return (
+        <>
+          <span className="text-xs text-gray-400">Do svatby</span>
+          <span className="text-2xl font-bold text-rose-500 leading-none mt-0.5">{dniDo}</span>
+          <span className="text-xs text-gray-400">dní</span>
+        </>
+      )
+    }
+
+    // Countdown pro mobil (kompaktní, inline)
+    function countdownMobile() {
+      if (dniDo === null) return null
+      if (dniDo === 0) return <span className="text-rose-500 font-semibold">Dnes!</span>
+      if (probehlo && z.vystup_odevzdan) return (
+        <button
+          onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
+          className="text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-700"
+        >
+          ✓ Odevzdáno
+        </button>
+      )
+      if (probehlo && !z.vystup_odevzdan) {
+        const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
+        const barva = zbyvaDni !== null && zbyvaDni <= 3 ? "text-red-500" : "text-orange-500"
+        return <span className={`font-semibold ${barva}`}>odevzdat za {zbyvaDni !== null && zbyvaDni <= 0 ? "!" : `${zbyvaDni} dní`}</span>
+      }
+      return <span className="text-rose-500 font-semibold">za {dniDo} dní</span>
+    }
+
+    const cdMobile = countdownMobile()
+
+    return (
+      <Link href={`/svatby/zakazky/${z.id}`} className="block hover:bg-gray-50 transition-colors">
+
+        {/* ── Mobilní karta ── */}
+        <div className="flex flex-col px-4 py-3 gap-1 md:hidden">
+          {/* Řádek 1: jména + stav */}
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-gray-900 flex-1 truncate text-sm">
+              {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
+            </p>
+            <span className={`text-xs font-medium px-2 py-1 rounded-lg whitespace-nowrap ${stavInfo(z.stav).barva}`}>
+              {stavInfo(z.stav).label}
+            </span>
+          </div>
+          {/* Řádek 2: datum + adresa + videohovor */}
+          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span className="font-medium text-gray-700">
+              {z.datum_svatby
+                ? `${String(new Date(z.datum_svatby).getDate()).padStart(2, "0")}.${String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}. ${new Date(z.datum_svatby).getFullYear()}`
+                : "—"}
+            </span>
+            {z.adresa_obradu && <><span>·</span><span className="truncate">{z.adresa_obradu}</span></>}
+            {z.videohovor_datum && <span className="shrink-0">📹</span>}
+          </div>
+          {/* Řádek 3: typ + cena + countdown */}
+          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span>{typLabel(z.typ_sluzby)}</span>
+            {z.cena > 0 && <><span>·</span><span className="font-semibold text-gray-700">{formatCena(z.cena)}</span></>}
+            {cdMobile && <span className="ml-auto">{cdMobile}</span>}
+          </div>
         </div>
 
-        {/* Stav */}
-        <div className="flex flex-col items-center justify-center px-2 md:px-4 py-4 border-l border-gray-100">
-          <span className={`text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap ${stavInfo(z.stav).barva}`}>
-            {stavInfo(z.stav).label}
-          </span>
-        </div>
+        {/* ── Desktopový řádek ── */}
+        <div className="hidden md:flex items-stretch">
 
-        {/* Cena + typ */}
-        <div className="hidden md:flex flex-col items-end justify-center px-5 py-4 border-l border-gray-100 min-w-[120px]">
-          <p className="font-semibold text-gray-900 text-sm">{formatCena(z.cena)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{typLabel(z.typ_sluzby)}</p>
-        </div>
-
-        {/* Countdown / stav */}
-        <div className="flex flex-col items-center justify-center px-4 py-4 border-l border-gray-100 min-w-[90px]">
-          {dniDo === null ? (
-            <span className="text-gray-300 text-sm">—</span>
-          ) : dniDo === 0 ? (
-            <span className="text-sm font-bold text-rose-500">Dnes!</span>
-          ) : probehlo && z.vystup_odevzdan ? (
-            <button
-              onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
-              className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-            >
-              ✓ Odevzdáno
-            </button>
-          ) : probehlo && !z.vystup_odevzdan ? (() => {
-            const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
-            const barva = zbyvaDni !== null && zbyvaDni <= 3 ? "text-red-500" : "text-orange-500"
-            return (
-              <div className="flex flex-col items-center">
-                <span className="text-xs text-gray-400">Odevzdat do</span>
-                <span className={`text-2xl font-bold leading-none mt-0.5 ${barva}`}>
-                  {zbyvaDni !== null ? (zbyvaDni <= 0 ? "!" : zbyvaDni) : "—"}
+          {/* Datum */}
+          <div className="flex flex-col items-center justify-center px-5 py-4 border-r border-gray-100 min-w-[60px]">
+            {z.datum_svatby ? (
+              <>
+                <span className="text-lg font-bold text-gray-900 leading-none">
+                  {String(new Date(z.datum_svatby).getDate()).padStart(2, "0")}.{String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}.
                 </span>
-                <span className="text-xs text-gray-400">{zbyvaDni !== null && zbyvaDni <= 0 ? "Po termínu" : "dní"}</span>
-              </div>
-            )
-          })() : (
-            <>
-              <span className="text-xs text-gray-400">Do svatby</span>
-              <span className="text-2xl font-bold text-rose-500 leading-none mt-0.5">{dniDo}</span>
-              <span className="text-xs text-gray-400">dní</span>
-            </>
-          )}
+                <span className="text-sm text-gray-400 mt-0.5">{new Date(z.datum_svatby).getFullYear()}</span>
+              </>
+            ) : <span className="text-gray-300">—</span>}
+          </div>
+
+          {/* Jména + adresa */}
+          <div className="flex-1 px-5 py-4 flex flex-col justify-center min-w-0">
+            <p className="font-semibold text-gray-900 truncate">
+              {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5 truncate">{z.adresa_obradu || "—"}</p>
+          </div>
+
+          {/* Videohovor */}
+          <div className="flex flex-col items-center justify-center py-4 border-l border-gray-100" style={{ width: 44, minWidth: 44 }}>
+            {z.videohovor_datum && (
+              <span
+                title={`Videohovor: ${new Date(z.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}`}
+                className="text-lg leading-none"
+              >
+                📹
+              </span>
+            )}
+          </div>
+
+          {/* Stav */}
+          <div className="flex flex-col items-center justify-center px-4 py-4 border-l border-gray-100">
+            <span className={`text-xs font-medium px-2 py-1.5 rounded-lg whitespace-nowrap ${stavInfo(z.stav).barva}`}>
+              {stavInfo(z.stav).label}
+            </span>
+          </div>
+
+          {/* Cena + typ */}
+          <div className="flex flex-col items-end justify-center px-5 py-4 border-l border-gray-100 min-w-[120px]">
+            <p className="font-semibold text-gray-900 text-sm">{formatCena(z.cena)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{typLabel(z.typ_sluzby)}</p>
+          </div>
+
+          {/* Countdown */}
+          <div className="flex flex-col items-center justify-center px-4 py-4 border-l border-gray-100 min-w-[90px]">
+            {countdownDesktop()}
+          </div>
+
         </div>
 
       </Link>
