@@ -44,25 +44,6 @@ function StatBox({ label, value }: { label: string; value: string }) {
   )
 }
 
-// ── KPI Card ────────────────────────────────────────────────────────────────
-function KpiCard({ tone, label, value, foot }: { tone: "rose" | "coral" | "plum" | "slate" | "mint" | "sky"; label: string; value: string; foot: React.ReactNode }) {
-  const GRADS: Record<string, string> = {
-    rose:  "linear-gradient(140deg, #ff7aa0 0%, #ff6a8b 45%, #ff9a6a 100%)",
-    coral: "linear-gradient(140deg, #ff9f6a 0%, #ff7a86 100%)",
-    plum:  "linear-gradient(140deg, #8b5cf6 0%, #ec6ad4 100%)",
-    slate: "linear-gradient(140deg, #2a2b33 0%, #3c3e49 100%)",
-    mint:  "linear-gradient(140deg, #36d7a8 0%, #5fcf7a 100%)",
-    sky:   "linear-gradient(140deg, #5eb8ff 0%, #6aa6ff 100%)",
-  }
-  return (
-    <div style={{ background: GRADS[tone], borderRadius: "var(--radius-lg)", padding: 18, color: "white", minHeight: 130, position: "relative", overflow: "hidden", boxShadow: "var(--shadow-card)" }}>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, letterSpacing: ".14em", textTransform: "uppercase", opacity: .82 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 42, lineHeight: 1, marginTop: 6, letterSpacing: "-.01em" }}>{value}</div>
-      <div style={{ position: "absolute", left: 18, right: 18, bottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, opacity: .9 }}>{foot}</div>
-    </div>
-  )
-}
-
 // ── Mini Calendar ────────────────────────────────────────────────────────────
 const MESICE_NAZVY = ["Leden","Únor","Březen","Duben","Květen","Červen","Červenec","Srpen","Září","Říjen","Listopad","Prosinec"]
 const DNY_NAZVY    = ["Po","Út","St","Čt","Pá","So","Ne"]
@@ -546,29 +527,6 @@ export default function Home() {
     : null
   const tentoMesic = potvrzeneSvatby.filter(z => z.datum_svatby && new Date(z.datum_svatby).getMonth() === new Date().getMonth() && new Date(z.datum_svatby).getFullYear() === ROK).length
   const cashflowYTD = potvrzeneSvatby.filter(z => z.datum_svatby && new Date(z.datum_svatby).getFullYear() === ROK).reduce((s, z) => s + (z.cena || 0), 0)
-
-  // ── Heatmap data ─────────────────────────────────────────────────────────────
-  const HM_DAYS = [5, 6, 0]
-  const HM_DAY_LABELS = ["Pá", "So", "Ne"]
-  const HM_MONTHS = ["Led", "Úno", "Bře", "Dub", "Kvě", "Čvn", "Čvc", "Srp", "Zář", "Říj", "Lis", "Pro"]
-  const hmGrid = HM_DAYS.map(dow =>
-    HM_MONTHS.map((_, m) =>
-      potvrzeneSvatby.filter(z => {
-        if (!z.datum_svatby) return false
-        const d = new Date(z.datum_svatby)
-        return d.getMonth() === m && d.getDay() === dow
-      }).length
-    )
-  )
-  const hmMax = Math.max(...hmGrid.flat(), 1)
-
-  // ── Kanban ───────────────────────────────────────────────────────────────────
-  const KANBAN_COLS: { key: string; label: string; color: string; items: Zakazka[] }[] = [
-    { key: "poptavka",   label: "Poptávka",  color: "#8b5cf6", items: zakazky.filter(z => ["poptavka", "rozhoduje-se"].includes(z.stav)) },
-    { key: "potvrzeno",  label: "Potvrzeno", color: "#5b8def", items: zakazky.filter(z => ["objednavka", "cekam-platbu"].includes(z.stav)) },
-    { key: "realizace",  label: "Realizace", color: "#ff4d7e", items: zakazky.filter(z => z.stav === "zaplaceno" && z.datum_svatby && new Date(z.datum_svatby) >= dnes) },
-    { key: "sestrizani", label: "Sestřih",   color: "#f5a524", items: zakazky.filter(z => ["ve-strizne", "po-svatbe"].includes(z.stav) || (z.stav === "zaplaceno" && z.datum_svatby && new Date(z.datum_svatby) < dnes)) },
-  ]
 
   // ── Upcoming filtered ────────────────────────────────────────────────────────
   const filteredUpcoming = (
