@@ -79,51 +79,65 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
   )
 
   return (
-    <div style={{ display: "flex", gap: 12 }}>
+    // width:100% + flex row → měsíce se roztáhnou do šířky
+    // height je zděděna přes flex chain z rodiče (alignItems:"stretch")
+    <div style={{ display: "flex", gap: 16, width: "100%" }}>
       {mesice.map(({ year, month }) => {
-        const firstDay = new Date(year, month, 1)
-        const startDow = (firstDay.getDay() + 6) % 7  // Po=0 … Ne=6
+        const firstDay  = new Date(year, month, 1)
+        const startDow  = (firstDay.getDay() + 6) % 7       // Po=0 … Ne=6
         const daysInMonth = new Date(year, month + 1, 0).getDate()
         const cells: (number | null)[] = [
           ...Array(startDow).fill(null),
           ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
         ]
         while (cells.length % 7 !== 0) cells.push(null)
+        const rowCount = cells.length / 7
 
         return (
-          <div key={`${year}-${month}`} style={{ flex: 1, minWidth: 0 }}>
+          // flex:1 + flexDirection:column → měsíc zabere rovný díl šířky
+          // a roztáhne se na plnou výšku flex řádku (default alignItems:stretch)
+          <div key={`${year}-${month}`} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+
             {/* Název měsíce */}
             <div style={{
-              fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: ".1em",
+              fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: ".1em",
               textTransform: "uppercase", color: "var(--ink-2)", fontWeight: 700,
-              marginBottom: 8, textAlign: "center",
+              marginBottom: 10, textAlign: "center",
             }}>
               {MESICE_NAZVY[month].slice(0, 3)} · {year}
             </div>
+
             {/* Záhlaví dnů */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, marginBottom: 3 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
               {DNY_NAZVY.map((d, i) => (
                 <div key={d} style={{
-                  textAlign: "center", fontSize: 8, fontFamily: "var(--font-mono)",
-                  color: i >= 5 ? "#f43f5e" : "var(--muted)", paddingBottom: 3,
+                  textAlign: "center", fontSize: 9, fontFamily: "var(--font-mono)",
+                  color: i >= 5 ? "#f43f5e" : "var(--muted)", paddingBottom: 2,
                 }}>
                   {d}
                 </div>
               ))}
             </div>
-            {/* Buňky dnů */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1 }}>
+
+            {/* Buňky dnů — flex:1 + gridTemplateRows:repeat(N,1fr) vyplní zbytek výšky */}
+            <div style={{
+              flex: 1,
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 1fr)",
+              gridTemplateRows: `repeat(${rowCount}, 1fr)`,
+              gap: 2,
+            }}>
               {cells.map((day, i) => {
                 if (day === null) return <div key={i} />
-                const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                const dateStr   = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
                 const isSvatba  = svatebniDny.has(dateStr)
                 const isDnes    = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
                 const colIndex  = (startDow + day - 1) % 7
                 const isWeekend = colIndex >= 5
                 return (
                   <div key={i} style={{
-                    textAlign: "center", fontSize: 10.5, lineHeight: "22px",
-                    borderRadius: 4,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 12, borderRadius: 5,
                     background: isSvatba
                       ? "var(--wed-grad-a, #f43f5e)"
                       : isDnes
@@ -143,6 +157,7 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
                 )
               })}
             </div>
+
           </div>
         )
       })}
@@ -598,7 +613,7 @@ export default function Home() {
                 svatba
               </span>
             </div>
-            <div style={{ padding: "20px 22px", flex: 1, display: "flex", alignItems: "stretch" }}>
+            <div style={{ padding: "20px 22px", flex: 1, display: "flex", alignItems: "stretch", minHeight: 0 }}>
               <MiniKalendar zakazky={potvrzeneSvatby} />
             </div>
           </div>
