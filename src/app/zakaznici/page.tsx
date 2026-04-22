@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import AppShell from "@/components/AppShell"
 
@@ -18,24 +17,65 @@ type Zakaznik = {
   created_at: string
 }
 
-const PROJEKTY = ["Vše", "Svatby", "Půjčovna"]
+// ── Avatar gradient derived from name ────────────────────────────────────────
+const GRADIENTS = [
+  ["#ff6a8b", "#ff9a6a"],
+  ["#2dd4a6", "#7cd38a"],
+  ["#6366f1", "#8b5cf6"],
+  ["#f59e0b", "#fb923c"],
+  ["#0ea5e9", "#6366f1"],
+  ["#ec4899", "#f43f5e"],
+]
+function avatarGradient(jmeno: string, prijmeni: string) {
+  const idx = ((jmeno.charCodeAt(0) || 65) + (prijmeni.charCodeAt(0) || 65)) % GRADIENTS.length
+  const [a, b] = GRADIENTS[idx]
+  return `linear-gradient(135deg, ${a}, ${b})`
+}
+function initials(jmeno: string, prijmeni: string) {
+  return ((jmeno[0] ?? "") + (prijmeni[0] ?? "")).toUpperCase() || "?"
+}
+
+// ── Inline SVG icons ──────────────────────────────────────────────────────────
+function Ico({ d, size = 14 }: { d: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
+  )
+}
+const IC = {
+  phone:  "M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.18 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z",
+  mail:   "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6",
+  pin:    "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z M12 10a3 3 0 100-6 3 3 0 000 6",
+  search: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0",
+  plus:   "M12 5v14M5 12h14",
+  edit:   "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
+  trash:  "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
+  x:      "M18 6L6 18M6 6l12 12",
+  user:   "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8",
+}
+
+const PROJ_STYLE: Record<string, { bg: string; color: string }> = {
+  "Svatby":    { bg: "rgba(255,106,139,.12)", color: "#b1174a" },
+  "Půjčovna":  { bg: "rgba(45,212,166,.15)",  color: "#0a7a5a" },
+}
 
 export default function Zakaznici() {
-  const router = useRouter()
-  const [zakaznici, setZakaznici] = useState<Zakaznik[]>([])
-  const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState("")
+  const [zakaznici, setZakaznici]   = useState<Zakaznik[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [query, setQuery]           = useState("")
   const [projektFilter, setProjektFilter] = useState("Vše")
-  const [editId, setEditId] = useState<number | null>(null)
-  const [editForm, setEditForm] = useState<Partial<Zakaznik>>({})
-  const [novyModal, setNovyModal] = useState(false)
-  const [novyForm, setNovyForm] = useState({ jmeno: "", prijmeni: "", ulice: "", mesto: "", psc: "", email: "", telefon: "", projekty: [] as string[] })
-  const [ukladam, setUkladam] = useState(false)
-  const [mazaniId, setMazaniId] = useState<number | null>(null)
+  const [editId, setEditId]         = useState<number | null>(null)
+  const [editForm, setEditForm]     = useState<Partial<Zakaznik>>({})
+  const [novyModal, setNovyModal]   = useState(false)
+  const [novyForm, setNovyForm]     = useState({
+    jmeno: "", prijmeni: "", ulice: "", mesto: "", psc: "", email: "", telefon: "", projekty: [] as string[],
+  })
+  const [ukladam, setUkladam]       = useState(false)
+  const [mazaniId, setMazaniId]     = useState<number | null>(null)
 
-  useEffect(() => {
-    nacti()
-  }, [])
+  useEffect(() => { nacti() }, [])
 
   async function nacti() {
     const { data } = await supabase.from("zakaznici").select("*").order("prijmeni").order("jmeno")
@@ -84,147 +124,291 @@ export default function Zakaznici() {
     else onChange([...projekty, p])
   }
 
-  const inputClass = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+  const inputCls = [
+    "w-full border rounded-lg px-3 py-2 text-sm bg-white",
+    "focus:outline-none focus:ring-2 focus:ring-[rgba(255,106,139,.35)]",
+  ].join(" ")
+  const inputStyle = { borderColor: "var(--line-strong)", color: "var(--ink)" }
+
+  // stat counts
+  const celkem    = zakaznici.length
+  const svatebnich = zakaznici.filter(z => (z.projekty ?? []).includes("Svatby")).length
+  const pujcovnich = zakaznici.filter(z => (z.projekty ?? []).includes("Půjčovna")).length
 
   return (
     <AppShell module="wed">
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
-
-        <div className="flex items-center justify-between mb-6">
-          <h1 style={{ fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>Zákazníci</h1>
+      {/* ── Page header ── */}
+      <div style={{ padding: "28px 32px 0" }}>
+        <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontFamily: "var(--font-mono)", color: "var(--muted)", marginBottom: 4 }}>
+          CRM · Kontakty
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: 26, fontWeight: 400, color: "var(--ink)", margin: 0 }}>
+            Zákazníci
+          </h1>
           <button
             onClick={() => setNovyModal(true)}
-            className="bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            style={{
+              display: "flex", alignItems: "center", gap: 7,
+              padding: "9px 18px", borderRadius: 11,
+              background: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))",
+              color: "white", border: "none", cursor: "pointer",
+              fontSize: 13, fontWeight: 500,
+              boxShadow: "0 4px 14px rgba(255,106,139,.3)",
+            }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
+            <Ico d={IC.plus} size={13} />
             Nový zákazník
           </button>
         </div>
 
-        {/* Filtry */}
-        <div className="flex gap-3 mb-6 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-            </svg>
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Hledat dle jména, telefonu, e-mailu..."
-              className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
-          <select
-            value={projektFilter}
-            onChange={e => setProjektFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-          >
-            {PROJEKTY.map(p => <option key={p}>{p}</option>)}
-          </select>
+        {/* Stats row */}
+        <div style={{ display: "flex", gap: 24, marginTop: 16, paddingBottom: 20, borderBottom: "1px solid var(--line)" }}>
+          {[
+            { label: "Celkem", value: celkem, color: "var(--ink)" },
+            { label: "Svatby",   value: svatebnich, color: "#b1174a" },
+            { label: "Půjčovna", value: pujcovnich, color: "#0a7a5a" },
+          ].map(s => (
+            <div key={s.label} style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: 28, fontWeight: 400, color: s.color, lineHeight: 1 }}>
+                {s.value}
+              </span>
+              <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)", letterSpacing: ".08em", textTransform: "uppercase", marginTop: 3 }}>
+                {s.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Search + filter ── */}
+      <div style={{ padding: "20px 32px 0", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        {/* Search */}
+        <div style={{ position: "relative", flex: "1 1 260px", maxWidth: 440 }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }}>
+            <Ico d={IC.search} size={14} />
+          </span>
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Hledat dle jména, tel., e-mailu, města…"
+            style={{
+              width: "100%", paddingLeft: 36, paddingRight: 12, paddingTop: 8, paddingBottom: 8,
+              border: "1px solid var(--line-strong)", borderRadius: 11, fontSize: 13,
+              background: "white", color: "var(--ink)",
+              outline: "none", boxSizing: "border-box",
+            }}
+          />
         </div>
 
-        {/* Počet */}
-        <p className="text-sm text-gray-500 mb-4">{filtrovani.length} zákazník{filtrovani.length === 1 ? "" : filtrovani.length < 5 ? "i" : "ů"}</p>
+        {/* Project filter pills */}
+        <div style={{ display: "flex", gap: 6 }}>
+          {["Vše", "Svatby", "Půjčovna"].map(p => {
+            const active = projektFilter === p
+            const ps = PROJ_STYLE[p]
+            return (
+              <button key={p} onClick={() => setProjektFilter(p)} style={{
+                padding: "6px 14px", borderRadius: 99, border: "1px solid",
+                fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all .15s",
+                background: active ? (ps?.bg ?? "var(--ink)") : "white",
+                color: active ? (ps?.color ?? "white") : "var(--ink-2)",
+                borderColor: active ? (ps?.color ?? "var(--ink)") : "var(--line-strong)",
+              }}>
+                {p}
+              </button>
+            )
+          })}
+        </div>
 
-        {/* Seznam */}
+        <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--muted)", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
+          {filtrovani.length} {filtrovani.length === 1 ? "kontakt" : filtrovani.length < 5 ? "kontakty" : "kontaktů"}
+        </span>
+      </div>
+
+      {/* ── Cards grid ── */}
+      <div style={{ padding: "20px 32px 56px" }}>
         {loading ? (
-          <div className="space-y-3">
-            {[1,2,3].map(i => <div key={i} className="h-20 bg-white rounded-xl animate-pulse border border-gray-100" />)}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} style={{ height: 140, background: "white", borderRadius: 14, border: "1px solid var(--line)", opacity: 0.6 }} className="animate-pulse" />
+            ))}
           </div>
         ) : filtrovani.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <p className="text-lg">Žádní zákazníci nenalezeni</p>
+          <div style={{ textAlign: "center", padding: "80px 0", color: "var(--muted)" }}>
+            <div style={{ marginBottom: 12, opacity: 0.3 }}><Ico d={IC.user} size={40} /></div>
+            <p style={{ fontSize: 15 }}>Žádní zákazníci nenalezeni</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
             {filtrovani.map(z => (
-              <div key={z.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div key={z.id} style={{
+                background: "white",
+                border: "1px solid var(--line)",
+                borderRadius: 14,
+                boxShadow: "var(--shadow-1)",
+                overflow: "hidden",
+              }}>
+
                 {editId === z.id ? (
-                  <div className="p-5 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <input value={editForm.jmeno ?? ""} onChange={e => setEditForm({ ...editForm, jmeno: e.target.value })} placeholder="Jméno" className={inputClass} />
-                      <input value={editForm.prijmeni ?? ""} onChange={e => setEditForm({ ...editForm, prijmeni: e.target.value })} placeholder="Příjmení" className={inputClass} />
+                  /* ── Edit form ── */
+                  <div style={{ padding: "16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Upravit kontakt</span>
+                      <button onClick={() => setEditId(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 2 }}>
+                        <Ico d={IC.x} size={15} />
+                      </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <input value={editForm.telefon ?? ""} onChange={e => setEditForm({ ...editForm, telefon: e.target.value })} placeholder="Telefon" className={inputClass} />
-                      <input value={editForm.email ?? ""} onChange={e => setEditForm({ ...editForm, email: e.target.value })} placeholder="E-mail" className={inputClass} />
-                    </div>
-                    <input value={editForm.ulice ?? ""} onChange={e => setEditForm({ ...editForm, ulice: e.target.value })} placeholder="Ulice" className={inputClass} />
-                    <div className="grid grid-cols-3 gap-3">
-                      <input value={editForm.mesto ?? ""} onChange={e => setEditForm({ ...editForm, mesto: e.target.value })} placeholder="Město" className={`${inputClass} col-span-2`} />
-                      <input value={editForm.psc ?? ""} onChange={e => setEditForm({ ...editForm, psc: e.target.value })} placeholder="PSČ" className={inputClass} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 mb-2">Projekty</p>
-                      <div className="flex gap-2">
-                        {["Svatby", "Půjčovna"].map(p => (
-                          <label key={p} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={(editForm.projekty ?? []).includes(p)}
-                              onChange={() => toggleProjekt(p, editForm.projekty ?? [], v => setEditForm({ ...editForm, projekty: v }))}
-                              className="rounded text-blue-600"
-                            />
-                            {p}
-                          </label>
-                        ))}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <input value={editForm.jmeno ?? ""} onChange={e => setEditForm({ ...editForm, jmeno: e.target.value })} placeholder="Jméno" className={inputCls} style={inputStyle} />
+                        <input value={editForm.prijmeni ?? ""} onChange={e => setEditForm({ ...editForm, prijmeni: e.target.value })} placeholder="Příjmení" className={inputCls} style={inputStyle} />
                       </div>
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <button onClick={ulozEdit} disabled={ukladam} className="flex-1 bg-gray-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors">
-                        {ukladam ? "Ukládám..." : "Uložit"}
-                      </button>
-                      <button onClick={() => setEditId(null)} className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-                        Zrušit
-                      </button>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <input value={editForm.telefon ?? ""} onChange={e => setEditForm({ ...editForm, telefon: e.target.value })} placeholder="Telefon" className={inputCls} style={inputStyle} />
+                        <input value={editForm.email ?? ""} onChange={e => setEditForm({ ...editForm, email: e.target.value })} placeholder="E-mail" className={inputCls} style={inputStyle} />
+                      </div>
+                      <input value={editForm.ulice ?? ""} onChange={e => setEditForm({ ...editForm, ulice: e.target.value })} placeholder="Ulice" className={inputCls} style={inputStyle} />
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
+                        <input value={editForm.mesto ?? ""} onChange={e => setEditForm({ ...editForm, mesto: e.target.value })} placeholder="Město" className={inputCls} style={inputStyle} />
+                        <input value={editForm.psc ?? ""} onChange={e => setEditForm({ ...editForm, psc: e.target.value })} placeholder="PSČ" className={inputCls} style={{ ...inputStyle, width: 80 }} />
+                      </div>
+                      {/* Project toggles */}
+                      <div style={{ display: "flex", gap: 8, paddingTop: 2 }}>
+                        {["Svatby", "Půjčovna"].map(p => {
+                          const checked = (editForm.projekty ?? []).includes(p)
+                          const ps = PROJ_STYLE[p]
+                          return (
+                            <button key={p} type="button"
+                              onClick={() => toggleProjekt(p, editForm.projekty ?? [], v => setEditForm({ ...editForm, projekty: v }))}
+                              style={{
+                                padding: "5px 12px", borderRadius: 99, border: "1px solid", fontSize: 11, fontWeight: 600,
+                                cursor: "pointer", transition: "all .15s",
+                                background: checked ? ps.bg : "white",
+                                color: checked ? ps.color : "var(--muted)",
+                                borderColor: checked ? ps.color : "var(--line-strong)",
+                              }}
+                            >
+                              {p}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
+                        <button onClick={ulozEdit} disabled={ukladam} style={{
+                          flex: 1, padding: "8px 0", borderRadius: 9, border: "none", cursor: "pointer",
+                          background: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))",
+                          color: "white", fontSize: 12, fontWeight: 600, opacity: ukladam ? 0.6 : 1,
+                        }}>
+                          {ukladam ? "Ukládám…" : "Uložit"}
+                        </button>
+                        <button onClick={() => setEditId(null)} style={{
+                          padding: "8px 14px", borderRadius: 9, border: "1px solid var(--line-strong)",
+                          cursor: "pointer", background: "white", color: "var(--ink-2)", fontSize: 12, fontWeight: 500,
+                        }}>
+                          Zrušit
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-5 flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-gray-900">{z.jmeno} {z.prijmeni}</h3>
-                        {(z.projekty ?? []).map(p => (
-                          <span key={p} className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                            p === "Svatby" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-700"
-                          }`}>{p}</span>
-                        ))}
+                  /* ── Card view ── */
+                  <div style={{ padding: "16px" }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                      {/* Avatar */}
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                        background: avatarGradient(z.jmeno, z.prijmeni),
+                        display: "grid", placeItems: "center",
+                        color: "white", fontWeight: 700, fontSize: 14,
+                        letterSpacing: ".02em",
+                      }}>
+                        {initials(z.jmeno, z.prijmeni)}
                       </div>
-                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5">
-                        {z.telefon && <span className="text-sm text-gray-600">📞 {z.telefon}</span>}
-                        {z.email && <span className="text-sm text-gray-600">✉️ {z.email}</span>}
-                        {(z.ulice || z.mesto) && (
-                          <span className="text-sm text-gray-500">
-                            {[z.ulice, z.mesto, z.psc].filter(Boolean).join(", ")}
-                          </span>
-                        )}
+
+                      {/* Name + badges */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)", marginBottom: 4, lineHeight: 1.2 }}>
+                          {z.jmeno} {z.prijmeni}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {(z.projekty ?? []).map(p => {
+                            const ps = PROJ_STYLE[p]
+                            return (
+                              <span key={p} style={{
+                                fontSize: 10, fontWeight: 700, letterSpacing: ".05em",
+                                textTransform: "uppercase", padding: "2px 8px", borderRadius: 99,
+                                background: ps?.bg ?? "var(--bg)",
+                                color: ps?.color ?? "var(--muted)",
+                              }}>
+                                {p}
+                              </span>
+                            )
+                          })}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-2 shrink-0">
-                      {mazaniId === z.id ? (
-                        <>
-                          <button onClick={() => smazat(z.id)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500 text-white hover:bg-red-600 transition-colors">Potvrdit</button>
-                          <button onClick={() => setMazaniId(null)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">Zrušit</button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => { setEditId(z.id); setEditForm({ ...z }) }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                          >
-                            Upravit
-                          </button>
-                          <button
-                            onClick={() => setMazaniId(z.id)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-                          >
-                            Smazat
-                          </button>
-                        </>
+
+                    {/* Contact info */}
+                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 5 }}>
+                      {z.telefon && (
+                        <a href={`tel:${z.telefon}`} style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--ink-2)", textDecoration: "none", fontSize: 12 }}>
+                          <span style={{ color: "var(--muted)", flexShrink: 0 }}><Ico d={IC.phone} size={13} /></span>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{z.telefon}</span>
+                        </a>
                       )}
+                      {z.email && (
+                        <a href={`mailto:${z.email}`} style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--ink-2)", textDecoration: "none", fontSize: 12 }}>
+                          <span style={{ color: "var(--muted)", flexShrink: 0 }}><Ico d={IC.mail} size={13} /></span>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{z.email}</span>
+                        </a>
+                      )}
+                      {(z.ulice || z.mesto) && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--muted)" }}>
+                          <span style={{ flexShrink: 0 }}><Ico d={IC.pin} size={13} /></span>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {[z.ulice, z.mesto, z.psc].filter(Boolean).join(", ")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer: date + actions */}
+                    <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+                        {new Date(z.created_at).toLocaleDateString("cs-CZ", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {mazaniId === z.id ? (
+                          <>
+                            <button onClick={() => smazat(z.id)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", cursor: "pointer", background: "#ef4444", color: "white", fontSize: 11, fontWeight: 600 }}>
+                              Potvrdit
+                            </button>
+                            <button onClick={() => setMazaniId(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--line-strong)", cursor: "pointer", background: "white", color: "var(--ink-2)", fontSize: 11 }}>
+                              Zrušit
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => { setEditId(z.id); setEditForm({ ...z }) }} style={{
+                              display: "flex", alignItems: "center", gap: 5,
+                              padding: "5px 10px", borderRadius: 8,
+                              border: "1px solid var(--line-strong)", cursor: "pointer",
+                              background: "white", color: "var(--ink-2)", fontSize: 11, fontWeight: 500,
+                            }}>
+                              <Ico d={IC.edit} size={12} /> Upravit
+                            </button>
+                            <button onClick={() => setMazaniId(z.id)} style={{
+                              display: "flex", alignItems: "center", gap: 5,
+                              padding: "5px 10px", borderRadius: 8,
+                              border: "1px solid rgba(239,68,68,.2)", cursor: "pointer",
+                              background: "rgba(239,68,68,.04)", color: "#ef4444", fontSize: 11, fontWeight: 500,
+                            }}>
+                              <Ico d={IC.trash} size={12} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -234,53 +418,86 @@ export default function Zakaznici() {
         )}
       </div>
 
-      {/* Modal — nový zákazník */}
+      {/* ── Modal — nový zákazník ── */}
       {novyModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <h2 className="font-bold text-gray-900">Nový zákazník</h2>
-              <button onClick={() => setNovyModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-            <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <input value={novyForm.jmeno} onChange={e => setNovyForm({ ...novyForm, jmeno: e.target.value })} placeholder="Jméno" className={inputClass} />
-                <input value={novyForm.prijmeni} onChange={e => setNovyForm({ ...novyForm, prijmeni: e.target.value })} placeholder="Příjmení" className={inputClass} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input value={novyForm.telefon} onChange={e => setNovyForm({ ...novyForm, telefon: e.target.value })} placeholder="Telefon" className={inputClass} />
-                <input value={novyForm.email} onChange={e => setNovyForm({ ...novyForm, email: e.target.value })} placeholder="E-mail" className={inputClass} />
-              </div>
-              <input value={novyForm.ulice} onChange={e => setNovyForm({ ...novyForm, ulice: e.target.value })} placeholder="Ulice" className={inputClass} />
-              <div className="grid grid-cols-3 gap-3">
-                <input value={novyForm.mesto} onChange={e => setNovyForm({ ...novyForm, mesto: e.target.value })} placeholder="Město" className={`${inputClass} col-span-2`} />
-                <input value={novyForm.psc} onChange={e => setNovyForm({ ...novyForm, psc: e.target.value })} placeholder="PSČ" className={inputClass} />
-              </div>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(10,10,14,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
+          <div style={{ background: "white", borderRadius: 20, boxShadow: "0 24px 64px rgba(0,0,0,.22)", width: "100%", maxWidth: 440, overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-2">Projekty</p>
-                <div className="flex gap-3">
-                  {["Svatby", "Půjčovna"].map(p => (
-                    <label key={p} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={novyForm.projekty.includes(p)}
-                        onChange={() => {
-                          if (novyForm.projekty.includes(p)) setNovyForm({ ...novyForm, projekty: novyForm.projekty.filter(x => x !== p) })
+                <div style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", fontFamily: "var(--font-mono)", color: "var(--muted)", marginBottom: 2 }}>
+                  Nový kontakt
+                </div>
+                <h2 style={{ fontSize: 17, fontWeight: 600, color: "var(--ink)", margin: 0 }}>Přidat zákazníka</h2>
+              </div>
+              <button onClick={() => setNovyModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 4 }}>
+                <Ico d={IC.x} size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <input value={novyForm.jmeno} onChange={e => setNovyForm({ ...novyForm, jmeno: e.target.value })} placeholder="Jméno" className={inputCls} style={inputStyle} />
+                <input value={novyForm.prijmeni} onChange={e => setNovyForm({ ...novyForm, prijmeni: e.target.value })} placeholder="Příjmení" className={inputCls} style={inputStyle} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <input value={novyForm.telefon} onChange={e => setNovyForm({ ...novyForm, telefon: e.target.value })} placeholder="Telefon" className={inputCls} style={inputStyle} />
+                <input value={novyForm.email} onChange={e => setNovyForm({ ...novyForm, email: e.target.value })} placeholder="E-mail" className={inputCls} style={inputStyle} />
+              </div>
+              <input value={novyForm.ulice} onChange={e => setNovyForm({ ...novyForm, ulice: e.target.value })} placeholder="Ulice a č.p." className={inputCls} style={inputStyle} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>
+                <input value={novyForm.mesto} onChange={e => setNovyForm({ ...novyForm, mesto: e.target.value })} placeholder="Město" className={inputCls} style={inputStyle} />
+                <input value={novyForm.psc} onChange={e => setNovyForm({ ...novyForm, psc: e.target.value })} placeholder="PSČ" className={inputCls} style={{ ...inputStyle, width: 84 }} />
+              </div>
+
+              {/* Project selector */}
+              <div style={{ paddingTop: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", letterSpacing: ".08em", textTransform: "uppercase", fontFamily: "var(--font-mono)", marginBottom: 8 }}>
+                  Projekty
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {["Svatby", "Půjčovna"].map(p => {
+                    const checked = novyForm.projekty.includes(p)
+                    const ps = PROJ_STYLE[p]
+                    return (
+                      <button key={p} type="button"
+                        onClick={() => {
+                          if (checked) setNovyForm({ ...novyForm, projekty: novyForm.projekty.filter(x => x !== p) })
                           else setNovyForm({ ...novyForm, projekty: [...novyForm.projekty, p] })
                         }}
-                        className="rounded text-blue-600"
-                      />
-                      {p}
-                    </label>
-                  ))}
+                        style={{
+                          flex: 1, padding: "8px 0", borderRadius: 10, border: "1px solid",
+                          fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all .15s",
+                          background: checked ? ps.bg : "white",
+                          color: checked ? ps.color : "var(--muted)",
+                          borderColor: checked ? ps.color : "var(--line-strong)",
+                        }}
+                      >
+                        {p}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 p-5 pt-0">
-              <button onClick={ulozNoveho} disabled={ukladam} className="flex-1 bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors">
-                {ukladam ? "Ukládám..." : "Uložit zákazníka"}
+
+            {/* Footer */}
+            <div style={{ padding: "0 24px 24px", display: "flex", gap: 10 }}>
+              <button onClick={ulozNoveho} disabled={ukladam} style={{
+                flex: 1, padding: "10px 0", borderRadius: 11, border: "none", cursor: "pointer",
+                background: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))",
+                color: "white", fontSize: 13, fontWeight: 600,
+                boxShadow: "0 4px 14px rgba(255,106,139,.3)",
+                opacity: ukladam ? 0.6 : 1,
+              }}>
+                {ukladam ? "Ukládám…" : "Uložit zákazníka"}
               </button>
-              <button onClick={() => setNovyModal(false)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+              <button onClick={() => setNovyModal(false)} style={{
+                padding: "10px 18px", borderRadius: 11,
+                border: "1px solid var(--line-strong)", cursor: "pointer",
+                background: "white", color: "var(--ink-2)", fontSize: 13, fontWeight: 500,
+              }}>
                 Zrušit
               </button>
             </div>
