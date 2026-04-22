@@ -528,77 +528,130 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Desktop row ── */}
+        {/* ── Desktop row — pipe-separated sections ── */}
         <div className="hidden md:flex" style={{
-          gap: 10, padding: "10px 14px",
-          alignItems: "center",
+          alignItems: "stretch",
           borderTop: "1px solid var(--line)",
+          minHeight: 62,
+          overflow: "hidden",
         }}>
 
-          {/* Datum box — barevné pozadí, velké číslo dne */}
+          {/* 1 · Datum box */}
           <div style={{
-            background: borderColor, borderRadius: 8,
-            padding: "7px 10px", textAlign: "center",
-            flexShrink: 0, minWidth: 52,
+            background: borderColor,
+            padding: "10px 14px",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            flexShrink: 0, minWidth: 60,
           }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>
               {datumDen}
             </div>
-            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,.85)", fontFamily: "var(--font-mono)", marginTop: 3, letterSpacing: ".04em" }}>
+            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,.82)", fontFamily: "var(--font-mono)", marginTop: 3, letterSpacing: ".05em" }}>
               {datumMesRok}
             </div>
           </div>
 
-          {/* Střed: jméno + badges + adresa */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, color: "var(--ink)", fontSize: 13, lineHeight: 1.2, display: "flex", alignItems: "center", gap: 6 }}>
-              <span className="truncate">{z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}</span>
-              {z.videohovor_datum && (
-                <span title="Videohovor absolvován" style={{ fontSize: 13, flexShrink: 0 }}>🎥</span>
-              )}
+          {/* 2 · Jméno + adresa */}
+          <div style={{ flex: 1, minWidth: 0, padding: "10px 14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
-              {/* Typ služby badge */}
-              {typBadge && (
-                <span style={{
-                  background: typBadge.bg, color: typBadge.color,
-                  borderRadius: 4, padding: "1px 6px",
-                  fontSize: 10, fontWeight: 700,
-                  fontFamily: "var(--font-mono)", letterSpacing: ".04em",
-                  flexShrink: 0,
-                }}>
-                  {typLabel(z.typ_sluzby)}
-                </span>
-              )}
-              {z.adresa_obradu && (
-                <span style={{ fontSize: 11, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {z.adresa_obradu}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Pravá strana: stav + cena + countdown */}
-          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
-            {/* Stav — hranatý */}
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              padding: "2px 7px", borderRadius: 4, fontSize: 10.5, fontWeight: 600,
-              background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
-              color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
-              whiteSpace: "nowrap",
-            }}>
-              <span style={{ width: 5, height: 5, borderRadius: 2, background: borderColor, flexShrink: 0 }} />
-              {stavInfo(z.stav).label}
-            </span>
-            {/* Cena — větší a tučnější */}
-            {z.cena > 0 && (
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--ink)", textAlign: "right" }}>
-                {z.cena.toLocaleString("cs-CZ")} <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400 }}>Kč</span>
+            {z.adresa_obradu && (
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {z.adresa_obradu}
               </div>
             )}
-            {/* Countdown pill */}
-            {countdownPill()}
+          </div>
+
+          {/* 3 · Kamera (volitelná) */}
+          {z.videohovor_datum && (
+            <>
+              <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+              <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <span title="Videohovor absolvován" style={{ fontSize: 18, lineHeight: 1 }}>🎥</span>
+              </div>
+            </>
+          )}
+
+          {/* 4 · Typ */}
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {typBadge ? (
+              <span style={{
+                background: typBadge.bg, color: typBadge.color,
+                borderRadius: 4, padding: "4px 9px",
+                fontSize: 11, fontWeight: 700,
+                fontFamily: "var(--font-mono)", letterSpacing: ".03em",
+                whiteSpace: "nowrap",
+              }}>
+                {typLabel(z.typ_sluzby)}
+              </span>
+            ) : <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>—</span>}
+          </div>
+
+          {/* 5 · Stav */}
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{
+              background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
+              color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
+              borderRadius: 6, padding: "5px 11px",
+              fontSize: 11, fontWeight: 700,
+              whiteSpace: "nowrap", letterSpacing: ".05em",
+              textTransform: "uppercase",
+            }}>
+              {stavInfo(z.stav).label}
+            </span>
+          </div>
+
+          {/* 6 · Cena */}
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
+              {z.cena > 0 ? `${z.cena.toLocaleString("cs-CZ")} Kč` : "—"}
+            </span>
+          </div>
+
+          {/* 7 · Countdown box */}
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ padding: "10px 14px", minWidth: 70, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {dniDo === null ? (
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>—</span>
+            ) : dniDo === 0 ? (
+              <>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#be123c", fontFamily: "var(--font-serif)", lineHeight: 1 }}>!</div>
+                <div style={{ fontSize: 7.5, fontFamily: "var(--font-mono)", color: "#be123c", marginTop: 3, letterSpacing: ".1em", textTransform: "uppercase", textAlign: "center" }}>DNES</div>
+              </>
+            ) : probehlo && z.vystup_odevzdan ? (
+              <button
+                onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#15803d", fontFamily: "var(--font-serif)", lineHeight: 1 }}>✓</div>
+                <div style={{ fontSize: 7.5, fontFamily: "var(--font-mono)", color: "#15803d", marginTop: 3, letterSpacing: ".08em", textTransform: "uppercase", textAlign: "center" }}>ODEVZDÁNO</div>
+              </button>
+            ) : probehlo && !z.vystup_odevzdan ? (() => {
+              const zb = deadlineDni(z.datum_svatby, z.rychlost_dodani)
+              const urgent = zb !== null && zb <= 3
+              const c = urgent ? "#dc2626" : "#d97706"
+              return (
+                <>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: c, fontFamily: "var(--font-serif)", lineHeight: 1 }}>
+                    {zb != null ? (zb <= 0 ? "!" : zb) : "—"}
+                  </div>
+                  <div style={{ fontSize: 7.5, fontFamily: "var(--font-mono)", color: c, marginTop: 3, letterSpacing: ".06em", textTransform: "uppercase", textAlign: "center" }}>DNY / STŘ.</div>
+                </>
+              )
+            })() : (
+              <>
+                <div style={{ fontSize: 22, fontWeight: 800, color: dniDo <= 7 ? "#be123c" : "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: 1 }}>
+                  {dniDo}
+                </div>
+                <div style={{ fontSize: 7.5, fontFamily: "var(--font-mono)", color: "var(--muted)", marginTop: 3, letterSpacing: ".06em", textTransform: "uppercase", textAlign: "center", lineHeight: 1.4 }}>
+                  DNY<br />ZBÝVAJÍ
+                </div>
+              </>
+            )}
           </div>
 
         </div>
