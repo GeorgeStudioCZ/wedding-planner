@@ -79,12 +79,10 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
   )
 
   return (
-    // width:100% + flex row → měsíce se roztáhnou do šířky
-    // height je zděděna přes flex chain z rodiče (alignItems:"stretch")
-    <div style={{ display: "flex", gap: 16, width: "100%" }}>
-      {mesice.map(({ year, month }) => {
-        const firstDay  = new Date(year, month, 1)
-        const startDow  = (firstDay.getDay() + 6) % 7       // Po=0 … Ne=6
+    <div style={{ display: "flex", width: "100%" }}>
+      {mesice.map(({ year, month }, mi) => {
+        const firstDay    = new Date(year, month, 1)
+        const startDow    = (firstDay.getDay() + 6) % 7
         const daysInMonth = new Date(year, month + 1, 0).getDate()
         const cells: (number | null)[] = [
           ...Array(startDow).fill(null),
@@ -94,65 +92,106 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
         const rowCount = cells.length / 7
 
         return (
-          // flex:1 + flexDirection:column → měsíc zabere rovný díl šířky
-          // a roztáhne se na plnou výšku flex řádku (default alignItems:stretch)
-          <div key={`${year}-${month}`} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <div key={`${year}-${month}`} style={{
+            flex: 1, minWidth: 0, display: "flex", flexDirection: "column",
+            // silná svislá čára mezi měsíci
+            borderLeft: mi > 0 ? "2px solid var(--line-strong)" : "none",
+            paddingLeft: mi > 0 ? 16 : 0,
+            paddingRight: mi < 2 ? 16 : 0,
+          }}>
 
-            {/* Název měsíce */}
-            <div style={{
-              fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: ".1em",
-              textTransform: "uppercase", color: "var(--ink-2)", fontWeight: 700,
-              marginBottom: 10, textAlign: "center",
-            }}>
-              {MESICE_NAZVY[month].slice(0, 3)} · {year}
+            {/* Název měsíce — větší, s barevným akcentem */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{
+                fontFamily: "var(--font-serif), serif", fontStyle: "italic",
+                fontSize: 18, fontWeight: 400, color: "var(--ink)", lineHeight: 1,
+              }}>
+                {MESICE_NAZVY[month]}
+              </div>
+              <div style={{
+                fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: ".12em",
+                textTransform: "uppercase", color: "var(--muted)", marginTop: 2,
+              }}>
+                {year}
+              </div>
             </div>
 
-            {/* Záhlaví dnů */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+            {/* Záhlaví dnů s decentní spodní linkou */}
+            <div style={{
+              display: "grid", gridTemplateColumns: "repeat(7, 1fr)",
+              gap: 0, marginBottom: 0,
+              borderBottom: "1px solid var(--line-strong)",
+              paddingBottom: 5,
+            }}>
               {DNY_NAZVY.map((d, i) => (
                 <div key={d} style={{
                   textAlign: "center", fontSize: 9, fontFamily: "var(--font-mono)",
-                  color: i >= 5 ? "#f43f5e" : "var(--muted)", paddingBottom: 2,
+                  fontWeight: 600, letterSpacing: ".05em",
+                  color: i >= 5 ? "#f43f5e" : "var(--muted)",
                 }}>
                   {d}
                 </div>
               ))}
             </div>
 
-            {/* Buňky dnů — flex:1 + gridTemplateRows:repeat(N,1fr) vyplní zbytek výšky */}
+            {/* Buňky dnů s mřížkou */}
             <div style={{
               flex: 1,
               display: "grid",
               gridTemplateColumns: "repeat(7, 1fr)",
               gridTemplateRows: `repeat(${rowCount}, 1fr)`,
-              gap: 2,
+              // decentní mřížka: průhledná na "gap" místech pomocí box-shadow, nebo outline
+              gap: 0,
+              // svislé i vodorovné linky pomocí border na buňkách (viz níže)
             }}>
               {cells.map((day, i) => {
-                if (day === null) return <div key={i} />
+                if (day === null) {
+                  // prázdné buňky tvoří mřížku
+                  const col = i % 7
+                  const row = Math.floor(i / 7)
+                  return (
+                    <div key={i} style={{
+                      borderRight:  col < 6 ? "1px solid rgba(0,0,0,.06)" : "none",
+                      borderBottom: row < rowCount - 1 ? "1px solid rgba(0,0,0,.06)" : "none",
+                    }} />
+                  )
+                }
                 const dateStr   = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
                 const isSvatba  = svatebniDny.has(dateStr)
                 const isDnes    = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
                 const colIndex  = (startDow + day - 1) % 7
                 const isWeekend = colIndex >= 5
+                const col       = i % 7
+                const row       = Math.floor(i / 7)
                 return (
                   <div key={i} style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 12, borderRadius: 5,
-                    background: isSvatba
-                      ? "var(--wed-grad-a, #f43f5e)"
-                      : isDnes
-                        ? "rgba(0,0,0,.07)"
-                        : "transparent",
-                    color: isSvatba
-                      ? "white"
-                      : isWeekend
-                        ? "#e11d48"
-                        : "var(--ink-2)",
-                    fontWeight: isSvatba || isDnes ? 700 : 400,
-                    outline: isDnes && !isSvatba ? "1.5px solid var(--line-strong)" : "none",
-                    outlineOffset: "-1.5px",
+                    fontSize: 12, position: "relative",
+                    // mřížka
+                    borderRight:  col < 6 ? "1px solid rgba(0,0,0,.06)" : "none",
+                    borderBottom: row < rowCount - 1 ? "1px solid rgba(0,0,0,.06)" : "none",
                   }}>
-                    {day}
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: "80%", aspectRatio: "1",
+                      borderRadius: isSvatba ? 6 : 99,
+                      background: isSvatba
+                        ? "var(--wed-grad-a, #f43f5e)"
+                        : isDnes
+                          ? "rgba(0,0,0,.07)"
+                          : "transparent",
+                      color: isSvatba
+                        ? "white"
+                        : isWeekend
+                          ? "#e11d48"
+                          : "var(--ink-2)",
+                      fontWeight: isSvatba || isDnes ? 700 : 400,
+                      outline: isDnes && !isSvatba ? "1.5px solid var(--line-strong)" : "none",
+                      outlineOffset: "-1.5px",
+                      fontSize: 12,
+                    }}>
+                      {day}
+                    </div>
                   </div>
                 )
               })}
