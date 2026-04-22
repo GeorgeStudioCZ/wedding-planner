@@ -26,6 +26,43 @@ type Zakazka = {
   videohovor_datum: string | null
 }
 
+// ── KPI Card (barevný gradient) ──────────────────────────────────────────────
+const KPI_GRADS: Record<string, string> = {
+  rose:  "linear-gradient(140deg, #ff7aa0 0%, #ff6a8b 45%, #ff9a6a 100%)",
+  coral: "linear-gradient(140deg, #ff9f6a 0%, #ff7a86 100%)",
+  plum:  "linear-gradient(140deg, #8b5cf6 0%, #ec6ad4 100%)",
+  slate: "linear-gradient(140deg, #2a2b33 0%, #3c3e49 100%)",
+  mint:  "linear-gradient(140deg, #36d7a8 0%, #5fcf7a 100%)",
+  sky:   "linear-gradient(140deg, #5eb8ff 0%, #6aa6ff 100%)",
+}
+function KpiCard({ tone, label, value, foot }: {
+  tone: keyof typeof KPI_GRADS
+  label: string
+  value: string
+  foot?: React.ReactNode
+}) {
+  return (
+    <div style={{
+      background: KPI_GRADS[tone], borderRadius: "var(--radius-lg)",
+      padding: "16px 18px 14px", color: "white",
+      position: "relative", overflow: "hidden", boxShadow: "var(--shadow-card)",
+      minHeight: 110,
+    }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: ".14em", textTransform: "uppercase", opacity: .82 }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "italic", fontSize: 38, lineHeight: 1, marginTop: 4, letterSpacing: "-.01em" }}>
+        {value}
+      </div>
+      {foot && (
+        <div style={{ position: "absolute", left: 18, right: 18, bottom: 12, fontSize: 11.5, opacity: .88 }}>
+          {foot}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Stat Box ────────────────────────────────────────────────────────────────
 function StatBox({ label, value }: { label: string; value: string }) {
   return (
@@ -575,13 +612,19 @@ export default function Home() {
 
             {/* Stat grid — 6 výchozích + toggle + 6 skrytých */}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-3">
-              {/* Vždy viditelných 6 */}
-              <StatBox label="Nadcházející svatby"  value={String(nadchazejici.length)} />
-              <StatBox label="Čeká na sestřihání"   value={String(cekaNaSestrizani.length)} />
-              <StatBox label="Realizováno svateb"   value={String(realizovano.length)} />
-              <StatBox label="Celkem km (tam+zpět)" value={celkemKm > 0 ? `${celkemKm.toLocaleString("cs-CZ")} km` : "—"} />
-              <StatBox label="Již ujeto km"         value={ujetoKm > 0 ? `${ujetoKm.toLocaleString("cs-CZ")} km` : "0 km"} />
-              <StatBox label="Zbývá doplatit"       value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"} />
+              {/* Vždy viditelných 6 — barevné KpiCards */}
+              <KpiCard tone="rose"  label="Nadcházející svatby"  value={String(nadchazejici.length)}
+                foot={pristiDni != null ? `Nejbližší: za ${pristiDni} dní` : "Žádné plánované"} />
+              <KpiCard tone="coral" label="Čeká na sestřihání"   value={String(cekaNaSestrizani.length)}
+                foot="ke zpracování" />
+              <KpiCard tone="plum"  label="Realizováno svateb"   value={String(realizovano.length)}
+                foot={`v sezóně ${new Date().getFullYear()}`} />
+              <KpiCard tone="slate" label="Celkem km (tam+zpět)" value={celkemKm > 0 ? `${celkemKm.toLocaleString("cs-CZ")} km` : "—"}
+                foot="tam + zpět za sezónu" />
+              <KpiCard tone="mint"  label="Již ujeto km"         value={ujetoKm > 0 ? `${ujetoKm.toLocaleString("cs-CZ")} km` : "0 km"}
+                foot={celkemKm > 0 ? `${Math.round(ujetoKm / celkemKm * 100)} % z celku` : "—"} />
+              <KpiCard tone="sky"   label="Zbývá doplatit"       value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"}
+                foot="zbývá k inkasu" />
 
               {/* Dalších 6 — zobrazí se po rozbalení */}
               {statsRozsireno && <>
