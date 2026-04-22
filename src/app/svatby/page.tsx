@@ -528,7 +528,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Desktop row — pipe-separated sections ── */}
+        {/* ── Desktop row — pipe-separated, PEVNÉ šířky sloupců ── */}
+        {/* Šířky: datum=60 | jméno=flex | kamera=44 | typ=108 | stav=124 | cena=92 | countdown=72 */}
         <div className="hidden md:flex" style={{
           alignItems: "stretch",
           borderTop: "1px solid var(--line)",
@@ -536,12 +537,11 @@ export default function Home() {
           overflow: "hidden",
         }}>
 
-          {/* 1 · Datum box */}
+          {/* 1 · Datum box — 60 px */}
           <div style={{
             background: borderColor,
-            padding: "10px 14px",
+            width: 60, flexShrink: 0,
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, minWidth: 60,
           }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>
               {datumDen}
@@ -551,7 +551,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 2 · Jméno + adresa */}
+          {/* 2 · Jméno + adresa — flex */}
           <div style={{ flex: 1, minWidth: 0, padding: "10px 14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
@@ -563,19 +563,17 @@ export default function Home() {
             )}
           </div>
 
-          {/* 3 · Kamera (volitelná) */}
-          {z.videohovor_datum && (
-            <>
-              <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-              <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <span title="Videohovor absolvován" style={{ fontSize: 18, lineHeight: 1 }}>🎥</span>
-              </div>
-            </>
-          )}
-
-          {/* 4 · Typ */}
+          {/* 3 · Kamera — 44 px, VŽDY přítomný slot */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {z.videohovor_datum && (
+              <span title="Videohovor absolvován" style={{ fontSize: 17, lineHeight: 1 }}>🎥</span>
+            )}
+          </div>
+
+          {/* 4 · Typ — 108 px */}
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ width: 108, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {typBadge ? (
               <span style={{
                 background: typBadge.bg, color: typBadge.color,
@@ -589,9 +587,9 @@ export default function Home() {
             ) : <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>—</span>}
           </div>
 
-          {/* 5 · Stav */}
+          {/* 5 · Stav — 124 px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 124, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{
               background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
               color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
@@ -604,17 +602,17 @@ export default function Home() {
             </span>
           </div>
 
-          {/* 6 · Cena */}
+          {/* 6 · Cena — 92 px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
+          <div style={{ width: 92, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
               {z.cena > 0 ? `${z.cena.toLocaleString("cs-CZ")} Kč` : "—"}
             </span>
           </div>
 
-          {/* 7 · Countdown box */}
+          {/* 7 · Countdown box — 72 px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ padding: "10px 14px", minWidth: 70, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 72, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             {dniDo === null ? (
               <span style={{ fontSize: 11, color: "var(--muted)" }}>—</span>
             ) : dniDo === 0 ? (
@@ -660,12 +658,12 @@ export default function Home() {
   }
 
   // ── ZakazkyBlok ─────────────────────────────────────────────────────────────
-  function ZakazkyBlok({ titulek, dot, zakazky, vychozi = true }: { titulek: string; dot: string; zakazky: Zakazka[]; vychozi?: boolean }) {
+  function ZakazkyBlok({ titulek, dot, zakazky, vychozi = true, noTopMargin = false }: { titulek: string; dot: string; zakazky: Zakazka[]; vychozi?: boolean; noTopMargin?: boolean }) {
     const [open, setOpen] = useState(vychozi)
     if (zakazky.length === 0) return null
     const sorted = [...zakazky].sort((a, b) => (a.datum_svatby || "").localeCompare(b.datum_svatby || ""))
     return (
-      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)", marginTop: 16 }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)", marginTop: noTopMargin ? 0 : 16 }}>
         <button onClick={() => setOpen(o => !o)} style={{ width: "100%", padding: "14px 18px", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer" }}>
           <span style={{ width: 8, height: 8, borderRadius: 99, background: dot }} />
           <span style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)" }}>{titulek}</span>
@@ -836,7 +834,7 @@ export default function Home() {
           <div className="mt-4 xl:mt-0 min-w-0">
 
             {/* Probíhá jednání */}
-            <ZakazkyBlok titulek="Probíhá jednání" dot="#fbbf24" zakazky={probihaJednani} vychozi={true} />
+            <ZakazkyBlok titulek="Probíhá jednání" dot="#fbbf24" zakazky={probihaJednani} vychozi={true} noTopMargin={true} />
 
             {/* Vyplněná objednávka */}
             <ZakazkyBlok titulek="Vyplněná objednávka" dot="#60a5fa" zakazky={vyplnenaObjednavka} vychozi={true} />
