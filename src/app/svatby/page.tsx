@@ -79,7 +79,8 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
   )
 
   return (
-    <div style={{ display: "flex", width: "100%" }}>
+    // < sm: měsíce pod sebou  |  sm+: vedle sebe
+    <div className="flex flex-col sm:flex-row w-full">
       {mesice.map(({ year, month }, mi) => {
         const firstDay    = new Date(year, month, 1)
         const startDow    = (firstDay.getDay() + 6) % 7
@@ -91,17 +92,20 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
         while (cells.length % 7 !== 0) cells.push(null)
         const rowCount = cells.length / 7
 
-        return (
-          <div key={`${year}-${month}`} style={{
-            flex: 1, minWidth: 0, display: "flex", flexDirection: "column",
-            // silná svislá čára mezi měsíci
-            borderLeft: mi > 0 ? "2px solid var(--line-strong)" : "none",
-            paddingLeft: mi > 0 ? 16 : 0,
-            paddingRight: mi < 2 ? 16 : 0,
-          }}>
+        // Oddělovač: na mobilu vodorovný (border-t), na sm+ svislý (border-l)
+        const sepCls = mi > 0
+          ? "border-t-2 sm:border-t-0 sm:border-l-2 pt-5 sm:pt-0 sm:pl-4"
+          : ""
+        const padCls = mi < 2 ? "pb-5 sm:pb-0 sm:pr-4" : ""
 
-            {/* Název měsíce — větší, s barevným akcentem */}
-            <div style={{ marginBottom: 12 }}>
+        return (
+          <div
+            key={`${year}-${month}`}
+            className={`flex-1 min-w-0 flex flex-col ${sepCls} ${padCls}`}
+            style={mi > 0 ? { borderColor: "var(--line-strong)" } : undefined}
+          >
+            {/* Název měsíce */}
+            <div style={{ marginBottom: 10 }}>
               <div style={{
                 fontFamily: "var(--font-serif), serif", fontStyle: "italic",
                 fontSize: 18, fontWeight: 400, color: "var(--ink)", lineHeight: 1,
@@ -116,12 +120,10 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
               </div>
             </div>
 
-            {/* Záhlaví dnů s decentní spodní linkou */}
+            {/* Záhlaví dnů */}
             <div style={{
               display: "grid", gridTemplateColumns: "repeat(7, 1fr)",
-              gap: 0, marginBottom: 0,
-              borderBottom: "1px solid var(--line-strong)",
-              paddingBottom: 5,
+              borderBottom: "1px solid var(--line-strong)", paddingBottom: 5,
             }}>
               {DNY_NAZVY.map((d, i) => (
                 <div key={d} style={{
@@ -134,61 +136,42 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
               ))}
             </div>
 
-            {/* Buňky dnů s mřížkou */}
+            {/* Buňky dnů
+                minmax(28px, 1fr): mobil → min 28px bez definované výšky
+                desktop → rovnoměrně vyplní výšku panelu */}
             <div style={{
               flex: 1,
               display: "grid",
               gridTemplateColumns: "repeat(7, 1fr)",
-              gridTemplateRows: `repeat(${rowCount}, 1fr)`,
-              // decentní mřížka: průhledná na "gap" místech pomocí box-shadow, nebo outline
-              gap: 0,
-              // svislé i vodorovné linky pomocí border na buňkách (viz níže)
+              gridTemplateRows: `repeat(${rowCount}, minmax(28px, 1fr))`,
             }}>
               {cells.map((day, i) => {
-                if (day === null) {
-                  // prázdné buňky tvoří mřížku
-                  const col = i % 7
-                  const row = Math.floor(i / 7)
-                  return (
-                    <div key={i} style={{
-                      borderRight:  col < 6 ? "1px solid rgba(0,0,0,.06)" : "none",
-                      borderBottom: row < rowCount - 1 ? "1px solid rgba(0,0,0,.06)" : "none",
-                    }} />
-                  )
+                const col = i % 7
+                const row = Math.floor(i / 7)
+                const gridLine = {
+                  borderRight:  col < 6 ? "1px solid rgba(0,0,0,.06)" : "none",
+                  borderBottom: row < rowCount - 1 ? "1px solid rgba(0,0,0,.06)" : "none",
                 }
+
+                if (day === null) return <div key={i} style={gridLine} />
+
                 const dateStr   = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
                 const isSvatba  = svatebniDny.has(dateStr)
                 const isDnes    = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
                 const colIndex  = (startDow + day - 1) % 7
                 const isWeekend = colIndex >= 5
-                const col       = i % 7
-                const row       = Math.floor(i / 7)
+
                 return (
-                  <div key={i} style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 12, position: "relative",
-                    // mřížka
-                    borderRight:  col < 6 ? "1px solid rgba(0,0,0,.06)" : "none",
-                    borderBottom: row < rowCount - 1 ? "1px solid rgba(0,0,0,.06)" : "none",
-                  }}>
+                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", ...gridLine }}>
                     <div style={{
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      width: "80%", aspectRatio: "1",
+                      width: "76%", aspectRatio: "1", fontSize: 12,
                       borderRadius: isSvatba ? 6 : 99,
-                      background: isSvatba
-                        ? "var(--wed-grad-a, #f43f5e)"
-                        : isDnes
-                          ? "rgba(0,0,0,.07)"
-                          : "transparent",
-                      color: isSvatba
-                        ? "white"
-                        : isWeekend
-                          ? "#e11d48"
-                          : "var(--ink-2)",
+                      background: isSvatba ? "var(--wed-grad-a, #f43f5e)" : isDnes ? "rgba(0,0,0,.07)" : "transparent",
+                      color: isSvatba ? "white" : isWeekend ? "#e11d48" : "var(--ink-2)",
                       fontWeight: isSvatba || isDnes ? 700 : 400,
                       outline: isDnes && !isSvatba ? "1.5px solid var(--line-strong)" : "none",
                       outlineOffset: "-1.5px",
-                      fontSize: 12,
                     }}>
                       {day}
                     </div>
