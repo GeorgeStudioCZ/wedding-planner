@@ -418,6 +418,13 @@ export default function Home() {
     "ukonceno":     "#94a3b8",
   }
 
+  // Barvy badge pro typ služby
+  const TYP_BADGE: Record<string, { bg: string; color: string }> = {
+    "foto":       { bg: "#dbeafe", color: "#1d4ed8" },
+    "video":      { bg: "#ffe4e6", color: "#be123c" },
+    "foto+video": { bg: "#ffedd5", color: "#c2410c" },
+  }
+
   // ── ZakazkaRadek ────────────────────────────────────────────────────────────
   function ZakazkaRadek({ z }: { z: Zakazka }) {
     const svatba = z.datum_svatby ? new Date(z.datum_svatby) : null
@@ -426,83 +433,94 @@ export default function Home() {
     const probehlo = dniDo !== null && dniDo < 0
     const borderColor = STAV_BORDER[z.stav] ?? "#9ca3af"
 
-    function countdownMobile() {
-      if (dniDo === null) return null
-      if (dniDo === 0) return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">Dnes!</span>
-      if (probehlo && z.vystup_odevzdan) return (
-        <button
-          onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
-          className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200"
-        >
-          ✓ Odevzdáno
-        </button>
-      )
-      if (probehlo && !z.vystup_odevzdan) {
-        const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
-        const cls = zbyvaDni !== null && zbyvaDni <= 3
-          ? "bg-red-50 text-red-700 border border-red-200"
-          : "bg-orange-50 text-orange-700 border border-orange-200"
-        return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${cls}`}>odevzdat za {zbyvaDni !== null && zbyvaDni <= 0 ? "!" : `${zbyvaDni} dní`}</span>
-      }
-      return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">za {dniDo} dní</span>
-    }
+    // Datum zkratky
+    const datumDen   = z.datum_svatby ? String(new Date(z.datum_svatby).getDate()).padStart(2, "0") : "—"
+    const datumMesRok = z.datum_svatby
+      ? `${String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}.${new Date(z.datum_svatby).getFullYear()}`
+      : ""
 
-    function countdownDesktop() {
-      if (dniDo === null) return <span style={{ color: "var(--muted)", fontSize: 13 }}>—</span>
-      if (dniDo === 0) return <span style={{ fontWeight: 700, color: "var(--wed)", fontSize: 13 }}>Dnes!</span>
+    // Countdown pill — barevný obdélník
+    function countdownPill() {
+      if (dniDo === null) return null
+      if (dniDo === 0) return (
+        <span style={{ background: "#fff1f2", color: "#be123c", borderRadius: 4, padding: "3px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
+          Dnes!
+        </span>
+      )
       if (probehlo && z.vystup_odevzdan) return (
         <button onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
-          style={{ fontSize: 12, fontWeight: 500, padding: "4px 10px", borderRadius: 99, background: "#e6f7ee", color: "#156a3a", border: "none", cursor: "pointer" }}>
+          style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 4, background: "#dcfce7", color: "#15803d", border: "none", cursor: "pointer" }}>
           ✓ Odevzdáno
         </button>
       )
       if (probehlo && !z.vystup_odevzdan) {
         const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
-        const col = zbyvaDni !== null && zbyvaDni <= 3 ? "#dc2626" : "#d97706"
+        const urgent = zbyvaDni !== null && zbyvaDni <= 3
         return (
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--muted)" }}>Odevzdat do</div>
-            <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 22, lineHeight: 1, color: col }}>
-              {zbyvaDni !== null ? (zbyvaDni <= 0 ? "!" : zbyvaDni) : "—"}
-            </div>
-            <div style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", fontSize: 10.5, color: "var(--muted)" }}>dní</div>
-          </div>
+          <span style={{
+            background: urgent ? "#fef2f2" : "#fff7ed",
+            color: urgent ? "#dc2626" : "#d97706",
+            borderRadius: 4, padding: "3px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+          }}>
+            odevzdat za {zbyvaDni != null ? (zbyvaDni <= 0 ? "!" : `${zbyvaDni} d`) : "—"}
+          </span>
         )
       }
+      const brzy = dniDo <= 7
       return (
-        <div style={{ textAlign: "right", minWidth: 44 }}>
-          <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 22, lineHeight: 1, color: "var(--wed)" }}>{dniDo}</div>
-          <div style={{ fontFamily: "var(--font-sans)", fontSize: 10.5, color: "var(--muted)", letterSpacing: ".1em" }}>dní</div>
-        </div>
+        <span style={{
+          background: brzy ? "#fff1f2" : "#f0fdf4",
+          color: brzy ? "#be123c" : "#15803d",
+          borderRadius: 4, padding: "3px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+        }}>
+          za {dniDo} dní
+        </span>
       )
+    }
+
+    // Mobile countdown (zachováno)
+    function countdownMobile() {
+      if (dniDo === null) return null
+      if (dniDo === 0) return <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">Dnes!</span>
+      if (probehlo && z.vystup_odevzdan) return (
+        <button onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
+          className="text-xs font-semibold px-2 py-0.5 rounded bg-green-50 text-green-700 border border-green-200">
+          ✓ Odevzdáno
+        </button>
+      )
+      if (probehlo && !z.vystup_odevzdan) {
+        const zbyvaDni = deadlineDni(z.datum_svatby, z.rychlost_dodani)
+        const cls = zbyvaDni !== null && zbyvaDni <= 3 ? "bg-red-50 text-red-700 border border-red-200" : "bg-orange-50 text-orange-700 border border-orange-200"
+        return <span className={`text-xs font-semibold px-2 py-0.5 rounded whitespace-nowrap ${cls}`}>odevzdat za {zbyvaDni !== null && zbyvaDni <= 0 ? "!" : `${zbyvaDni} dní`}</span>
+      }
+      return <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">za {dniDo} dní</span>
     }
 
     const cdMobile = countdownMobile()
+    const typBadge = TYP_BADGE[z.typ_sluzby]
 
     return (
       <Link href={`/svatby/zakazky/${z.id}`} className="block" style={{ textDecoration: "none" }}>
-        {/* Mobile card */}
+
+        {/* ── Mobile card ── */}
         <div className="flex flex-col px-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor }}>
-          {/* Row 1: names + status */}
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-900 flex-1 truncate text-sm">
               {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
             </p>
-            <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${stavInfo(z.stav).barva}`}>
+            <span className={`text-xs font-medium px-2 py-1 rounded whitespace-nowrap ${stavInfo(z.stav).barva}`}>
               {stavInfo(z.stav).label}
             </span>
           </div>
-          {/* Row 2: date + address */}
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <span className="font-medium text-gray-700 shrink-0">
               {z.datum_svatby
-                ? `${String(new Date(z.datum_svatby).getDate()).padStart(2, "0")}.${String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}. ${new Date(z.datum_svatby).getFullYear()}`
+                ? `${datumDen}.${String(new Date(z.datum_svatby).getMonth()+1).padStart(2,"0")}. ${new Date(z.datum_svatby).getFullYear()}`
                 : "—"}
             </span>
             {z.adresa_obradu && <><span className="text-gray-300">·</span><span className="truncate">{z.adresa_obradu}</span></>}
-            {z.videohovor_datum && <span className="shrink-0">📹</span>}
+            {z.videohovor_datum && <span className="shrink-0 ml-1" title="Videohovor absolvován">🎥</span>}
           </div>
-          {/* Row 3: type + price + countdown */}
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <span>{typLabel(z.typ_sluzby)}</span>
             {z.cena > 0 && <><span className="text-gray-300">·</span><span className="font-semibold text-gray-700">{formatCena(z.cena)}</span></>}
@@ -510,42 +528,79 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Desktop row */}
-        <div className="hidden md:grid" style={{
-          gridTemplateColumns: "72px 1fr auto auto auto",
-          gap: 16, padding: "14px 18px",
+        {/* ── Desktop row ── */}
+        <div className="hidden md:flex" style={{
+          gap: 10, padding: "10px 14px",
           alignItems: "center",
           borderTop: "1px solid var(--line)",
         }}>
-          {/* Date */}
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
-            <div>{z.datum_svatby ? `${String(new Date(z.datum_svatby).getDate()).padStart(2, "0")}.${String(new Date(z.datum_svatby).getMonth() + 1).padStart(2, "0")}.` : "—"}</div>
-            <div style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 2 }}>{z.datum_svatby ? new Date(z.datum_svatby).getFullYear() : ""}</div>
-          </div>
-          {/* Names + address */}
-          <div>
-            <div style={{ fontWeight: 600, color: "var(--ink)" }}>{z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}</div>
-            <div style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 2 }}>{z.adresa_obradu || "—"}</div>
-          </div>
-          {/* Status */}
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "3px 9px", borderRadius: 99, fontSize: 11.5, fontWeight: 500,
-            background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
-            color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
-            whiteSpace: "nowrap",
+
+          {/* Datum box — barevné pozadí, velké číslo dne */}
+          <div style={{
+            background: borderColor, borderRadius: 8,
+            padding: "7px 10px", textAlign: "center",
+            flexShrink: 0, minWidth: 52,
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: 99, background: "currentColor", opacity: .8 }} />
-            {stavInfo(z.stav).label}
-          </span>
-          {/* Price */}
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, textAlign: "right" }}>
-            {z.cena > 0
-              ? <>{z.cena.toLocaleString("cs-CZ")} <span style={{ fontSize: 11, color: "var(--muted)" }}>Kč</span></>
-              : <span style={{ color: "var(--muted)" }}>—</span>}
+            <div style={{ fontSize: 22, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>
+              {datumDen}
+            </div>
+            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,.85)", fontFamily: "var(--font-mono)", marginTop: 3, letterSpacing: ".04em" }}>
+              {datumMesRok}
+            </div>
           </div>
-          {/* Countdown */}
-          {countdownDesktop()}
+
+          {/* Střed: jméno + badges + adresa */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, color: "var(--ink)", fontSize: 13, lineHeight: 1.2, display: "flex", alignItems: "center", gap: 6 }}>
+              <span className="truncate">{z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}</span>
+              {z.videohovor_datum && (
+                <span title="Videohovor absolvován" style={{ fontSize: 13, flexShrink: 0 }}>🎥</span>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
+              {/* Typ služby badge */}
+              {typBadge && (
+                <span style={{
+                  background: typBadge.bg, color: typBadge.color,
+                  borderRadius: 4, padding: "1px 6px",
+                  fontSize: 10, fontWeight: 700,
+                  fontFamily: "var(--font-mono)", letterSpacing: ".04em",
+                  flexShrink: 0,
+                }}>
+                  {typLabel(z.typ_sluzby)}
+                </span>
+              )}
+              {z.adresa_obradu && (
+                <span style={{ fontSize: 11, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {z.adresa_obradu}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Pravá strana: stav + cena + countdown */}
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+            {/* Stav — hranatý */}
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "2px 7px", borderRadius: 4, fontSize: 10.5, fontWeight: 600,
+              background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
+              color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
+              whiteSpace: "nowrap",
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: 2, background: borderColor, flexShrink: 0 }} />
+              {stavInfo(z.stav).label}
+            </span>
+            {/* Cena — větší a tučnější */}
+            {z.cena > 0 && (
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--ink)", textAlign: "right" }}>
+                {z.cena.toLocaleString("cs-CZ")} <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400 }}>Kč</span>
+              </div>
+            )}
+            {/* Countdown pill */}
+            {countdownPill()}
+          </div>
+
         </div>
       </Link>
     )
