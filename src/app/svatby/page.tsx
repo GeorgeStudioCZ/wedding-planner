@@ -63,6 +63,93 @@ function KpiCard({ tone, label, value, foot }: { tone: "rose" | "coral" | "plum"
   )
 }
 
+// ── Mini Calendar ────────────────────────────────────────────────────────────
+const MESICE_NAZVY = ["Leden","Únor","Březen","Duben","Květen","Červen","Červenec","Srpen","Září","Říjen","Listopad","Prosinec"]
+const DNY_NAZVY    = ["Po","Út","St","Čt","Pá","So","Ne"]
+
+function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
+  const today = new Date()
+  const mesice = [0, 1, 2].map(offset => {
+    const d = new Date(today.getFullYear(), today.getMonth() + offset, 1)
+    return { year: d.getFullYear(), month: d.getMonth() }
+  })
+
+  const svatebniDny = new Set(
+    zakazky.filter(z => z.datum_svatby).map(z => z.datum_svatby.slice(0, 10))
+  )
+
+  return (
+    <div style={{ display: "flex", gap: 12 }}>
+      {mesice.map(({ year, month }) => {
+        const firstDay = new Date(year, month, 1)
+        const startDow = (firstDay.getDay() + 6) % 7  // Po=0 … Ne=6
+        const daysInMonth = new Date(year, month + 1, 0).getDate()
+        const cells: (number | null)[] = [
+          ...Array(startDow).fill(null),
+          ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+        ]
+        while (cells.length % 7 !== 0) cells.push(null)
+
+        return (
+          <div key={`${year}-${month}`} style={{ flex: 1, minWidth: 0 }}>
+            {/* Název měsíce */}
+            <div style={{
+              fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: ".1em",
+              textTransform: "uppercase", color: "var(--ink-2)", fontWeight: 700,
+              marginBottom: 8, textAlign: "center",
+            }}>
+              {MESICE_NAZVY[month].slice(0, 3)} · {year}
+            </div>
+            {/* Záhlaví dnů */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, marginBottom: 3 }}>
+              {DNY_NAZVY.map((d, i) => (
+                <div key={d} style={{
+                  textAlign: "center", fontSize: 8, fontFamily: "var(--font-mono)",
+                  color: i >= 5 ? "#f43f5e" : "var(--muted)", paddingBottom: 3,
+                }}>
+                  {d}
+                </div>
+              ))}
+            </div>
+            {/* Buňky dnů */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1 }}>
+              {cells.map((day, i) => {
+                if (day === null) return <div key={i} />
+                const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                const isSvatba  = svatebniDny.has(dateStr)
+                const isDnes    = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
+                const colIndex  = (startDow + day - 1) % 7
+                const isWeekend = colIndex >= 5
+                return (
+                  <div key={i} style={{
+                    textAlign: "center", fontSize: 10.5, lineHeight: "22px",
+                    borderRadius: 4,
+                    background: isSvatba
+                      ? "var(--wed-grad-a, #f43f5e)"
+                      : isDnes
+                        ? "rgba(0,0,0,.07)"
+                        : "transparent",
+                    color: isSvatba
+                      ? "white"
+                      : isWeekend
+                        ? "#e11d48"
+                        : "var(--ink-2)",
+                    fontWeight: isSvatba || isDnes ? 700 : 400,
+                    outline: isDnes && !isSvatba ? "1.5px solid var(--line-strong)" : "none",
+                    outlineOffset: "-1.5px",
+                  }}>
+                    {day}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Home() {
   const [zakazky, setZakazky] = useState<Zakazka[]>([])
   const [loading, setLoading] = useState(true)
@@ -486,8 +573,10 @@ export default function Home() {
           <StatBox label="Náklady na benzín"      value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
         </div>
 
-        {/* ── Map full-width ── */}
-        <div className="mt-4">
+        {/* ── Mapa + Kalendář ── */}
+        <div className="mt-4 grid xl:grid-cols-2 gap-3">
+
+          {/* Levý sloupec — Mapa */}
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Mapa obřadů</h3>
@@ -498,6 +587,22 @@ export default function Home() {
               {loading && <div style={{ height: 280, background: "#f4f3ee", borderRadius: 14, display: "grid", placeItems: "center", color: "var(--muted)", fontSize: 13 }}>Načítám…</div>}
             </div>
           </div>
+
+          {/* Pravý sloupec — Kalendář (aktuální + 2 měsíce) */}
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kalendář</h3>
+              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>3 měsíce</span>
+              <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: "var(--wed-grad-a, #f43f5e)", display: "inline-block" }} />
+                svatba
+              </span>
+            </div>
+            <div style={{ padding: "20px 22px", flex: 1, display: "flex", alignItems: "stretch" }}>
+              <MiniKalendar zakazky={potvrzeneSvatby} />
+            </div>
+          </div>
+
         </div>
 
         {/* ── Upcoming list ── */}
