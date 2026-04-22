@@ -556,7 +556,7 @@ export default function Home() {
             Dva hlavní sloupce na xl — na menších obrazovkách stacked
             grid-cols: levý sloupec 1fr, pravý 480 px
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="xl:grid xl:gap-5 xl:items-start" style={{ gridTemplateColumns: "1fr 480px" } as React.CSSProperties}>
+        <div className="xl:grid xl:grid-cols-2 xl:gap-5 xl:items-start">
 
           {/* ── LEVÝ SLOUPEC ─────────────────────────────────────────────── */}
           <div className="min-w-0">
