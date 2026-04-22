@@ -552,117 +552,111 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Stat grid — 6 per row on xl (2 × 6 = 12) ── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-          <StatBox label="Letos celkem"           value={String(letosConfirmed)} />
-          <StatBox label="Nadcházející svatby"    value={String(nadchazejici.length)} />
-          <StatBox label="Realizováno svateb"     value={String(realizovano.length)} />
-          <StatBox label="Čeká na sestřihání"     value={String(cekaNaSestrizani.length)} />
-          <StatBox label="Celkem km (tam+zpět)"   value={celkemKm > 0 ? `${celkemKm.toLocaleString("cs-CZ")} km` : "—"} />
-          <StatBox label="Celková doba jízdy"     value={celkovaCasJizdy} />
-          <StatBox label="Již ujeto km"           value={ujetoKm > 0 ? `${ujetoKm.toLocaleString("cs-CZ")} km` : "0 km"} />
-          <StatBox label="Zbývá ujet km"          value={`${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
-          <StatBox label="Celkem obrat"           value={celkemObrat > 0 ? formatCena(celkemObrat) : "—"} />
-          <StatBox label="Uhrazené zálohy"        value={uhrazeneZalohy > 0 ? formatCena(uhrazeneZalohy) : "—"} />
-          <StatBox label="Zbývá doplatit"         value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"} />
-          <StatBox label="Náklady na benzín"      value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
-        </div>
+        {/* ══════════════════════════════════════════════════════════════════
+            Dva hlavní sloupce na xl — na menších obrazovkách stacked
+            grid-cols: levý sloupec 1fr, pravý 480 px
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="xl:grid xl:gap-5 xl:items-start" style={{ gridTemplateColumns: "1fr 480px" } as React.CSSProperties}>
 
-        {/* ── Mapa + Kalendář ── */}
-        <div className="mt-4 grid xl:grid-cols-2 gap-3">
+          {/* ── LEVÝ SLOUPEC ─────────────────────────────────────────────── */}
+          <div className="min-w-0">
 
-          {/* Levý sloupec — Mapa */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Mapa obřadů</h3>
-              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>{bodyNaMape.length} lokací v ČR</span>
+            {/* Stat grid — 4 × 3 na xl */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+              <StatBox label="Letos celkem"           value={String(letosConfirmed)} />
+              <StatBox label="Nadcházející svatby"    value={String(nadchazejici.length)} />
+              <StatBox label="Realizováno svateb"     value={String(realizovano.length)} />
+              <StatBox label="Čeká na sestřihání"     value={String(cekaNaSestrizani.length)} />
+              <StatBox label="Celkem km (tam+zpět)"   value={celkemKm > 0 ? `${celkemKm.toLocaleString("cs-CZ")} km` : "—"} />
+              <StatBox label="Celková doba jízdy"     value={celkovaCasJizdy} />
+              <StatBox label="Již ujeto km"           value={ujetoKm > 0 ? `${ujetoKm.toLocaleString("cs-CZ")} km` : "0 km"} />
+              <StatBox label="Zbývá ujet km"          value={`${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
+              <StatBox label="Celkem obrat"           value={celkemObrat > 0 ? formatCena(celkemObrat) : "—"} />
+              <StatBox label="Uhrazené zálohy"        value={uhrazeneZalohy > 0 ? formatCena(uhrazeneZalohy) : "—"} />
+              <StatBox label="Zbývá doplatit"         value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"} />
+              <StatBox label="Náklady na benzín"      value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
             </div>
-            <div style={{ padding: "18px 20px" }}>
-              {!loading && <MapaDashboard body={bodyNaMape} />}
-              {loading && <div style={{ height: 280, background: "#f4f3ee", borderRadius: 14, display: "grid", placeItems: "center", color: "var(--muted)", fontSize: 13 }}>Načítám…</div>}
-            </div>
-          </div>
 
-          {/* Pravý sloupec — Kalendář (aktuální + 2 měsíce) */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)", display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kalendář</h3>
-              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>3 měsíce</span>
-              <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: "var(--wed-grad-a, #f43f5e)", display: "inline-block" }} />
-                svatba
-              </span>
-            </div>
-            <div style={{ padding: "20px 22px", flex: 1, display: "flex", alignItems: "stretch", minHeight: 0 }}>
-              <MiniKalendar zakazky={potvrzeneSvatby} />
-            </div>
-          </div>
-
-        </div>
-
-        {/* ── Upcoming list ── */}
-        <div style={{ marginTop: 16 }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Nadcházející svatby</h3>
-              <span style={{ color: "var(--muted)", fontSize: 12.5 }}>{filteredUpcoming.length} z {nadchazejici.length}</span>
-              <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {(["Vše", "Zaplaceno", "Čeká"] as const).map(f => (
-                  <button key={f} onClick={() => setFilter(f)}
-                    style={{
-                      padding: "4px 10px", borderRadius: 99, fontSize: 11.5, cursor: "pointer",
-                      background: filter === f ? "var(--ink)" : "#f2f1ec",
-                      color: filter === f ? "white" : "var(--ink-2)",
-                      border: "none", fontFamily: "inherit",
-                    }}>{f}</button>
-                ))}
+            {/* Mapa */}
+            <div className="mt-4" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Mapa obřadů</h3>
+                <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>{bodyNaMape.length} lokací v ČR</span>
+              </div>
+              <div style={{ padding: "18px 20px" }}>
+                {!loading && <MapaDashboard body={bodyNaMape} />}
+                {loading && <div style={{ height: 280, background: "#f4f3ee", borderRadius: 14, display: "grid", placeItems: "center", color: "var(--muted)", fontSize: 13 }}>Načítám…</div>}
               </div>
             </div>
-            {filteredUpcoming.map(z => <ZakazkaRadek key={z.id} z={z} />)}
-            {filteredUpcoming.length === 0 && (
-              <div style={{ padding: "32px 18px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Žádné záznamy</div>
+
+            {/* Kalendář */}
+            <div className="mt-3" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kalendář</h3>
+                <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>3 měsíce</span>
+                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: "var(--wed-grad-a, #f43f5e)", display: "inline-block" }} />
+                  svatba
+                </span>
+              </div>
+              <div style={{ padding: "20px 22px" }}>
+                <MiniKalendar zakazky={potvrzeneSvatby} />
+              </div>
+            </div>
+
+          </div>
+          {/* konec levého sloupce */}
+
+          {/* ── PRAVÝ SLOUPEC — seznam svateb ────────────────────────────── */}
+          <div className="mt-4 xl:mt-0 min-w-0">
+
+            {/* Nadcházející svatby */}
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Nadcházející svatby</h3>
+                <span style={{ color: "var(--muted)", fontSize: 12.5 }}>{filteredUpcoming.length} z {nadchazejici.length}</span>
+                <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {(["Vše", "Zaplaceno", "Čeká"] as const).map(f => (
+                    <button key={f} onClick={() => setFilter(f)}
+                      style={{
+                        padding: "4px 10px", borderRadius: 99, fontSize: 11.5, cursor: "pointer",
+                        background: filter === f ? "var(--ink)" : "#f2f1ec",
+                        color: filter === f ? "white" : "var(--ink-2)",
+                        border: "none", fontFamily: "inherit",
+                      }}>{f}</button>
+                  ))}
+                </div>
+              </div>
+              {filteredUpcoming.map(z => <ZakazkaRadek key={z.id} z={z} />)}
+              {filteredUpcoming.length === 0 && (
+                <div style={{ padding: "32px 18px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Žádné záznamy</div>
+              )}
+            </div>
+
+            {/* Realizované — čeká odevzdání */}
+            <ZakazkyBlok titulek="Realizované — čeká odevzdání" dot="#fb923c" zakazky={realizovaneNeodevzdane} vychozi={true} />
+
+            {/* Realizované — odevzdáno */}
+            <ZakazkyBlok titulek="Realizované — odevzdáno" dot="#4ade80" zakazky={realizovaneOdevzdane} vychozi={false} />
+
+            {/* Probíhá jednání */}
+            <ZakazkyBlok titulek="Probíhá jednání" dot="#fbbf24" zakazky={probihaJednani} vychozi={false} />
+
+            {/* Vyplněná objednávka */}
+            <ZakazkyBlok titulek="Vyplněná objednávka" dot="#60a5fa" zakazky={vyplnenaObjednavka} vychozi={true} />
+
+            {/* Error state */}
+            {chyba && (
+              <div style={{ marginTop: 16, background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "var(--radius-lg)", padding: "16px 20px", fontSize: 13, color: "#991b1b", wordBreak: "break-all" }}>
+                <strong>Chyba připojení k databázi:</strong><br />{chyba}
+              </div>
             )}
+
           </div>
+          {/* konec pravého sloupce */}
+
         </div>
-
-        {/* ── Realizované — čeká odevzdání ── */}
-        <ZakazkyBlok
-          titulek="Realizované — čeká odevzdání"
-          dot="#fb923c"
-          zakazky={realizovaneNeodevzdane}
-          vychozi={true}
-        />
-
-        {/* ── Realizované — odevzdáno ── */}
-        <ZakazkyBlok
-          titulek="Realizované — odevzdáno"
-          dot="#4ade80"
-          zakazky={realizovaneOdevzdane}
-          vychozi={false}
-        />
-
-        {/* ── Probíhá jednání ── */}
-        <ZakazkyBlok
-          titulek="Probíhá jednání"
-          dot="#fbbf24"
-          zakazky={probihaJednani}
-          vychozi={false}
-        />
-
-        {/* ── Vyplněná objednávka ── */}
-        <ZakazkyBlok
-          titulek="Vyplněná objednávka"
-          dot="#60a5fa"
-          zakazky={vyplnenaObjednavka}
-          vychozi={true}
-        />
-
-        {/* Error state */}
-        {chyba && (
-          <div style={{ marginTop: 16, background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "var(--radius-lg)", padding: "16px 20px", fontSize: 13, color: "#991b1b", wordBreak: "break-all" }}>
-            <strong>Chyba připojení k databázi:</strong><br />{chyba}
-          </div>
-        )}
+        {/* konec dvousloupcového gridu */}
 
       </div>
     </AppShell>
