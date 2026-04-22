@@ -470,42 +470,20 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── KPI Cards + Stat boxes — 8 per row on xl (2 rows × 8) ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
-          {/* Row 1 — gradient KPI cards */}
-          <KpiCard
-            tone="rose"
-            label="Letos celkem"
-            value={String(letosConfirmed)}
-            foot={<><span>Svateb {ROK}</span><span style={{ fontFamily: "var(--font-mono)" }}>+6 YoY</span></>}
-          />
-          <KpiCard
-            tone="coral"
-            label="Nadcházející"
-            value={String(nadchazejici.length)}
-            foot={<span>Nejbližší: {pristiDni !== null ? `za ${pristiDni}d` : "—"}</span>}
-          />
-          <KpiCard
-            tone="plum"
-            label="Tento měsíc"
-            value={String(tentoMesic)}
-            foot={<span>{new Date().toLocaleDateString("cs-CZ", { month: "long", year: "numeric" })}</span>}
-          />
-          <KpiCard
-            tone="slate"
-            label="Cashflow YTD"
-            value={`${Math.round(cashflowYTD / 1000)}k`}
-            foot={<><span>Kč (brutto)</span><span style={{ fontFamily: "var(--font-mono)" }}>↑ 18%</span></>}
-          />
-          {/* Row 2 — white stat boxes */}
-          <StatBox label="Realizováno svateb"      value={String(realizovano.length)} />
-          <StatBox label="Čeká na sestřihání"      value={String(cekaNaSestrizani.length)} />
-          <StatBox label="Celkem km (tam+zpět)"    value={celkemKm > 0 ? `${celkemKm.toLocaleString("cs-CZ")} km` : "—"} />
-          <StatBox label="Celková doba jízdy"      value={celkovaCasJizdy} />
-          <StatBox label="Celkem obrat"            value={celkemObrat > 0 ? formatCena(celkemObrat) : "—"} />
-          <StatBox label="Uhrazené zálohy"         value={uhrazeneZalohy > 0 ? formatCena(uhrazeneZalohy) : "—"} />
-          <StatBox label="Zbývá doplatit"          value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"} />
-          <StatBox label="Náklady na benzín"       value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
+        {/* ── Stat grid — 6 per row on xl (2 × 6 = 12) ── */}
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+          <StatBox label="Letos celkem"           value={String(letosConfirmed)} />
+          <StatBox label="Nadcházející svatby"    value={String(nadchazejici.length)} />
+          <StatBox label="Realizováno svateb"     value={String(realizovano.length)} />
+          <StatBox label="Čeká na sestřihání"     value={String(cekaNaSestrizani.length)} />
+          <StatBox label="Celkem km (tam+zpět)"   value={celkemKm > 0 ? `${celkemKm.toLocaleString("cs-CZ")} km` : "—"} />
+          <StatBox label="Celková doba jízdy"     value={celkovaCasJizdy} />
+          <StatBox label="Již ujeto km"           value={ujetoKm > 0 ? `${ujetoKm.toLocaleString("cs-CZ")} km` : "0 km"} />
+          <StatBox label="Zbývá ujet km"          value={`${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
+          <StatBox label="Celkem obrat"           value={celkemObrat > 0 ? formatCena(celkemObrat) : "—"} />
+          <StatBox label="Uhrazené zálohy"        value={uhrazeneZalohy > 0 ? formatCena(uhrazeneZalohy) : "—"} />
+          <StatBox label="Zbývá doplatit"         value={zbyvaDoplatit > 0 ? formatCena(zbyvaDoplatit) : "—"} />
+          <StatBox label="Náklady na benzín"      value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
         </div>
 
         {/* ── Map full-width ── */}
