@@ -528,73 +528,73 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Desktop row — pipe-separated, PEVNÉ šířky sloupců ── */}
-        {/* Šířky: datum=60 | jméno=flex | kamera=44 | typ=108 | stav=124 | cena=92 | countdown=72 */}
+        {/* ── Desktop row — pipe-separated, PEVNÉ šířky sloupců (+10 %) ── */}
+        {/* Šířky: datum=66 | jméno=flex | kamera=48 | typ=120 | stav=136 | cena=102 | countdown=80 */}
         <div className="hidden md:flex" style={{
           alignItems: "stretch",
           borderTop: "1px solid var(--line)",
-          minHeight: 62,
+          minHeight: 68,
           overflow: "hidden",
         }}>
 
-          {/* 1 · Datum box — 60 px */}
+          {/* 1 · Datum box — 66 px */}
           <div style={{
             background: borderColor,
-            width: 60, flexShrink: 0,
+            width: 66, flexShrink: 0,
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
           }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>
               {datumDen}
             </div>
-            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,.82)", fontFamily: "var(--font-mono)", marginTop: 3, letterSpacing: ".05em" }}>
+            <div style={{ fontSize: 9.5, color: "rgba(255,255,255,.82)", fontFamily: "var(--font-mono)", marginTop: 3, letterSpacing: ".05em" }}>
               {datumMesRok}
             </div>
           </div>
 
           {/* 2 · Jméno + adresa — flex */}
-          <div style={{ flex: 1, minWidth: 0, padding: "10px 14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ flex: 1, minWidth: 0, padding: "11px 16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
             </div>
             {z.adresa_obradu && (
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {z.adresa_obradu}
               </div>
             )}
           </div>
 
-          {/* 3 · Kamera — 44 px, VŽDY přítomný slot */}
+          {/* 3 · Kamera — 48 px, VŽDY přítomný slot */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {z.videohovor_datum && (
-              <span title="Videohovor absolvován" style={{ fontSize: 17, lineHeight: 1 }}>🎥</span>
+              <span title="Videohovor absolvován" style={{ fontSize: 19, lineHeight: 1 }}>🎥</span>
             )}
           </div>
 
-          {/* 4 · Typ — 108 px */}
+          {/* 4 · Typ — 120 px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ width: 108, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 120, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {typBadge ? (
               <span style={{
                 background: typBadge.bg, color: typBadge.color,
-                borderRadius: 4, padding: "4px 9px",
-                fontSize: 11, fontWeight: 700,
+                borderRadius: 4, padding: "5px 10px",
+                fontSize: 12, fontWeight: 700,
                 fontFamily: "var(--font-mono)", letterSpacing: ".03em",
                 whiteSpace: "nowrap",
               }}>
                 {typLabel(z.typ_sluzby)}
               </span>
-            ) : <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>—</span>}
+            ) : <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>—</span>}
           </div>
 
-          {/* 5 · Stav — 124 px */}
+          {/* 5 · Stav — 136 px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ width: 124, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 136, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{
               background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
               color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
-              borderRadius: 6, padding: "5px 11px",
-              fontSize: 11, fontWeight: 700,
+              borderRadius: 6, padding: "5px 12px",
+              fontSize: 12, fontWeight: 700,
               whiteSpace: "nowrap", letterSpacing: ".05em",
               textTransform: "uppercase",
             }}>
@@ -602,31 +602,31 @@ export default function Home() {
             </span>
           </div>
 
-          {/* 6 · Cena — 92 px */}
+          {/* 6 · Cena — 102 px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ width: 92, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
+          <div style={{ width: 102, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
               {z.cena > 0 ? `${z.cena.toLocaleString("cs-CZ")} Kč` : "—"}
             </span>
           </div>
 
-          {/* 7 · Countdown box — 72 px */}
+          {/* 7 · Countdown box — 80 px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ width: 72, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 80, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
             {dniDo === null ? (
-              <span style={{ fontSize: 11, color: "var(--muted)" }}>—</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>—</span>
             ) : dniDo === 0 ? (
               <>
-                <div style={{ fontSize: 20, fontWeight: 800, color: "#be123c", fontFamily: "var(--font-serif)", lineHeight: 1 }}>!</div>
-                <div style={{ fontSize: 7.5, fontFamily: "var(--font-mono)", color: "#be123c", marginTop: 3, letterSpacing: ".1em", textTransform: "uppercase", textAlign: "center" }}>DNES</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#be123c", fontFamily: "var(--font-serif)", lineHeight: 1 }}>!</div>
+                <div style={{ fontSize: 8.5, fontFamily: "var(--font-mono)", color: "#be123c", marginTop: 3, letterSpacing: ".1em", textTransform: "uppercase", textAlign: "center" }}>DNES</div>
               </>
             ) : probehlo && z.vystup_odevzdan ? (
               <button
                 onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
                 style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}
               >
-                <div style={{ fontSize: 20, fontWeight: 800, color: "#15803d", fontFamily: "var(--font-serif)", lineHeight: 1 }}>✓</div>
-                <div style={{ fontSize: 7.5, fontFamily: "var(--font-mono)", color: "#15803d", marginTop: 3, letterSpacing: ".08em", textTransform: "uppercase", textAlign: "center" }}>ODEVZDÁNO</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#15803d", fontFamily: "var(--font-serif)", lineHeight: 1 }}>✓</div>
+                <div style={{ fontSize: 8.5, fontFamily: "var(--font-mono)", color: "#15803d", marginTop: 3, letterSpacing: ".08em", textTransform: "uppercase", textAlign: "center" }}>ODEVZDÁNO</div>
               </button>
             ) : probehlo && !z.vystup_odevzdan ? (() => {
               const zb = deadlineDni(z.datum_svatby, z.rychlost_dodani)
@@ -634,18 +634,18 @@ export default function Home() {
               const c = urgent ? "#dc2626" : "#d97706"
               return (
                 <>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: c, fontFamily: "var(--font-serif)", lineHeight: 1 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: c, fontFamily: "var(--font-serif)", lineHeight: 1 }}>
                     {zb != null ? (zb <= 0 ? "!" : zb) : "—"}
                   </div>
-                  <div style={{ fontSize: 7.5, fontFamily: "var(--font-mono)", color: c, marginTop: 3, letterSpacing: ".06em", textTransform: "uppercase", textAlign: "center" }}>DNY / STŘ.</div>
+                  <div style={{ fontSize: 8.5, fontFamily: "var(--font-mono)", color: c, marginTop: 3, letterSpacing: ".06em", textTransform: "uppercase", textAlign: "center" }}>DNY / STŘ.</div>
                 </>
               )
             })() : (
               <>
-                <div style={{ fontSize: 22, fontWeight: 800, color: dniDo <= 7 ? "#be123c" : "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: 1 }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: dniDo <= 7 ? "#be123c" : "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: 1 }}>
                   {dniDo}
                 </div>
-                <div style={{ fontSize: 7.5, fontFamily: "var(--font-mono)", color: "var(--muted)", marginTop: 3, letterSpacing: ".06em", textTransform: "uppercase", textAlign: "center", lineHeight: 1.4 }}>
+                <div style={{ fontSize: 8.5, fontFamily: "var(--font-mono)", color: "var(--muted)", marginTop: 3, letterSpacing: ".06em", textTransform: "uppercase", textAlign: "center", lineHeight: 1.4 }}>
                   DNY<br />ZBÝVAJÍ
                 </div>
               </>
@@ -664,11 +664,11 @@ export default function Home() {
     const sorted = [...zakazky].sort((a, b) => (a.datum_svatby || "").localeCompare(b.datum_svatby || ""))
     return (
       <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-        <button onClick={() => setOpen(o => !o)} style={{ width: "100%", padding: "14px 18px", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer" }}>
-          <span style={{ width: 8, height: 8, borderRadius: 99, background: dot }} />
-          <span style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)" }}>{titulek}</span>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--muted)", background: "rgba(20,20,30,.06)", padding: "2px 8px", borderRadius: 99 }}>{zakazky.length}</span>
-          <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: 12, transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform .2s" }}>▾</span>
+        <button onClick={() => setOpen(o => !o)} style={{ width: "100%", padding: "16px 20px", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer" }}>
+          <span style={{ width: 9, height: 9, borderRadius: 99, background: dot }} />
+          <span style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>{titulek}</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)", background: "rgba(20,20,30,.06)", padding: "2px 8px", borderRadius: 99 }}>{zakazky.length}</span>
+          <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: 13, transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform .2s" }}>▾</span>
         </button>
         {open && <div style={{ borderTop: "1px solid var(--line)" }}>{sorted.map(z => <ZakazkaRadek key={z.id} z={z} />)}</div>}
       </div>
@@ -806,9 +806,9 @@ export default function Home() {
 
             {/* Nadcházející svatby */}
             <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
-                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Nadcházející svatby</h3>
-                <span style={{ color: "var(--muted)", fontSize: 12.5 }}>{filteredUpcoming.length} z {nadchazejici.length}</span>
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "16px 20px", borderBottom: "1px solid var(--line)" }}>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Nadcházející svatby</h3>
+                <span style={{ color: "var(--muted)", fontSize: 14 }}>{filteredUpcoming.length} z {nadchazejici.length}</span>
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {(["Vše", "Zaplaceno", "Čeká"] as const).map(f => (
                     <button key={f} onClick={() => setFilter(f)}
