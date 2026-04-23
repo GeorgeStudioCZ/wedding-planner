@@ -17,6 +17,9 @@ type Zakazka = {
   cena: number
   vzdalenost_km: number | null
   videohovor_datum: string | null
+  cas_prijezdu: string | null
+  cas_obradu: string | null
+  pocet_svatebcanu: number | null
 }
 
 // ── Design tokens (shodné s dashboardem) ────────────────────────
@@ -88,14 +91,23 @@ function balicekLabel(b: string) {
   return map[b] ?? b ?? null
 }
 
+function formatCas(cas: string | null) {
+  if (!cas) return null
+  return cas.slice(0, 5)   // "HH:MM:SS" → "HH:MM"
+}
+
 // Sdílená šířka sloupců — stejná v záhlaví i řádcích
 const W = {
-  datum:     66,
+  datum:      66,
   videohovor: 48,
   typ:       120,
   stav:      136,
+  balicek:    82,
+  prijezd:    72,
+  obrad:      72,
+  hoste:      68,
   cena:      108,
-  vzdal:      80,
+  vzdal:      76,
 }
 
 export default function SeznamSvateb() {
@@ -107,7 +119,7 @@ export default function SeznamSvateb() {
   useEffect(() => {
     supabase
       .from("zakazky")
-      .select("id, datum_svatby, jmeno_nevesty, jmeno_zenicha, stav, adresa_obradu, typ_sluzby, balicek, cena, vzdalenost_km, videohovor_datum")
+      .select("id, datum_svatby, jmeno_nevesty, jmeno_zenicha, stav, adresa_obradu, typ_sluzby, balicek, cena, vzdalenost_km, videohovor_datum, cas_prijezdu, cas_obradu, pocet_svatebcanu")
       .order("datum_svatby", { ascending: true })
       .then(({ data }) => {
         setZakazky(data ?? [])
@@ -310,6 +322,14 @@ export default function SeznamSvateb() {
                     <Pipe />
                     <div style={{ width: W.stav, flexShrink: 0, padding: "9px 0", textAlign: "center" }}>Stav</div>
                     <Pipe />
+                    <div style={{ width: W.balicek, flexShrink: 0, padding: "9px 0", textAlign: "center" }}>Balíček</div>
+                    <Pipe />
+                    <div style={{ width: W.prijezd, flexShrink: 0, padding: "9px 0", textAlign: "center" }}>Příjezd</div>
+                    <Pipe />
+                    <div style={{ width: W.obrad, flexShrink: 0, padding: "9px 0", textAlign: "center" }}>Obřad</div>
+                    <Pipe />
+                    <div style={{ width: W.hoste, flexShrink: 0, padding: "9px 0", textAlign: "center" }}>Hosté</div>
+                    <Pipe />
                     <div style={{ width: W.cena, flexShrink: 0, padding: "9px 16px", textAlign: "right" }}>Cena</div>
                     <Pipe />
                     <div style={{ width: W.vzdal, flexShrink: 0, padding: "9px 0", textAlign: "center" }}>Vzdál.</div>
@@ -324,7 +344,9 @@ export default function SeznamSvateb() {
                     const datumMesRok = d
                       ? `${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`
                       : ""
-                    const bal = balicekLabel(z.balicek)
+                    const bal        = balicekLabel(z.balicek)
+                    const prijezd    = formatCas(z.cas_prijezdu)
+                    const obrad      = formatCas(z.cas_obradu)
 
                     return (
                       <Link key={z.id} href={`/svatby/zakazky/${z.id}`} style={{ textDecoration: "none", display: "block" }}>
@@ -351,28 +373,17 @@ export default function SeznamSvateb() {
                             </div>
                           </div>
 
-                          {/* 2 · Jméno + adresa + balíček */}
+                          {/* 2 · Jméno + adresa */}
                           <Pipe />
                           <div style={{ flex: 1, minWidth: 0, padding: "11px 16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                             <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 3, minWidth: 0 }}>
-                              {z.adresa_obradu && (
-                                <span style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
-                                  {z.adresa_obradu}
-                                </span>
-                              )}
-                              {bal && (
-                                <span style={{
-                                  flexShrink: 0, fontSize: 10, fontFamily: "var(--font-mono)",
-                                  color: "var(--muted)", background: "rgba(0,0,0,.05)",
-                                  borderRadius: 4, padding: "1px 6px",
-                                }}>
-                                  {bal}
-                                </span>
-                              )}
-                            </div>
+                            {z.adresa_obradu && (
+                              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {z.adresa_obradu}
+                              </div>
+                            )}
                           </div>
 
                           {/* 3 · Videohovor */}
@@ -416,7 +427,47 @@ export default function SeznamSvateb() {
                             </span>
                           </div>
 
-                          {/* 6 · Cena */}
+                          {/* 6 · Balíček */}
+                          <Pipe />
+                          <div style={{ width: W.balicek, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {bal ? (
+                              <span style={{
+                                fontSize: 11, fontFamily: "var(--font-mono)",
+                                color: "var(--ink-2)", background: "rgba(0,0,0,.05)",
+                                borderRadius: 4, padding: "3px 8px", whiteSpace: "nowrap",
+                              }}>
+                                {bal}
+                              </span>
+                            ) : <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>—</span>}
+                          </div>
+
+                          {/* 7 · Čas příjezdu */}
+                          <Pipe />
+                          <div style={{ width: W.prijezd, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: prijezd ? "var(--ink)" : "var(--muted)", whiteSpace: "nowrap" }}>
+                              {prijezd ?? "—"}
+                            </span>
+                          </div>
+
+                          {/* 8 · Čas obřadu */}
+                          <Pipe />
+                          <div style={{ width: W.obrad, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: obrad ? "var(--ink)" : "var(--muted)", whiteSpace: "nowrap" }}>
+                              {obrad ?? "—"}
+                            </span>
+                          </div>
+
+                          {/* 9 · Počet hostů */}
+                          <Pipe />
+                          <div style={{ width: W.hoste, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {z.pocet_svatebcanu ? (
+                              <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                                {z.pocet_svatebcanu}
+                              </span>
+                            ) : <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>—</span>}
+                          </div>
+
+                          {/* 10 · Cena */}
                           <Pipe />
                           <div style={{ width: W.cena, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 16 }}>
                             <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
