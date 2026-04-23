@@ -224,6 +224,7 @@ export default function Home() {
   const [cenaBenzinu, setCenaBenzinu] = useState<number | null>(null)
   const [filter, setFilter] = useState<"Vše" | "Zaplaceno" | "Čeká">("Vše")
   const [statsRozsireno, setStatsRozsireno] = useState(false)
+  const [upcomingLimit, setUpcomingLimit] = useState(14)
 
   async function nactiZakazky() {
     const { data, error } = await supabase
@@ -692,6 +693,9 @@ export default function Home() {
     nadchazejici
   ).sort((a, b) => a.datum_svatby.localeCompare(b.datum_svatby))
 
+  const visibleUpcoming = filteredUpcoming.slice(0, upcomingLimit)
+  const hiddenCount = filteredUpcoming.length - visibleUpcoming.length
+
   return (
     <AppShell module="wed">
       <div style={{ padding: "22px 28px 60px" }}>
@@ -811,7 +815,7 @@ export default function Home() {
                 <span style={{ color: "var(--muted)", fontSize: 14 }}>{filteredUpcoming.length} z {nadchazejici.length}</span>
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {(["Vše", "Zaplaceno", "Čeká"] as const).map(f => (
-                    <button key={f} onClick={() => setFilter(f)}
+                    <button key={f} onClick={() => { setFilter(f); setUpcomingLimit(14) }}
                       style={{
                         padding: "4px 10px", borderRadius: 99, fontSize: 11.5, cursor: "pointer",
                         background: filter === f ? "var(--ink)" : "#f2f1ec",
@@ -821,9 +825,31 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              {filteredUpcoming.map(z => <ZakazkaRadek key={z.id} z={z} />)}
+
+              {visibleUpcoming.map(z => <ZakazkaRadek key={z.id} z={z} />)}
+
               {filteredUpcoming.length === 0 && (
                 <div style={{ padding: "32px 18px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Žádné záznamy</div>
+              )}
+
+              {hiddenCount > 0 && (
+                <div style={{ borderTop: "1px solid var(--line)", padding: "12px 20px" }}>
+                  <button
+                    onClick={() => setUpcomingLimit(l => l + 14)}
+                    style={{
+                      width: "100%", padding: "9px 0",
+                      background: "var(--bg)", border: "1px solid var(--line-strong)",
+                      borderRadius: "var(--radius-md)", cursor: "pointer",
+                      fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)",
+                      fontFamily: "inherit", letterSpacing: ".02em",
+                      transition: "background .15s",
+                    }}
+                    onMouseOver={e => (e.currentTarget.style.background = "#eeecea")}
+                    onMouseOut={e => (e.currentTarget.style.background = "var(--bg)")}
+                  >
+                    Zobrazit dalších {Math.min(hiddenCount, 14)} <span style={{ color: "var(--muted)", fontWeight: 400 }}>({hiddenCount} zbývá)</span>
+                  </button>
+                </div>
               )}
             </div>
 
