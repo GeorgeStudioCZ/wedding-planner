@@ -36,7 +36,6 @@ const I = {
 const NAV_WED = [
   { key: "home",     label: "Přehled",       href: "/svatby",          ico: I.home },
   { key: "seznam",   label: "Seznam svateb", href: "/svatby/seznam",   ico: I.list },
-  { key: "kanban",   label: "Kanban",        href: "/svatby",          ico: I.kanban },
   { key: "kalendar", label: "Kalendář",      href: "/svatby/kalendar", ico: I.calendar },
   { key: "klienti",  label: "Klienti",       href: "/zakaznici",       ico: I.users },
 ]
