@@ -35,22 +35,44 @@ function formatCas(sekund: number): string {
   return hod > 0 ? `${hod}:${String(zbytek).padStart(2, "0")} h` : `${min} min`
 }
 
-async function getTrasa(body: { lat: number; lng: number }[]): Promise<{ coords: [number, number][]; km: number; prvniUsekCas: string } | null> {
-  try {
-    const waypoints = body.map(b => `${b.lng},${b.lat}`).join(";")
-    const url = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`
-    const res = await fetch(url)
-    const data = await res.json()
-    if (data.routes?.length > 0) {
-      const coords: [number, number][] = data.routes[0].geometry.coordinates.map(
-        ([lng, lat]: [number, number]) => [lat, lng]
-      )
-      const km = Math.round((data.routes[0].distance / 1000) * 10) / 10
-      const prvniUsekCas = formatCas(data.routes[0].legs?.[0]?.duration ?? 0)
-      return { coords, km, prvniUsekCas }
+async function getTrasa(body: { lat: number; lng: number }[]): Promise<{ coords: [number, number][]; km: number; prvniUsekCas: string; jeOdhad?: boolean } | null> {
+  // Zkusíme OSRM jako primární routing engine
+  const endpoints = [
+    `https://router.project-osrm.org/route/v1/driving`,
+    `https://routing.openstreetmap.de/routed-car/route/v1/driving`,
+  ]
+
+  const waypoints = body.map(b => `${b.lng},${b.lat}`).join(";")
+
+  for (const base of endpoints) {
+    try {
+      const url = `${base}/${waypoints}?overview=full&geometries=geojson`
+      const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
+      const data = await res.json()
+      if (data.routes?.length > 0) {
+        const coords: [number, number][] = data.routes[0].geometry.coordinates.map(
+          ([lng, lat]: [number, number]) => [lat, lng]
+        )
+        const km = Math.round((data.routes[0].distance / 1000) * 10) / 10
+        const prvniUsekCas = formatCas(data.routes[0].legs?.[0]?.duration ?? 0)
+        return { coords, km, prvniUsekCas }
+      }
+    } catch {
+      // Zkusíme další endpoint
     }
-    return null
-  } catch { return null }
+  }
+
+  // Fallback: přímé čáry mezi body + hrubý odhad vzdálenosti
+  const coords: [number, number][] = body.map(b => [b.lat, b.lng])
+  let km = 0
+  for (let i = 1; i < body.length; i++) {
+    const R = 6371
+    const dLat = (body[i].lat - body[i - 1].lat) * Math.PI / 180
+    const dLon = (body[i].lng - body[i - 1].lng) * Math.PI / 180
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(body[i - 1].lat * Math.PI / 180) * Math.cos(body[i].lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+    km += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  }
+  return { coords, km: Math.round(km * 10) / 10, prvniUsekCas: "—", jeOdhad: true }
 }
 
 function googleMapsUrl(od: string, do_: string) {
@@ -69,7 +91,7 @@ export default function MapaTrasyInner({ adresaPripravy, adresaObradu, adresaVes
   const [priprava, setPriprava] = useState<Coords | null>(null)
   const [obrad, setObrad] = useState<Coords | null>(null)
   const [veseli, setVeseli] = useState<Coords | null>(null)
-  const [trasa, setTrasa] = useState<{ coords: [number, number][]; km: number; kmTam: number; prvniUsekCas: string } | null>(null)
+  const [trasa, setTrasa] = useState<{ coords: [number, number][]; km: number; kmTam: number; prvniUsekCas: string; jeOdhad?: boolean } | null>(null)
   const [nacitam, setNacitam] = useState(true)
 
   useEffect(() => {
@@ -98,12 +120,14 @@ export default function MapaTrasyInner({ adresaPripravy, adresaObradu, adresaVes
           getTrasa(bodyTam),
           getTrasa(bodyRoundtrip),
         ])
-        if (tRoundtrip) {
+        const vysledek = tRoundtrip ?? tTam
+        if (vysledek) {
           setTrasa({
-            coords: tRoundtrip.coords,
-            km: tRoundtrip.km,
-            prvniUsekCas: tTam?.prvniUsekCas ?? "",
+            coords: vysledek.coords,
+            km: tRoundtrip?.km ?? tTam?.km ?? 0,
+            prvniUsekCas: tTam?.prvniUsekCas ?? "—",
             kmTam: tTam?.km ?? 0,
+            jeOdhad: vysledek.jeOdhad,
           })
         }
       }
@@ -133,21 +157,28 @@ export default function MapaTrasyInner({ adresaPripravy, adresaObradu, adresaVes
 
       {/* Celková vzdálenost + doba do přípravy */}
       {trasa && (
-        <div className="flex items-center justify-center gap-6 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
+        <div className={`flex items-center justify-center gap-6 border rounded-lg px-4 py-3 flex-wrap ${trasa.jeOdhad ? "bg-amber-50 border-amber-100" : "bg-blue-50 border-blue-100"}`}>
           <div className="text-center">
-            <p className="text-2xl font-bold text-blue-700">{trasa.kmTam} km</p>
-            <p className="text-xs text-blue-500">celkem pouze tam</p>
+            <p className={`text-2xl font-bold ${trasa.jeOdhad ? "text-amber-700" : "text-blue-700"}`}>{trasa.kmTam} km</p>
+            <p className={`text-xs ${trasa.jeOdhad ? "text-amber-500" : "text-blue-500"}`}>celkem pouze tam</p>
           </div>
-          <div className="w-px h-8 bg-blue-200" />
+          <div className={`w-px h-8 ${trasa.jeOdhad ? "bg-amber-200" : "bg-blue-200"}`} />
           <div className="text-center">
-            <p className="text-2xl font-bold text-blue-700">{trasa.km} km</p>
-            <p className="text-xs text-blue-500">celkem tam i zpět</p>
+            <p className={`text-2xl font-bold ${trasa.jeOdhad ? "text-amber-700" : "text-blue-700"}`}>{trasa.km} km</p>
+            <p className={`text-xs ${trasa.jeOdhad ? "text-amber-500" : "text-blue-500"}`}>celkem tam i zpět</p>
           </div>
-          <div className="w-px h-8 bg-blue-200" />
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-700">{trasa.prvniUsekCas}</p>
-            <p className="text-xs text-blue-500">HK → příprava nevěsty</p>
-          </div>
+          {!trasa.jeOdhad && (
+            <>
+              <div className="w-px h-8 bg-blue-200" />
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-700">{trasa.prvniUsekCas}</p>
+                <p className="text-xs text-blue-500">HK → příprava nevěsty</p>
+              </div>
+            </>
+          )}
+          {trasa.jeOdhad && (
+            <p className="text-xs text-amber-500 w-full text-center">⚠ vzdušná čára — routing server nedostupný</p>
+          )}
         </div>
       )}
 
@@ -183,7 +214,13 @@ export default function MapaTrasyInner({ adresaPripravy, adresaObradu, adresaVes
           )}
 
           {trasa && (
-            <Polyline positions={trasa.coords} color="#3b82f6" weight={4} opacity={0.8} />
+            <Polyline
+              positions={trasa.coords}
+              color={trasa.jeOdhad ? "#d97706" : "#3b82f6"}
+              weight={trasa.jeOdhad ? 2 : 4}
+              opacity={0.7}
+              dashArray={trasa.jeOdhad ? "8 6" : undefined}
+            />
           )}
         </MapContainer>
       </div>
