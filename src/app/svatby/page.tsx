@@ -86,11 +86,13 @@ const MESICE_NAZVY = ["Leden","Únor","Březen","Duben","Květen","Červen","Če
 const DNY_NAZVY    = ["Po","Út","St","Čt","Pá","So","Ne"]
 
 // Barvy kategorií — stejná logika jako na stránce kalendáře
-function typSvatbyBarva(typ: string): string {
-  if (typ === "foto")       return "#3b82f6"  // modrá
-  if (typ === "video")      return "#f43f5e"  // růžová
-  if (typ === "foto+video") return "#f97316"  // fialová
-  return "#94a3b8"                            // šedá (nezadáno)
+// Barva události — SHODNÁ s velkým kalendářem i s legendou
+function typSvatbyBarva(typ: string, stav: string): string {
+  if (stav === "objednavka" || stav === "cekam-platbu") return "#fbbf24"  // žlutá  — předrezervace
+  if (typ === "foto")       return "#3b82f6"                               // modrá  — foto
+  if (typ === "video")      return "#f43f5e"                               // červená — video
+  if (typ === "foto+video") return "#f97316"                               // oranžová — foto+video
+  return "#94a3b8"                                                          // šedá   — nezadáno
 }
 
 function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
@@ -104,7 +106,7 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
   const svatebniDny = new Map<string, string>(
     zakazky
       .filter(z => z.datum_svatby)
-      .map(z => [z.datum_svatby.slice(0, 10), typSvatbyBarva(z.typ_sluzby)])
+      .map(z => [z.datum_svatby.slice(0, 10), typSvatbyBarva(z.typ_sluzby, z.stav)])
   )
 
   return (
@@ -789,7 +791,7 @@ export default function Home() {
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kalendář</h3>
                 <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>3 měsíce</span>
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
-                  {([["foto", "#3b82f6"], ["video", "#f43f5e"], ["foto+video", "#f97316"]] as const).map(([label, color]) => (
+                  {([["předrezervace", "#fbbf24"], ["foto", "#3b82f6"], ["video", "#f43f5e"], ["foto+video", "#f97316"]] as const).map(([label, color]) => (
                     <span key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: "inline-block", flexShrink: 0 }} />
                       {label}
@@ -798,7 +800,8 @@ export default function Home() {
                 </div>
               </div>
               <div style={{ padding: "20px 22px" }}>
-                <MiniKalendar zakazky={potvrzeneSvatby} />
+                {/* Předáme i předrezervace (objednavka/cekam-platbu) → zobrazí se žlutě */}
+                <MiniKalendar zakazky={zakazky.filter(z => z.datum_svatby && !["poptavka", "rozhoduje-se"].includes(z.stav))} />
               </div>
             </div>
 
