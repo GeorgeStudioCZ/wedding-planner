@@ -68,13 +68,13 @@ function StatBox({ label, value }: { label: string; value: string }) {
   return (
     <div style={{
       background: "var(--surface)", border: "1px solid var(--line)",
-      borderRadius: "var(--radius-md)", padding: "14px 16px 16px",
+      borderRadius: "var(--radius-md)", padding: "11px 13px 10px",
       boxShadow: "var(--shadow-1)",
     }}>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 6 }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 8.5, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 4 }}>
         {label}
       </div>
-      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, color: "var(--ink)", fontSize: 30, lineHeight: 1 }}>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, color: "var(--ink)", fontSize: 22, lineHeight: 1 }}>
         {value}
       </div>
     </div>
@@ -128,31 +128,31 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
             key={`${year}-${month}`}
             className="flex flex-col min-w-0"
           >
-            {/* Název měsíce */}
-            <div style={{ marginBottom: 10 }}>
-              <div style={{
+            {/* Název měsíce + rok na jednom řádku */}
+            <div style={{ marginBottom: 8, display: "flex", alignItems: "baseline", gap: 5 }}>
+              <span style={{
                 fontFamily: "var(--font-serif), serif", fontStyle: "normal",
-                fontSize: 18, fontWeight: 700, color: "var(--ink)", lineHeight: 1,
+                fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: 1,
               }}>
                 {MESICE_NAZVY[month]}
-              </div>
-              <div style={{
-                fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: ".12em",
-                textTransform: "uppercase", color: "var(--muted)", marginTop: 2,
+              </span>
+              <span style={{
+                fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: ".1em",
+                textTransform: "uppercase", color: "var(--muted)",
               }}>
                 {year}
-              </div>
+              </span>
             </div>
 
             {/* Záhlaví dnů */}
             <div style={{
               display: "grid", gridTemplateColumns: "repeat(7, 1fr)",
-              borderBottom: "1px solid var(--line-strong)", paddingBottom: 5,
+              borderBottom: "1px solid var(--line-strong)", paddingBottom: 4,
             }}>
               {DNY_NAZVY.map((d, i) => (
                 <div key={d} style={{
-                  textAlign: "center", fontSize: 9, fontFamily: "var(--font-mono)",
-                  fontWeight: 600, letterSpacing: ".05em",
+                  textAlign: "center", fontSize: 8, fontFamily: "var(--font-mono)",
+                  fontWeight: 600, letterSpacing: ".03em",
                   color: i >= 5 ? "#f43f5e" : "var(--muted)",
                 }}>
                   {d}
@@ -190,7 +190,7 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
                   <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", ...gridLine }}>
                     <div style={{
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      width: "76%", aspectRatio: "1", fontSize: 12,
+                      width: "76%", aspectRatio: "1", fontSize: 10.5,
                       borderRadius: isSvatba ? 6 : 99,
                       background: isSvatba ? svatbaBarva : isDnes ? "rgba(0,0,0,.07)" : "transparent",
                       color: isSvatba ? "white" : isWeekend ? "#e11d48" : "var(--ink-2)",
