@@ -110,8 +110,8 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
   )
 
   return (
-    // 6 měsíců v mřížce 3×2
-    <div className="grid grid-cols-3 gap-x-5 gap-y-5">
+    {/* mobil: 2×2 (4 měsíce), desktop: 3×2 (6 měsíců) */}
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-5">
       {mesice.map(({ year, month }, mi) => {
         const firstDay    = new Date(year, month, 1)
         const startDow    = (firstDay.getDay() + 6) % 7
@@ -126,7 +126,7 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
         return (
           <div
             key={`${year}-${month}`}
-            className="flex flex-col min-w-0"
+            className={`flex flex-col min-w-0${mi >= 4 ? " hidden md:flex" : ""}`}
           >
             {/* Název měsíce + rok na jednom řádku */}
             <div style={{ marginBottom: 8, display: "flex", alignItems: "baseline", gap: 5 }}>
