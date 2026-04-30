@@ -157,7 +157,7 @@ export default function SeznamSvateb() {
 
   return (
     <AppShell module="wed">
-      <div style={{ padding: "28px 32px 72px" }}>
+      <div className="px-4 sm:px-8" style={{ paddingTop: 28, paddingBottom: 72 }}>
 
         {/* ── Page header ── */}
         <div style={{ marginBottom: 24 }}>
@@ -248,8 +248,7 @@ export default function SeznamSvateb() {
               border: "1px solid var(--line-strong)",
               fontSize: 12.5, color: "var(--ink)",
               background: "var(--surface)", outline: "none",
-              width: 220, fontFamily: "inherit",
-              flexShrink: 0,
+              width: "100%", maxWidth: 220, fontFamily: "inherit",
             }}
           />
         </div>
@@ -304,9 +303,9 @@ export default function SeznamSvateb() {
                   overflow: "hidden",
                 }}>
 
-                  {/* Column header */}
-                  <div style={{
-                    display: "flex", alignItems: "stretch",
+                  {/* Column header — hidden on mobile */}
+                  <div className="hidden md:flex" style={{
+                    alignItems: "stretch",
                     background: "rgba(0,0,0,.025)",
                     borderBottom: "1px solid var(--line-strong)",
                     fontSize: 9.5, fontFamily: "var(--font-mono)", fontWeight: 700,
@@ -350,9 +349,54 @@ export default function SeznamSvateb() {
 
                     return (
                       <Link key={z.id} href={`/svatby/zakazky/${z.id}`} style={{ textDecoration: "none", display: "block" }}>
+
+                        {/* ── Mobile card ── */}
+                        <div className="md:hidden" style={{
+                          display: "flex", alignItems: "stretch",
+                          borderTop: i > 0 ? "1px solid var(--line)" : "none",
+                          minHeight: 70,
+                        }}>
+                          {/* Datum */}
+                          <div style={{
+                            background: borderColor, width: 54, flexShrink: 0,
+                            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                          }}>
+                            <div style={{ fontSize: 20, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>{datumDen}</div>
+                            <div style={{ fontSize: 8, color: "rgba(255,255,255,.82)", fontFamily: "var(--font-mono)", marginTop: 2, letterSpacing: ".04em" }}>{datumMesRok}</div>
+                          </div>
+                          {/* Content */}
+                          <div style={{ flex: 1, minWidth: 0, padding: "9px 12px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}>
+                            <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {z.jmeno_nevesty || "—"} &amp; {z.jmeno_zenicha || "—"}
+                            </div>
+                            {z.adresa_obradu && (
+                              <div style={{ fontSize: 11, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {z.adresa_obradu}
+                              </div>
+                            )}
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginTop: 1 }}>
+                              {typBadge && (
+                                <span style={{ background: typBadge.bg, color: typBadge.color, borderRadius: 4, padding: "2px 7px", fontSize: 10.5, fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                                  {typLabel(z.typ_sluzby)}
+                                </span>
+                              )}
+                              <span style={{ background: WED_PILL[z.stav]?.bg ?? "#f2f1ec", color: WED_PILL[z.stav]?.color ?? "var(--ink-2)", borderRadius: 4, padding: "2px 7px", fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>
+                                {STAV_LABEL[z.stav] ?? z.stav}
+                              </span>
+                              {z.cena > 0 && (
+                                <span style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
+                                  {z.cena.toLocaleString("cs-CZ")} Kč
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ── Desktop row ── */}
                         <div
+                          className="hidden md:flex"
                           style={{
-                            display: "flex", alignItems: "stretch",
+                            alignItems: "stretch",
                             borderTop: i > 0 ? "1px solid var(--line)" : "none",
                             minHeight: 68,
                             transition: "background .12s",

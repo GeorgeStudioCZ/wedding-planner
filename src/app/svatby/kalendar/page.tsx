@@ -210,7 +210,7 @@ export default function Kalendar() {
 
   return (
     <AppShell module="wed">
-      <div style={{ padding: "28px 32px 64px" }}>
+      <div className="px-4 sm:px-8" style={{ paddingTop: 28, paddingBottom: 64 }}>
 
         {/* ── Page header ── */}
         <div style={{ marginBottom: 24 }}>
@@ -280,13 +280,7 @@ export default function Kalendar() {
         </div>
 
         {/* ── Mřížka měsíců ── */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 16,
-        }}
-          className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-        >
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4" style={{ gap: 16 }}>
           {Array.from({ length: 12 }, (_, i) => (
             <MesicniKalendar key={i} rok={rok} mesic={i} svatby={zakazky} />
           ))}

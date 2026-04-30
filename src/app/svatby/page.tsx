@@ -51,7 +51,7 @@ function KpiCard({ tone, label, value, foot }: {
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 8.5, letterSpacing: ".14em", textTransform: "uppercase", opacity: .82 }}>
         {label}
       </div>
-      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 26, lineHeight: 1, marginTop: 4, letterSpacing: "-.01em" }}>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: "clamp(16px, 4vw, 26px)", lineHeight: 1, marginTop: 4, letterSpacing: "-.01em" }}>
         {value}
       </div>
       {foot && (
@@ -74,7 +74,7 @@ function StatBox({ label, value }: { label: string; value: string }) {
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 8.5, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 4 }}>
         {label}
       </div>
-      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, color: "var(--ink)", fontSize: 22, lineHeight: 1 }}>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, color: "var(--ink)", fontSize: "clamp(13px, 3.5vw, 22px)", lineHeight: 1, wordBreak: "break-word" }}>
         {value}
       </div>
     </div>
