@@ -109,8 +109,8 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
       .map(z => [z.datum_svatby.slice(0, 10), typSvatbyBarva(z.typ_sluzby, z.stav)])
   )
 
+  // mobil: 2×2 (4 měsíce), desktop: 3×2 (6 měsíců)
   return (
-    {/* mobil: 2×2 (4 měsíce), desktop: 3×2 (6 měsíců) */}
     <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-5">
       {mesice.map(({ year, month }, mi) => {
         const firstDay    = new Date(year, month, 1)
