@@ -351,8 +351,8 @@ export default function SeznamSvateb() {
                       <Link key={z.id} href={`/svatby/zakazky/${z.id}`} style={{ textDecoration: "none", display: "block" }}>
 
                         {/* ── Mobile card ── */}
-                        <div className="md:hidden" style={{
-                          display: "flex", alignItems: "stretch",
+                        <div className="flex md:hidden" style={{
+                          alignItems: "stretch",
                           borderTop: i > 0 ? "1px solid var(--line)" : "none",
                           minHeight: 70,
                         }}>
