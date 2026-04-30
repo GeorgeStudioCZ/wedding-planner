@@ -52,6 +52,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
   const router = useRouter()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const nav = module === "wed" ? NAV_WED : NAV_VAN
   const isActive = (href: string) => pathname === href
@@ -70,6 +71,110 @@ export default function AppShell({ module, children }: { module: AppModule; chil
     : "linear-gradient(135deg, var(--van-grad-a), var(--van-grad-b))"
   const accentGlow = module === "wed" ? "rgba(255,106,139,.32)" : "rgba(45,212,166,.3)"
 
+  // ── Sidebar obsah (sdílený mezi desktop+mobil) ───────────────────────────
+  const sidebarContent = (
+    <>
+      {/* Brand */}
+      <div style={{ padding: "18px 14px 14px", borderBottom: "1px dashed rgba(255,255,255,.08)", marginBottom: 6, display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+          background: "conic-gradient(from 220deg, #ff6a8b, #ff9a6a, #2dd4a6, #7cd38a, #ff6a8b)",
+          boxShadow: "inset 0 0 0 2px rgba(255,255,255,.15)",
+          display: "grid", placeItems: "center",
+          color: "white", fontWeight: 700, fontSize: 14,
+          fontFamily: "var(--font-serif), serif", fontStyle: "normal",
+        }}>G</div>
+        <div>
+          <div style={{ fontWeight: 600, letterSpacing: "-.01em", color: "white", fontSize: 15 }}>George Studio</div>
+          <div style={{ fontSize: 11, color: "#7a7b85", letterSpacing: ".08em", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>CRM · 2026</div>
+        </div>
+      </div>
+
+      {/* Section label */}
+      <div style={{ padding: "12px 14px 6px", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#5a5b66", fontFamily: "var(--font-mono)" }}>
+        {module === "wed" ? "Svatby" : "Autostany"}
+      </div>
+
+      {/* Nav */}
+      <nav style={{ display: "flex", flexDirection: "column", gap: 2, padding: "0 8px" }}>
+        {nav.map(item => {
+          const active = isActive(item.href)
+          return (
+            <Link key={item.key} href={item.href}
+              onClick={() => setMobileOpen(false)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "8px 10px", borderRadius: 10, textDecoration: "none",
+                color: active ? "#fff" : "#a9aab5",
+                background: active ? "rgba(255,255,255,.06)" : "transparent",
+                fontSize: 13.5, transition: "background .15s, color .15s",
+              }}>
+              <span style={{ width: 16, height: 16, flexShrink: 0, opacity: .85, display: "flex", alignItems: "center" }}>
+                <Ico d={item.ico} />
+              </span>
+              <span>{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* Settings */}
+      <div style={{ padding: "16px 14px 6px", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#5a5b66", fontFamily: "var(--font-mono)" }}>
+        Nastavení
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "0 8px" }}>
+        <button onClick={signOut}
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "8px 10px", borderRadius: 10,
+            color: "#a9aab5", fontSize: 13.5,
+            background: "none", border: "none", cursor: "pointer", width: "100%",
+            transition: "background .15s, color .15s",
+          }}>
+          <span style={{ width: 16, height: 16, flexShrink: 0, opacity: .85, display: "flex", alignItems: "center" }}>
+            <Ico d={I.logout} />
+          </span>
+          <span>Odhlásit</span>
+        </button>
+      </div>
+
+      {/* Module switcher */}
+      <div style={{
+        margin: "auto 12px 12px",
+        background: "#15161c",
+        border: "1px solid rgba(255,255,255,.06)",
+        borderRadius: 14, padding: 10,
+      }}>
+        <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#5a5b66", padding: "2px 4px 8px", fontFamily: "var(--font-mono)" }}>
+          Modul
+        </div>
+        {([
+          { mod: "wed" as AppModule, label: "Wedding Planner",   sub: "Sezóna 2026", href: "/svatby" },
+          { mod: "van" as AppModule, label: "Autostany Planner", sub: "Sezóna 2026", href: "/pujcovna" },
+        ] as const).map(m => (
+          <Link key={m.mod} href={m.href}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: 8, borderRadius: 10, textDecoration: "none",
+              background: module === m.mod ? "rgba(255,255,255,.06)" : "transparent",
+              transition: "background .15s",
+            }}>
+            <span style={{
+              width: 10, height: 10, borderRadius: 99, flexShrink: 0,
+              background: m.mod === "wed"
+                ? "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))"
+                : "linear-gradient(135deg, var(--van-grad-a), var(--van-grad-b))",
+            }} />
+            <div>
+              <div style={{ fontSize: 13, color: "#eaeaf0", fontWeight: 500 }}>{m.label}</div>
+              <div style={{ fontSize: 11, color: "#7a7b85" }}>{m.sub}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </>
+  )
+
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
 
@@ -82,119 +187,31 @@ export default function AppShell({ module, children }: { module: AppModule; chil
         />
       )}
 
-      {/* ── Sidebar ── */}
-      <aside
-        className={[
-          "flex flex-col shrink-0 h-screen overflow-y-auto z-40 transition-transform duration-200",
-          "fixed inset-y-0 left-0",
-          "lg:static lg:translate-x-0",
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
-        ].join(" ")}
+      {/* ── Desktop sidebar — wrapper animuje šířku ── */}
+      <div
+        className="hidden lg:flex flex-col shrink-0 overflow-hidden"
         style={{
-          width: 248,
+          width: sidebarOpen ? 248 : 0,
+          transition: "width .25s cubic-bezier(.4,0,.2,1)",
           background: "#0e0f14",
-          borderRight: "1px solid rgba(255,255,255,.05)",
+          borderRight: sidebarOpen ? "1px solid rgba(255,255,255,.05)" : "none",
         }}
       >
-        {/* Brand */}
-        <div style={{ padding: "18px 14px 14px", borderBottom: "1px dashed rgba(255,255,255,.08)", marginBottom: 6 }}
-          className="flex items-center gap-3">
-          <div style={{
-            width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-            background: "conic-gradient(from 220deg, #ff6a8b, #ff9a6a, #2dd4a6, #7cd38a, #ff6a8b)",
-            boxShadow: "inset 0 0 0 2px rgba(255,255,255,.15)",
-            display: "grid", placeItems: "center",
-            color: "white", fontWeight: 700, fontSize: 14,
-            fontFamily: "var(--font-serif), serif", fontStyle: "normal",
-          }}>G</div>
-          <div>
-            <div style={{ fontWeight: 600, letterSpacing: "-.01em", color: "white", fontSize: 15 }}>George Studio</div>
-            <div style={{ fontSize: 11, color: "#7a7b85", letterSpacing: ".08em", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>CRM · 2026</div>
-          </div>
+        <div style={{ width: 248, height: "100vh", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+          {sidebarContent}
         </div>
+      </div>
 
-        {/* Section label */}
-        <div style={{ padding: "12px 14px 6px", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#5a5b66", fontFamily: "var(--font-mono)" }}>
-          {module === "wed" ? "Svatby" : "Autostany"}
-        </div>
-
-        {/* Nav */}
-        <nav className="flex flex-col gap-0.5 px-2">
-          {nav.map(item => {
-            const active = isActive(item.href)
-            return (
-              <Link key={item.key} href={item.href}
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "8px 10px", borderRadius: 10, textDecoration: "none",
-                  color: active ? "#fff" : "#a9aab5",
-                  background: active ? "rgba(255,255,255,.06)" : "transparent",
-                  fontSize: 13.5, transition: "background .15s, color .15s",
-                }}>
-                <span style={{ width: 16, height: 16, flexShrink: 0, opacity: .85, display: "flex", alignItems: "center" }}>
-                  <Ico d={item.ico} />
-                </span>
-                <span>{item.label}</span>
-              </Link>
-            )
-          })}
-        </nav>
-
-        {/* Settings */}
-        <div style={{ padding: "16px 14px 6px", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#5a5b66", fontFamily: "var(--font-mono)" }}>
-          Nastavení
-        </div>
-        <div className="flex flex-col gap-0.5 px-2">
-          <button onClick={signOut}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "8px 10px", borderRadius: 10,
-              color: "#a9aab5", fontSize: 13.5,
-              background: "none", border: "none", cursor: "pointer", width: "100%",
-              transition: "background .15s, color .15s",
-            }}>
-            <span style={{ width: 16, height: 16, flexShrink: 0, opacity: .85, display: "flex", alignItems: "center" }}>
-              <Ico d={I.logout} />
-            </span>
-            <span>Odhlásit</span>
-          </button>
-        </div>
-
-        {/* Module switcher */}
-        <div style={{
-          margin: "auto 12px 12px",
-          background: "#15161c",
-          border: "1px solid rgba(255,255,255,.06)",
-          borderRadius: 14, padding: 10,
-        }}>
-          <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#5a5b66", padding: "2px 4px 8px", fontFamily: "var(--font-mono)" }}>
-            Modul
-          </div>
-          {([
-            { mod: "wed" as AppModule, label: "Wedding Planner",   sub: "Sezóna 2026", href: "/svatby" },
-            { mod: "van" as AppModule, label: "Autostany Planner", sub: "Sezóna 2026", href: "/pujcovna" },
-          ] as const).map(m => (
-            <Link key={m.mod} href={m.href}
-              style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: 8, borderRadius: 10, textDecoration: "none",
-                background: module === m.mod ? "rgba(255,255,255,.06)" : "transparent",
-                transition: "background .15s",
-              }}>
-              <span style={{
-                width: 10, height: 10, borderRadius: 99, flexShrink: 0,
-                background: m.mod === "wed"
-                  ? "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))"
-                  : "linear-gradient(135deg, var(--van-grad-a), var(--van-grad-b))",
-              }} />
-              <div>
-                <div style={{ fontSize: 13, color: "#eaeaf0", fontWeight: 500 }}>{m.label}</div>
-                <div style={{ fontSize: 11, color: "#7a7b85" }}>{m.sub}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+      {/* ── Mobile sidebar — fixed + translate ── */}
+      <aside
+        className={[
+          "flex flex-col shrink-0 h-screen overflow-y-auto z-40 lg:hidden",
+          "fixed inset-y-0 left-0 transition-transform duration-200",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
+        style={{ width: 248, background: "#0e0f14", borderRight: "1px solid rgba(255,255,255,.05)" }}
+      >
+        {sidebarContent}
       </aside>
 
       {/* ── Content area ── */}
@@ -214,6 +231,23 @@ export default function AppShell({ module, children }: { module: AppModule; chil
           <button className="lg:hidden flex items-center justify-center"
             style={{ width: 36, height: 36, borderRadius: 10, background: "white", border: "1px solid var(--line)", cursor: "pointer" }}
             onClick={() => setMobileOpen(true)}>
+            <Ico d={I.menu} size={18} />
+          </button>
+
+          {/* Desktop sidebar toggle */}
+          <button
+            className="hidden lg:flex items-center justify-center"
+            onClick={() => setSidebarOpen(o => !o)}
+            title={sidebarOpen ? "Skrýt panel" : "Zobrazit panel"}
+            style={{
+              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              background: "white", border: "1px solid var(--line)",
+              cursor: "pointer", color: "var(--ink-2)",
+              transition: "background .15s",
+            }}
+            onMouseOver={e => (e.currentTarget.style.background = "var(--bg)")}
+            onMouseOut={e => (e.currentTarget.style.background = "white")}
+          >
             <Ico d={I.menu} size={18} />
           </button>
 

@@ -44,18 +44,18 @@ function KpiCard({ tone, label, value, foot }: {
   return (
     <div style={{
       background: KPI_GRADS[tone], borderRadius: "var(--radius-lg)",
-      padding: "16px 18px 14px", color: "white",
+      padding: "11px 13px 10px", color: "white",
       position: "relative", overflow: "hidden", boxShadow: "var(--shadow-card)",
-      minHeight: 110,
+      minHeight: 86,
     }}>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: ".14em", textTransform: "uppercase", opacity: .82 }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 8.5, letterSpacing: ".14em", textTransform: "uppercase", opacity: .82 }}>
         {label}
       </div>
-      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 38, lineHeight: 1, marginTop: 4, letterSpacing: "-.01em" }}>
+      <div style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 26, lineHeight: 1, marginTop: 4, letterSpacing: "-.01em" }}>
         {value}
       </div>
       {foot && (
-        <div style={{ position: "absolute", left: 18, right: 18, bottom: 12, fontSize: 11.5, opacity: .88 }}>
+        <div style={{ position: "absolute", left: 13, right: 13, bottom: 9, fontSize: 10, opacity: .88 }}>
           {foot}
         </div>
       )}
@@ -97,7 +97,7 @@ function typSvatbyBarva(typ: string, stav: string): string {
 
 function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
   const today = new Date()
-  const mesice = [0, 1, 2].map(offset => {
+  const mesice = [0, 1, 2, 3, 4, 5].map(offset => {
     const d = new Date(today.getFullYear(), today.getMonth() + offset, 1)
     return { year: d.getFullYear(), month: d.getMonth() }
   })
@@ -110,8 +110,8 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
   )
 
   return (
-    // < sm: měsíce pod sebou  |  sm+: vedle sebe
-    <div className="flex flex-col sm:flex-row w-full">
+    // 6 měsíců v mřížce 3×2
+    <div className="grid grid-cols-3 gap-x-5 gap-y-5">
       {mesice.map(({ year, month }, mi) => {
         const firstDay    = new Date(year, month, 1)
         const startDow    = (firstDay.getDay() + 6) % 7
@@ -123,17 +123,10 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
         while (cells.length % 7 !== 0) cells.push(null)
         const rowCount = cells.length / 7
 
-        // Oddělovač: na mobilu vodorovný (border-t), na sm+ svislý (border-l)
-        const sepCls = mi > 0
-          ? "border-t-2 sm:border-t-0 sm:border-l-2 pt-5 sm:pt-0 sm:pl-4"
-          : ""
-        const padCls = mi < 2 ? "pb-5 sm:pb-0 sm:pr-4" : ""
-
         return (
           <div
             key={`${year}-${month}`}
-            className={`flex-1 min-w-0 flex flex-col ${sepCls} ${padCls}`}
-            style={mi > 0 ? { borderColor: "var(--line-strong)" } : undefined}
+            className="flex flex-col min-w-0"
           >
             {/* Název měsíce */}
             <div style={{ marginBottom: 10 }}>
@@ -833,7 +826,7 @@ export default function Home() {
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kalendář</h3>
-              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>3 měsíce</span>
+              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>6 měsíců</span>
               <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
                 {([["předrezervace", "#fbbf24"], ["foto", "#3b82f6"], ["video", "#f43f5e"], ["foto+video", "#f97316"]] as const).map(([label, color]) => (
                   <span key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
