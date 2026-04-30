@@ -531,9 +531,62 @@ export default function Home() {
           </div>
         </div>
 
+        {/* ── Condensed row — MacBook xl (md až 2xl) ── */}
+        <div className="hidden md:flex 2xl:hidden" style={{
+          alignItems: "stretch",
+          borderTop: "1px solid var(--line)",
+          minHeight: 60,
+          overflow: "hidden",
+        }}>
+          {/* 1 · Datum — 60px */}
+          <div style={{ background: borderColor, width: 60, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>{datumDen}</div>
+            <div style={{ fontSize: 8, color: "rgba(255,255,255,.82)", fontFamily: "var(--font-mono)", marginTop: 2, letterSpacing: ".05em" }}>{datumMesRok}</div>
+          </div>
+          {/* 2 · Jméno + adresa — flex */}
+          <div style={{ flex: 1, minWidth: 0, padding: "10px 14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
+            </div>
+            {z.adresa_obradu && (
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {z.adresa_obradu}
+              </div>
+            )}
+          </div>
+          {/* 3 · Typ — 100px */}
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ width: 100, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {typBadge ? (
+              <span style={{ background: typBadge.bg, color: typBadge.color, borderRadius: 4, padding: "4px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", fontFamily: "var(--font-mono)" }}>
+                {typLabel(z.typ_sluzby)}
+              </span>
+            ) : <span style={{ fontSize: 11, color: "var(--muted)" }}>—</span>}
+          </div>
+          {/* 4 · Stav — 118px */}
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ width: 118, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ background: WED_PILL[z.stav]?.bg ?? "#f2f1ec", color: WED_PILL[z.stav]?.color ?? "var(--ink-2)", borderRadius: 6, padding: "4px 9px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", letterSpacing: ".04em", textTransform: "uppercase" }}>
+              {stavInfo(z.stav).label}
+            </span>
+          </div>
+          {/* 5 · Cena — 86px */}
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ width: 86, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
+              {z.cena > 0 ? `${z.cena.toLocaleString("cs-CZ")} Kč` : "—"}
+            </span>
+          </div>
+          {/* 6 · Countdown — 66px */}
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+          <div style={{ width: 66, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {countdownPill()}
+          </div>
+        </div>
+
         {/* ── Desktop row — pipe-separated, PEVNÉ šířky sloupců (+10 %) ── */}
         {/* Šířky: datum=66 | jméno=flex | kamera=48 | typ=120 | stav=136 | cena=102 | countdown=80 */}
-        <div className="hidden md:flex" style={{
+        <div className="hidden 2xl:flex" style={{
           alignItems: "stretch",
           borderTop: "1px solid var(--line)",
           minHeight: 68,
@@ -717,7 +770,7 @@ export default function Home() {
         {/* ══════════════════════════════════════════════════════════════════
             Tři hlavní sloupce na xl — na menších obrazovkách stacked
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="xl:grid xl:grid-cols-3 xl:gap-5 xl:items-start">
+        <div className="xl:grid xl:grid-cols-2 2xl:grid-cols-3 xl:gap-5 xl:items-start">
 
           {/* ── SLOUPEC 1 — statistiky, mapa, kalendář ───────────────────── */}
           <div className="min-w-0">
@@ -808,8 +861,11 @@ export default function Home() {
           </div>
           {/* konec sloupce 1 */}
 
+          {/* ── Wrapper pro col2 + col3 na xl (2-sloupcový grid), na 2xl obsah přímo ── */}
+          <div className="mt-4 xl:mt-0 flex flex-col gap-4 2xl:contents">
+
           {/* ── SLOUPEC 2 — nadcházející + aktivní zakázky ───────────────── */}
-          <div className="mt-4 xl:mt-0 min-w-0">
+          <div className="min-w-0">
 
             {/* Nadcházející svatby */}
             <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
@@ -860,7 +916,7 @@ export default function Home() {
           {/* konec sloupce 2 */}
 
           {/* ── SLOUPEC 3 — všechny ostatní stavy ────────────────────────── */}
-          <div className="mt-4 xl:mt-0 min-w-0" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="min-w-0" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
             {/* Probíhá jednání */}
             <ZakazkyBlok titulek="Probíhá jednání" dot="#fbbf24" zakazky={probihaJednani} vychozi={true} />
@@ -883,6 +939,9 @@ export default function Home() {
 
           </div>
           {/* konec sloupce 3 */}
+
+          </div>
+          {/* konec wrapperu col2+col3 */}
 
         </div>
         {/* konec třísloupcového gridu */}
