@@ -811,14 +811,14 @@ export default function Home() {
         <div className="grid grid-cols-1 ipad:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
 
           {/* Mapa */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Mapa obřadů</h3>
               <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>{bodyNaMape.length} lokací v ČR</span>
             </div>
-            <div style={{ padding: "18px 20px" }}>
+            <div style={{ padding: "18px 20px", flex: 1, display: "flex", flexDirection: "column" }}>
               {!loading && <MapaDashboard body={bodyNaMape} />}
-              {loading && <div style={{ height: 280, background: "#f4f3ee", borderRadius: 14, display: "grid", placeItems: "center", color: "var(--muted)", fontSize: 13 }}>Načítám…</div>}
+              {loading && <div style={{ flex: 1, minHeight: 280, background: "#f4f3ee", borderRadius: 14, display: "grid", placeItems: "center", color: "var(--muted)", fontSize: 13 }}>Načítám…</div>}
             </div>
           </div>
 

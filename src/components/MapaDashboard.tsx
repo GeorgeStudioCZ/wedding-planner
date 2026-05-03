@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 const MapaDashboardInner = dynamic(() => import("./MapaDashboardInner"), {
   ssr: false,
   loading: () => (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 text-sm" style={{ height: 420 }}>
+    <div className="rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 text-sm" style={{ flex: 1, minHeight: 300 }}>
       Načítám mapu...
     </div>
   ),

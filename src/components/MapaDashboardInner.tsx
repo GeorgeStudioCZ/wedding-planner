@@ -39,7 +39,7 @@ function formatDatum(datum: string) {
 
 export default function MapaDashboardInner({ body }: { body: Bod[] }) {
   return (
-    <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: 420 }}>
+    <div className="rounded-xl overflow-hidden border border-gray-200" style={{ flex: 1, minHeight: 300 }}>
       <MapContainer
         center={[49.8, 15.5]}
         zoom={7}
