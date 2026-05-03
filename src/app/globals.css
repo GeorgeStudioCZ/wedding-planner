@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+@theme {
+  /*
+   * Vlastní breakpointy pro konkrétní zařízení
+   * Použití v className: ipad:, mac:, monitor:
+   *
+   * iPhone 16 Pro Max : 2868×1320 @ 3× → 440px CSS (portrait) — výchozí, žádný prefix
+   * iPad              : 2360×1640 @ 2× → 820px portrait / 1180px landscape
+   * MacBook           : 3024×1964 @ 2× → 1512px CSS
+   * Monitor           : 3440×1440 @ 2× → 1720px CSS (nebo @ 1× → 3440px)
+   */
+  --breakpoint-ipad:    820px;
+  --breakpoint-mac:    1400px;
+  --breakpoint-monitor: 1700px;
+}
+
 /* ── Design tokens ─────────────────────────────────────────────────────────── */
 :root {
   --bg:          #f6f5f2;

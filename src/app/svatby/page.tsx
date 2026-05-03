@@ -111,7 +111,7 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
 
   // mobil: 2×2 (4 měsíce), desktop: 3×2 (6 měsíců)
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-5">
+    <div className="grid grid-cols-2 ipad:grid-cols-3 gap-x-5 gap-y-5">
       {mesice.map(({ year, month }, mi) => {
         const firstDay    = new Date(year, month, 1)
         const startDow    = (firstDay.getDay() + 6) % 7
@@ -126,7 +126,7 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
         return (
           <div
             key={`${year}-${month}`}
-            className={`flex flex-col min-w-0${mi >= 4 ? " hidden md:flex" : ""}`}
+            className={`flex flex-col min-w-0${mi >= 4 ? " hidden ipad:flex" : ""}`}
           >
             {/* Název měsíce + rok na jednom řádku */}
             <div style={{ marginBottom: 8, display: "flex", alignItems: "baseline", gap: 5 }}>
@@ -499,7 +499,7 @@ export default function Home() {
       <Link href={`/svatby/zakazky/${z.id}`} className="block" style={{ textDecoration: "none" }}>
 
         {/* ── Mobile card ── */}
-        <div className="flex flex-col px-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor }}>
+        <div className="flex flex-col px-4 py-3.5 gap-1.5 ipad:hidden border-l-4" style={{ borderColor }}>
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-900 flex-1 truncate text-sm">
               {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
@@ -524,8 +524,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Condensed row — MacBook xl (md až 2xl) ── */}
-        <div className="hidden md:flex 2xl:hidden" style={{
+        {/* ── Condensed row — iPad + MacBook (ipad až monitor) ── */}
+        <div className="hidden ipad:flex monitor:hidden" style={{
           alignItems: "stretch",
           borderTop: "1px solid var(--line)",
           minHeight: 60,
@@ -577,9 +577,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Desktop row — pipe-separated, PEVNÉ šířky sloupců (+10 %) ── */}
+        {/* ── Desktop row — Monitor (1700px+ CSS) ── */}
         {/* Šířky: datum=66 | jméno=flex | kamera=48 | typ=120 | stav=136 | cena=102 | countdown=80 */}
-        <div className="hidden 2xl:flex" style={{
+        <div className="hidden monitor:flex" style={{
           alignItems: "stretch",
           borderTop: "1px solid var(--line)",
           minHeight: 68,
@@ -761,7 +761,7 @@ export default function Home() {
         </div>
 
         {/* ── Řádek 1: 6 KPI stat boxes ─────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3" style={{ marginBottom: 16 }}>
+        <div className="grid grid-cols-2 ipad:grid-cols-3 mac:grid-cols-6 gap-3" style={{ marginBottom: 16 }}>
           <KpiCard tone="rose"  label="Nadcházející svatby"  value={String(nadchazejici.length)}
             foot={pristiDni != null ? `Nejbližší: za ${pristiDni} dní` : "Žádné plánované"} />
           <KpiCard tone="coral" label="Čeká na sestřihání"   value={String(cekaNaSestrizani.length)}
@@ -797,7 +797,7 @@ export default function Home() {
 
         {/* Rozšířené stats */}
         {statsRozsireno && (
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3" style={{ marginBottom: 16 }}>
+          <div className="grid grid-cols-2 ipad:grid-cols-3 mac:grid-cols-6 gap-3" style={{ marginBottom: 16 }}>
             <StatBox label="Letos celkem"       value={String(letosConfirmed)} />
             <StatBox label="Celková doba jízdy" value={celkovaCasJizdy} />
             <StatBox label="Zbývá ujet km"      value={`${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
@@ -808,7 +808,7 @@ export default function Home() {
         )}
 
         {/* ── Řádek 2: Mapa (vlevo) + Kalendář (vpravo) ─────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
+        <div className="grid grid-cols-1 ipad:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
 
           {/* Mapa */}
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
@@ -844,7 +844,7 @@ export default function Home() {
         </div>
 
         {/* ── Řádek 3: Čeká na sestřihání (vlevo) + Nadcházející (vpravo) ─ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
+        <div className="grid grid-cols-1 ipad:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
 
           {/* Levý sloupec: Čeká na sestřihání */}
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
@@ -911,7 +911,7 @@ export default function Home() {
         </div>
 
         {/* ── Řádek 4: Ostatní skupiny (2 sloupce) ──────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 ipad:grid-cols-2 gap-4">
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <ZakazkyBlok titulek="Probíhá jednání"       dot="#fbbf24" zakazky={probihaJednani}      vychozi={true} />
             <ZakazkyBlok titulek="Vyplněná objednávka"   dot="#60a5fa" zakazky={vyplnenaObjednavka}  vychozi={true} />

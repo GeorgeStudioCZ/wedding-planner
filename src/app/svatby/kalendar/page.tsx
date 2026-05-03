@@ -280,7 +280,7 @@ export default function Kalendar() {
         </div>
 
         {/* ── Mřížka měsíců ── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4" style={{ gap: 16 }}>
+        <div className="grid grid-cols-2 ipad:grid-cols-3 mac:grid-cols-4" style={{ gap: 16 }}>
           {Array.from({ length: 12 }, (_, i) => (
             <MesicniKalendar key={i} rok={rok} mesic={i} svatby={zakazky} />
           ))}

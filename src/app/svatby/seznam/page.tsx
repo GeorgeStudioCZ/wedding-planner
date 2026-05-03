@@ -304,7 +304,7 @@ export default function SeznamSvateb() {
                 }}>
 
                   {/* Column header — hidden on mobile */}
-                  <div className="hidden md:flex" style={{
+                  <div className="hidden ipad:flex" style={{
                     alignItems: "stretch",
                     background: "rgba(0,0,0,.025)",
                     borderBottom: "1px solid var(--line-strong)",
@@ -394,7 +394,7 @@ export default function SeznamSvateb() {
 
                         {/* ── Desktop row ── */}
                         <div
-                          className="hidden md:flex"
+                          className="hidden ipad:flex"
                           style={{
                             alignItems: "stretch",
                             borderTop: i > 0 ? "1px solid var(--line)" : "none",
