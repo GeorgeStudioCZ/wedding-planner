@@ -445,8 +445,8 @@ export default function Home() {
       )
       if (probehlo && z.vystup_odevzdan) return (
         <button onClick={(e) => toggleOdevzdani(e, z.id, z.vystup_odevzdan)}
-          style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 4, background: "#dcfce7", color: "#15803d", border: "none", cursor: "pointer" }}>
-          ✓ Odevzdáno
+          style={{ fontSize: 11, fontWeight: 600, padding: "3px 6px", borderRadius: 4, background: "#dcfce7", color: "#15803d", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
+          ✓ ok
         </button>
       )
       if (probehlo && !z.vystup_odevzdan) {
@@ -456,9 +456,9 @@ export default function Home() {
           <span style={{
             background: urgent ? "#fef2f2" : "#fff7ed",
             color: urgent ? "#dc2626" : "#d97706",
-            borderRadius: 4, padding: "3px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+            borderRadius: 4, padding: "3px 6px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
           }}>
-            odevzdat za {zbyvaDni != null ? (zbyvaDni <= 0 ? "!" : `${zbyvaDni} d`) : "—"}
+            za {zbyvaDni != null ? (zbyvaDni <= 0 ? "!" : `${zbyvaDni} d`) : "—"}
           </span>
         )
       }
@@ -467,9 +467,9 @@ export default function Home() {
         <span style={{
           background: brzy ? "#fff1f2" : "#f0fdf4",
           color: brzy ? "#be123c" : "#15803d",
-          borderRadius: 4, padding: "3px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+          borderRadius: 4, padding: "3px 6px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
         }}>
-          za {dniDo} dní
+          za {dniDo} d
         </span>
       )
     }
@@ -570,9 +570,9 @@ export default function Home() {
               {z.cena > 0 ? `${z.cena.toLocaleString("cs-CZ")} Kč` : "—"}
             </span>
           </div>
-          {/* 6 · Countdown — 66px */}
+          {/* 6 · Countdown — 80px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ width: 66, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 80, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
             {countdownPill()}
           </div>
         </div>
