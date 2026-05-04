@@ -42,6 +42,7 @@ const NAV_WED = [
 
 const NAV_VAN = [
   { key: "home",     label: "Přehled",    href: "/pujcovna",           ico: I.home },
+  { key: "seznam",   label: "Seznam",     href: "/pujcovna/seznam",    ico: I.list },
   { key: "kalendar", label: "Kalendář",   href: "/pujcovna/kalendar",  ico: I.calendar },
   { key: "klienti",  label: "Zákazníci",  href: "/zakaznici",          ico: I.users },
   { key: "cenik",    label: "Ceník",      href: "/pujcovna/cenik",     ico: I.wallet },
