@@ -83,6 +83,11 @@ function formatDatum(datum: string) {
   return new Date(datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "short" })
 }
 
+// Vrátí "YYYY-MM-DD" v lokálním čase — toISOString() by použilo UTC a způsobilo posun o 1 den
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
 function pocetDni(start: string, end: string): number {
   const s = new Date(start)
   const e = new Date(end)
@@ -196,7 +201,7 @@ function Pujcovna() {
   }
 
   function klikNaDen(itemId: number, unitIndex: number, datum: Date) {
-    const dateStr = datum.toISOString().slice(0, 10)
+    const dateStr = localDateStr(datum)
     setModal({ mode: "nova", itemId, unitIndex, startDate: dateStr })
   }
 
@@ -303,7 +308,7 @@ function Pujcovna() {
               {/* Řádek 3 — svatby */}
               <div className="flex bg-white border-t border-gray-100" style={{ height: 20 }}>
                 {DNY.map((den, i) => {
-                  const denStr = den.toISOString().slice(0, 10)
+                  const denStr = localDateStr(den)
                   const jeSvatba = svatebnidny.includes(denStr)
                   return (
                     <div key={i} style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
@@ -448,7 +453,7 @@ function ModalRezervace({
   onClose: () => void
   onSave: () => void
 }) {
-  const dnesStr = new Date().toISOString().slice(0, 10)
+  const dnesStr = localDateStr(new Date())
   const stanyIds = new Set(polozky.filter(p => p.category === "Stany").map(p => p.id))
 
   const [zakaznikId, setZakaznikId] = useState<number | null>(editRezervace?.zakaznik_id ?? null)
