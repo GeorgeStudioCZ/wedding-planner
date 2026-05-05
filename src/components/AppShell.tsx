@@ -34,24 +34,24 @@ const I = {
 
 // ── Nav items ───────────────────────────────────────────────────────────────
 const NAV_WED = [
-  { key: "home",     label: "Přehled",       href: "/svatby",          ico: I.home },
-  { key: "seznam",   label: "Seznam svateb", href: "/svatby/seznam",   ico: I.list },
-  { key: "kalendar", label: "Kalendář",      href: "/svatby/kalendar", ico: I.calendar },
-  { key: "klienti",  label: "Klienti",       href: "/zakaznici",       ico: I.users },
+  { key: "home",     label: "Přehled",       href: "/svatby",                  ico: I.home },
+  { key: "seznam",   label: "Seznam svateb", href: "/svatby/seznam",           ico: I.list },
+  { key: "kalendar", label: "Kalendář",      href: "/svatby/kalendar",         ico: I.calendar },
+  { key: "klienti",  label: "Klienti",       href: "/zakaznici?from=wed",      ico: I.users },
 ]
 
 const NAV_VAN = [
-  { key: "home",     label: "Přehled",    href: "/pujcovna",           ico: I.home },
-  { key: "seznam",   label: "Seznam",     href: "/pujcovna/seznam",    ico: I.list },
-  { key: "kalendar", label: "Kalendář",   href: "/pujcovna/kalendar",  ico: I.calendar },
-  { key: "klienti",  label: "Zákazníci",  href: "/zakaznici",          ico: I.users },
-  { key: "cenik",    label: "Ceník",      href: "/pujcovna/cenik",     ico: I.wallet },
+  { key: "home",     label: "Přehled",    href: "/pujcovna",                   ico: I.home },
+  { key: "seznam",   label: "Seznam",     href: "/pujcovna/seznam",            ico: I.list },
+  { key: "kalendar", label: "Kalendář",   href: "/pujcovna/kalendar",          ico: I.calendar },
+  { key: "klienti",  label: "Zákazníci",  href: "/zakaznici?from=van",         ico: I.users },
+  { key: "cenik",    label: "Ceník",      href: "/pujcovna/cenik",             ico: I.wallet },
 ]
 
 const NAV_STUDIO = [
-  { key: "home",    label: "Přehled",      href: "/george",         ico: I.home },
-  { key: "cenik",   label: "Ceník služeb", href: "/george/cenik",   ico: I.wallet },
-  { key: "klienti", label: "Zákazníci",    href: "/zakaznici",      ico: I.users },
+  { key: "home",    label: "Přehled",      href: "/george",                    ico: I.home },
+  { key: "cenik",   label: "Ceník služeb", href: "/george/cenik",              ico: I.wallet },
+  { key: "klienti", label: "Zákazníci",    href: "/zakaznici?from=studio",     ico: I.users },
 ]
 
 // ── Component ───────────────────────────────────────────────────────────────

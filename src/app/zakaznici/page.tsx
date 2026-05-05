@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import AppShell from "@/components/AppShell"
+import AppShell, { AppModule } from "@/components/AppShell"
 
 type Zakaznik = {
   id: number
@@ -62,6 +63,9 @@ const PROJ_STYLE: Record<string, { bg: string; color: string }> = {
 }
 
 export default function Zakaznici() {
+  const searchParams = useSearchParams()
+  const module: AppModule = (searchParams.get("from") as AppModule) ?? "wed"
+
   const [zakaznici, setZakaznici]   = useState<Zakaznik[]>([])
   const [loading, setLoading]       = useState(true)
   const [query, setQuery]           = useState("")
@@ -136,7 +140,7 @@ export default function Zakaznici() {
   const pujcovnich = zakaznici.filter(z => (z.projekty ?? []).includes("Půjčovna")).length
 
   return (
-    <AppShell module="wed">
+    <AppShell module={module}>
 
       {/* ── Page header ── */}
       <div style={{ padding: "28px 32px 0" }}>
