@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
@@ -170,7 +170,7 @@ function CustomerForm({
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function Zakaznici() {
+function ZakazníciInner() {
   const searchParams = useSearchParams()
   const module: AppModule = (searchParams.get("from") as AppModule) ?? "wed"
 
@@ -544,5 +544,13 @@ export default function Zakaznici() {
       )}
 
     </AppShell>
+  )
+}
+
+export default function Zakaznici() {
+  return (
+    <Suspense>
+      <ZakazníciInner />
+    </Suspense>
   )
 }
