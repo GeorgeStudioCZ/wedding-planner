@@ -476,8 +476,8 @@ export default function PujcovnaDashboard() {
           />
         </div>
 
-        {/* Row 1: Kapacita + Vozový park */}
-        <div className="grid grid-cols-1 md:grid-cols-[7fr_5fr] gap-4 mt-4">
+        {/* Grafy: Kapacita + Rezervace/příjem */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
 
           {/* Využití kapacity */}
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
@@ -509,43 +509,6 @@ export default function PujcovnaDashboard() {
             </div>
           </div>
 
-          {/* Vozový park */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Vozový park</h3>
-              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>{stany.length} stany</span>
-            </div>
-            <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {stany.map((p, idx) => {
-                const COLORS = ["#fb7185", "#5b8def", "#f59e0b", "#10b981"]
-                const color = COLORS[idx % COLORS.length]
-                const stanRez = rezStanu.filter(r => r.item_id === p.id)
-                const obsazenoDni = stanRez.reduce((s, r) => s + pocetDni(r.start_date, r.end_date), 0)
-                const util = Math.min(100, Math.round((obsazenoDni / 183) * 100))
-                return (
-                  <div key={p.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 10, alignItems: "center" }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 99, background: color, flexShrink: 0 }} />
-                    <div>
-                      <div style={{ fontWeight: 500, fontSize: 13 }}>{p.name}</div>
-                      <div style={{ height: 6, background: "#f2f1ec", borderRadius: 99, marginTop: 5, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${util}%`, background: color, borderRadius: 99 }} />
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)" }}>{util}%</div>
-                  </div>
-                )
-              })}
-              {stany.length === 0 && (
-                <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: "12px 0" }}>Žádné stany v katalogu</div>
-              )}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Row 2: Rezervace + příjem chart / Mini ceník */}
-        <div className="grid grid-cols-1 md:grid-cols-[8fr_4fr] gap-4 mt-4">
-
           {/* Rezervace a příjem bez DPH */}
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
@@ -569,7 +532,6 @@ export default function PujcovnaDashboard() {
                   return (
                     <div key={label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                       <div style={{ width: "100%", display: "flex", alignItems: "flex-end", gap: 2, height: 84 }}>
-                        {/* Count bar */}
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
                           {pocet > 0 && <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--van-ink)", fontWeight: 600, marginBottom: 2 }}>{pocet}</span>}
                           <div style={{
@@ -578,7 +540,6 @@ export default function PujcovnaDashboard() {
                             height: cH,
                           }} />
                         </div>
-                        {/* Income bar */}
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
                           {cisty > 0 && <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "#2563eb", fontWeight: 600, marginBottom: 2 }}>{Math.round(cisty / 1000)}k</span>}
                           <div style={{ width: "100%", borderRadius: "4px 4px 0 0", background: cisty > 0 ? "#60a5fa" : "#f2f1ec", height: mH }} />
@@ -590,53 +551,6 @@ export default function PujcovnaDashboard() {
                   )
                 })}
               </div>
-            </div>
-          </div>
-
-          {/* Mini ceník */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Ceník stanů</h3>
-            </div>
-            <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
-              {stany.map((p, idx) => {
-                const COLORS = ["#fb7185", "#5b8def", "#f59e0b", "#10b981"]
-                const color = COLORS[idx % COLORS.length]
-                const hasStupne = p.cena_typ === "stupnovana" && stupne.some(s => s.polozka_id === p.id)
-                const basePrice = p.cena_fixni
-
-                return (
-                  <div key={p.id} style={{
-                    background: "#faf9f5",
-                    border: "1px solid var(--line)",
-                    borderRadius: 10,
-                    padding: "10px 12px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 99, background: color, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 500, fontSize: 13, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, fontFamily: "var(--font-mono)" }}>
-                        {p.cena_typ === "kusova" ? "jednorázová" : p.cena_typ === "fixni" ? "za den" : "stupňovaná"}
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, textAlign: "right", flexShrink: 0 }}>
-                      {hasStupne ? (
-                        <span style={{ color: "var(--muted)", fontSize: 11 }}>stupňovaná</span>
-                      ) : basePrice !== null ? (
-                        <>{basePrice.toLocaleString("cs-CZ")} <span style={{ fontSize: 10, color: "var(--muted)" }}>Kč</span></>
-                      ) : (
-                        <span style={{ color: "var(--muted)" }}>—</span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-              {stany.length === 0 && (
-                <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: "12px 0" }}>Žádné položky</div>
-              )}
             </div>
           </div>
 
