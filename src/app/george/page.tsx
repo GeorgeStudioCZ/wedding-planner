@@ -331,19 +331,19 @@ export default function GeorgePage() {
         {/* ── Right panel — timer ── */}
         <div className="hidden ipad:flex flex-col" style={{
           width: 280,
-          borderLeft: "1px solid var(--line)",
-          background: "white",
+          borderLeft: "1px solid rgba(255,255,255,.05)",
+          background: "#0e0f14",
           overflowY: "auto",
           flexShrink: 0,
         }}>
           <div style={{ padding: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--muted)", marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: "#5a5b66", marginBottom: 16, fontFamily: "var(--font-mono)" }}>
               Nová aktivita
             </div>
 
             {/* Task name */}
             <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Název úkolu</label>
+              <label style={{ fontSize: 12, color: "#7a7b85", display: "block", marginBottom: 4 }}>Název úkolu</label>
               <input
                 value={nazev}
                 onChange={e => setNazev(e.target.value)}
@@ -353,25 +353,25 @@ export default function GeorgePage() {
                 style={{
                   width: "100%", boxSizing: "border-box",
                   padding: "9px 11px", borderRadius: 9,
-                  border: "1px solid var(--line-strong)",
-                  fontSize: 14, color: "var(--ink)", outline: "none",
-                  background: running ? "var(--bg)" : "white",
+                  border: "1px solid rgba(255,255,255,.08)",
+                  fontSize: 14, color: "#eaeaf0", outline: "none",
+                  background: "rgba(255,255,255,.04)",
                 }}
               />
             </div>
 
             {/* Zákazník */}
             <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4 }}>Zákazník</label>
+              <label style={{ fontSize: 12, color: "#7a7b85", display: "block", marginBottom: 4 }}>Zákazník</label>
               <select
                 value={zakaznikId ?? ""}
                 onChange={e => setZakaznikId(e.target.value ? Number(e.target.value) : null)}
                 disabled={!!running}
                 style={{
                   width: "100%", padding: "9px 11px", borderRadius: 9,
-                  border: "1px solid var(--line-strong)",
-                  fontSize: 13, color: "var(--ink)", outline: "none",
-                  background: running ? "var(--bg)" : "white",
+                  border: "1px solid rgba(255,255,255,.08)",
+                  fontSize: 13, color: "#eaeaf0", outline: "none",
+                  background: "#15161c",
                 }}>
                 <option value="">— bez zákazníka —</option>
                 {zakaznici.map(z => (
@@ -382,9 +382,9 @@ export default function GeorgePage() {
 
             {/* Kategorie — color pills */}
             <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 6 }}>Kategorie</label>
+              <label style={{ fontSize: 12, color: "#7a7b85", display: "block", marginBottom: 6 }}>Kategorie</label>
               {kategorie.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--muted)" }}>Přidej kategorie v Ceníku služeb.</p>
+                <p style={{ fontSize: 12, color: "#5a5b66" }}>Přidej kategorie v Ceníku služeb.</p>
               ) : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {kategorie.map(k => {
@@ -396,9 +396,9 @@ export default function GeorgePage() {
                         disabled={!!running}
                         style={{
                           padding: "5px 10px", borderRadius: 99, fontSize: 12, cursor: running ? "default" : "pointer",
-                          border: `1.5px solid ${active ? k.barva : "transparent"}`,
-                          background: active ? k.barva + "22" : "var(--bg)",
-                          color: active ? k.barva : "var(--ink-2)",
+                          border: `1.5px solid ${active ? k.barva : "rgba(255,255,255,.1)"}`,
+                          background: active ? k.barva + "33" : "rgba(255,255,255,.04)",
+                          color: active ? k.barva : "#a9aab5",
                           fontWeight: active ? 600 : 400,
                           transition: "all .12s",
                         }}>
@@ -413,7 +413,7 @@ export default function GeorgePage() {
             {/* Elapsed display */}
             {running && (
               <div style={{ textAlign: "center", marginBottom: 16 }}>
-                <div style={{ fontSize: 36, fontWeight: 700, fontVariantNumeric: "tabular-nums", letterSpacing: "-.04em", color: "var(--studio)" }}>
+                <div style={{ fontSize: 36, fontWeight: 700, fontVariantNumeric: "tabular-nums", letterSpacing: "-.04em", color: "#eaeaf0" }}>
                   {formatElapsed(elapsed)}
                 </div>
               </div>
@@ -437,8 +437,8 @@ export default function GeorgePage() {
                 borderRadius: 11, border: "none", cursor: nazev.trim() ? "pointer" : "default",
                 background: nazev.trim()
                   ? "linear-gradient(135deg, var(--studio-grad-a), var(--studio-grad-b))"
-                  : "var(--bg)",
-                color: nazev.trim() ? "white" : "var(--muted)",
+                  : "rgba(255,255,255,.06)",
+                color: nazev.trim() ? "white" : "#5a5b66",
                 fontSize: 15, fontWeight: 600,
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 transition: "all .15s",
@@ -454,7 +454,7 @@ export default function GeorgePage() {
               const k = kategorie.find(x => x.id === kategorieId)
               if (!k || !k.sazba) return null
               return (
-                <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+                <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: "#7a7b85" }}>
                   {k.sazba.toLocaleString("cs-CZ")} Kč / {k.sazba_typ === "kus" ? "kus" : "hod"}
                 </div>
               )
