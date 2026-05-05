@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase-browser"
 
-export type AppModule = "wed" | "van"
+export type AppModule = "wed" | "van" | "studio"
 
 // ── Inline SVG icon helper ──────────────────────────────────────────────────
 function Ico({ d, size = 16 }: { d: string | string[]; size?: number }) {
@@ -48,6 +48,12 @@ const NAV_VAN = [
   { key: "cenik",    label: "Ceník",      href: "/pujcovna/cenik",     ico: I.wallet },
 ]
 
+const NAV_STUDIO = [
+  { key: "home",    label: "Přehled",      href: "/george",         ico: I.home },
+  { key: "cenik",   label: "Ceník služeb", href: "/george/cenik",   ico: I.wallet },
+  { key: "klienti", label: "Zákazníci",    href: "/zakaznici",      ico: I.users },
+]
+
 // ── Component ───────────────────────────────────────────────────────────────
 export default function AppShell({ module, children }: { module: AppModule; children: React.ReactNode }) {
   const router = useRouter()
@@ -55,7 +61,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
   const [mobileOpen, setMobileOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
-  const nav = module === "wed" ? NAV_WED : NAV_VAN
+  const nav = module === "wed" ? NAV_WED : module === "van" ? NAV_VAN : NAV_STUDIO
   const isActive = (href: string) => pathname === href
 
   async function signOut() {
@@ -65,12 +71,14 @@ export default function AppShell({ module, children }: { module: AppModule; chil
     router.refresh()
   }
 
-  const ctaLabel = module === "wed" ? "Nová zakázka" : "Nová rezervace"
-  const ctaHref  = module === "wed" ? "/svatby/zakazky/nova" : "/pujcovna/kalendar"
+  const ctaLabel = module === "wed" ? "Nová zakázka" : module === "van" ? "Nová rezervace" : "Nová aktivita"
+  const ctaHref  = module === "wed" ? "/svatby/zakazky/nova" : module === "van" ? "/pujcovna/kalendar" : "/george"
   const accent   = module === "wed"
     ? "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))"
-    : "linear-gradient(135deg, var(--van-grad-a), var(--van-grad-b))"
-  const accentGlow = module === "wed" ? "rgba(255,106,139,.32)" : "rgba(45,212,166,.3)"
+    : module === "van"
+    ? "linear-gradient(135deg, var(--van-grad-a), var(--van-grad-b))"
+    : "linear-gradient(135deg, var(--studio-grad-a), var(--studio-grad-b))"
+  const accentGlow = module === "wed" ? "rgba(255,106,139,.32)" : module === "van" ? "rgba(45,212,166,.3)" : "rgba(99,102,241,.3)"
 
   // ── Sidebar obsah (sdílený mezi desktop+mobil) ───────────────────────────
   const sidebarContent = (
@@ -93,7 +101,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
 
       {/* Section label */}
       <div style={{ padding: "12px 14px 6px", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#5a5b66", fontFamily: "var(--font-mono)" }}>
-        {module === "wed" ? "Svatby" : "Autostany"}
+        {module === "wed" ? "Svatby" : module === "van" ? "Autostany" : "George Studio"}
       </div>
 
       {/* Nav */}
@@ -150,8 +158,9 @@ export default function AppShell({ module, children }: { module: AppModule; chil
           Modul
         </div>
         {([
-          { mod: "wed" as AppModule, label: "Wedding Planner",   sub: "Sezóna 2026", href: "/svatby" },
-          { mod: "van" as AppModule, label: "Autostany Planner", sub: "Sezóna 2026", href: "/pujcovna" },
+          { mod: "wed"    as AppModule, label: "Wedding Planner",   sub: "Sezóna 2026", href: "/svatby",   grad: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))" },
+          { mod: "van"    as AppModule, label: "Autostany Planner", sub: "Sezóna 2026", href: "/pujcovna", grad: "linear-gradient(135deg, var(--van-grad-a), var(--van-grad-b))" },
+          { mod: "studio" as AppModule, label: "George Studio",     sub: "Časomíra",    href: "/george",   grad: "linear-gradient(135deg, var(--studio-grad-a), var(--studio-grad-b))" },
         ] as const).map(m => (
           <Link key={m.mod} href={m.href}
             style={{
@@ -162,9 +171,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
             }}>
             <span style={{
               width: 10, height: 10, borderRadius: 99, flexShrink: 0,
-              background: m.mod === "wed"
-                ? "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))"
-                : "linear-gradient(135deg, var(--van-grad-a), var(--van-grad-b))",
+              background: m.grad,
             }} />
             <div>
               <div style={{ fontSize: 13, color: "#eaeaf0", fontWeight: 500 }}>{m.label}</div>
@@ -261,7 +268,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
           }}>
             <Ico d={I.search} size={15} />
             <span style={{ fontSize: 13.5, flex: 1, color: "var(--muted)" }}>
-              {module === "wed" ? "Hledat zakázku, klienta, lokaci…" : "Hledat rezervaci, zákazníka…"}
+              {module === "wed" ? "Hledat zakázku, klienta, lokaci…" : module === "van" ? "Hledat rezervaci, zákazníka…" : "Hledat aktivitu, zákazníka…"}
             </span>
             <kbd style={{
               fontFamily: "var(--font-mono)", fontSize: 10.5,

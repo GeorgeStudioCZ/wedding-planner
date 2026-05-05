@@ -39,6 +39,13 @@
   --van-grad-a: #2dd4a6;
   --van-grad-b: #7cd38a;
 
+  /* George Studio accent */
+  --studio:        #6366f1;
+  --studio-ink:    #4338ca;
+  --studio-soft:   #e0e7ff;
+  --studio-grad-a: #6366f1;
+  --studio-grad-b: #8b5cf6;
+
   --radius-lg:   20px;
   --radius-md:   14px;
   --radius-sm:   10px;
