@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase-browser"
 import AppShell, { AppModule } from "@/components/AppShell"
 
 type Zakaznik = {
   id: number
   jmeno: string
   prijmeni: string
+  firma: string
+  ico: string
+  dic: string
   ulice: string
   mesto: string
   psc: string
@@ -18,7 +22,26 @@ type Zakaznik = {
   created_at: string
 }
 
-// ── Avatar gradient derived from name ────────────────────────────────────────
+type FormData = {
+  jmeno: string
+  prijmeni: string
+  firma: string
+  ico: string
+  dic: string
+  ulice: string
+  mesto: string
+  psc: string
+  email: string
+  telefon: string
+  projekty: string[]
+}
+
+const EMPTY_FORM: FormData = {
+  jmeno: "", prijmeni: "", firma: "", ico: "", dic: "",
+  ulice: "", mesto: "", psc: "", email: "", telefon: "", projekty: [],
+}
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
 const GRADIENTS = [
   ["#ff6a8b", "#ff9a6a"],
   ["#2dd4a6", "#7cd38a"],
@@ -36,48 +59,131 @@ function initials(jmeno: string, prijmeni: string) {
   return ((jmeno[0] ?? "") + (prijmeni[0] ?? "")).toUpperCase() || "?"
 }
 
-// ── Inline SVG icons ──────────────────────────────────────────────────────────
-function Ico({ d, size = 14 }: { d: string; size?: number }) {
+// ── Icons ─────────────────────────────────────────────────────────────────────
+function Ico({ d, size = 14 }: { d: string | string[]; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <path d={d} />
+      {(Array.isArray(d) ? d : [d]).map((p, i) => <path key={i} d={p} />)}
     </svg>
   )
 }
 const IC = {
-  phone:  "M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.18 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z",
-  mail:   "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6",
-  pin:    "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z M12 10a3 3 0 100-6 3 3 0 000 6",
-  search: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0",
-  plus:   "M12 5v14M5 12h14",
-  edit:   "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
-  trash:  "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
-  x:      "M18 6L6 18M6 6l12 12",
-  user:   "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8",
+  phone:   "M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.22 1.18 2 2 0 012.18 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z",
+  mail:    "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6",
+  pin:     "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z M12 10a3 3 0 100-6 3 3 0 000 6",
+  building:["M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z","M9 22V12h6v10"],
+  search:  "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0",
+  plus:    "M12 5v14M5 12h14",
+  edit:    "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
+  trash:   "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
+  x:       "M18 6L6 18M6 6l12 12",
+  user:    "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8",
+  hash:    "M4 9h16M4 15h16M10 3L8 21M16 3l-2 18",
 }
 
+// ── Projekt styles ─────────────────────────────────────────────────────────────
 const PROJ_STYLE: Record<string, { bg: string; color: string }> = {
   "Svatby":    { bg: "rgba(255,106,139,.12)", color: "#b1174a" },
   "Půjčovna":  { bg: "rgba(45,212,166,.15)",  color: "#0a7a5a" },
+  "Studio":    { bg: "rgba(99,102,241,.12)",   color: "#4338ca" },
+}
+const PROJEKTY = ["Svatby", "Půjčovna", "Studio"]
+
+// ── Section label ─────────────────────────────────────────────────────────────
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted)", letterSpacing: ".1em", textTransform: "uppercase", fontFamily: "var(--font-mono)", marginBottom: 6 }}>
+      {children}
+    </div>
+  )
 }
 
+// ── CustomerForm ───────────────────────────────────────────────────────────────
+function CustomerForm({
+  form, onChange, onToggleProjekt,
+  inputCls, inputStyle,
+}: {
+  form: FormData
+  onChange: (f: FormData) => void
+  onToggleProjekt: (p: string) => void
+  inputCls: string
+  inputStyle: React.CSSProperties
+}) {
+  const s = (key: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    onChange({ ...form, [key]: e.target.value })
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+      {/* Osobní údaje */}
+      <SectionLabel>Osobní údaje</SectionLabel>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <input value={form.jmeno}    onChange={s("jmeno")}    placeholder="Jméno"    className={inputCls} style={inputStyle} />
+        <input value={form.prijmeni} onChange={s("prijmeni")} placeholder="Příjmení" className={inputCls} style={inputStyle} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <input value={form.telefon}  onChange={s("telefon")}  placeholder="Telefon"  className={inputCls} style={inputStyle} />
+        <input value={form.email}    onChange={s("email")}    placeholder="E-mail"   className={inputCls} style={inputStyle} />
+      </div>
+
+      {/* Fakturační údaje */}
+      <div style={{ marginTop: 6 }}>
+        <SectionLabel>Fakturační údaje</SectionLabel>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <input value={form.firma} onChange={s("firma")} placeholder="Název firmy (volitelné)" className={inputCls} style={inputStyle} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input value={form.ico}   onChange={s("ico")}   placeholder="IČO"   className={inputCls} style={inputStyle} />
+            <input value={form.dic}   onChange={s("dic")}   placeholder="DIČ"   className={inputCls} style={inputStyle} />
+          </div>
+          <input value={form.ulice}   onChange={s("ulice")}  placeholder="Ulice a č.p."  className={inputCls} style={inputStyle} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
+            <input value={form.mesto} onChange={s("mesto")}  placeholder="Město" className={inputCls} style={inputStyle} />
+            <input value={form.psc}   onChange={s("psc")}    placeholder="PSČ"   className={inputCls} style={{ ...inputStyle, width: 80 }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Projekty */}
+      <div style={{ marginTop: 4 }}>
+        <SectionLabel>Projekty</SectionLabel>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {PROJEKTY.map(p => {
+            const checked = form.projekty.includes(p)
+            const ps = PROJ_STYLE[p]
+            return (
+              <button key={p} type="button" onClick={() => onToggleProjekt(p)} style={{
+                padding: "6px 14px", borderRadius: 99, border: "1px solid", fontSize: 12, fontWeight: 600,
+                cursor: "pointer", transition: "all .15s",
+                background: checked ? ps.bg : "white",
+                color: checked ? ps.color : "var(--muted)",
+                borderColor: checked ? ps.color : "var(--line-strong)",
+              }}>
+                {p}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function Zakaznici() {
   const searchParams = useSearchParams()
   const module: AppModule = (searchParams.get("from") as AppModule) ?? "wed"
 
-  const [zakaznici, setZakaznici]   = useState<Zakaznik[]>([])
-  const [loading, setLoading]       = useState(true)
-  const [query, setQuery]           = useState("")
+  const [zakaznici, setZakaznici] = useState<Zakaznik[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [query, setQuery]         = useState("")
   const [projektFilter, setProjektFilter] = useState("Vše")
-  const [editId, setEditId]         = useState<number | null>(null)
-  const [editForm, setEditForm]     = useState<Partial<Zakaznik>>({})
-  const [novyModal, setNovyModal]   = useState(false)
-  const [novyForm, setNovyForm]     = useState({
-    jmeno: "", prijmeni: "", ulice: "", mesto: "", psc: "", email: "", telefon: "", projekty: [] as string[],
-  })
-  const [ukladam, setUkladam]       = useState(false)
-  const [mazaniId, setMazaniId]     = useState<number | null>(null)
+  const [editId, setEditId]       = useState<number | null>(null)
+  const [editForm, setEditForm]   = useState<FormData>(EMPTY_FORM)
+  const [novyModal, setNovyModal] = useState(false)
+  const [novyForm, setNovyForm]   = useState<FormData>(EMPTY_FORM)
+  const [ukladam, setUkladam]     = useState(false)
+  const [mazaniId, setMazaniId]   = useState<number | null>(null)
 
   useEffect(() => { nacti() }, [])
 
@@ -92,6 +198,8 @@ export default function Zakaznici() {
     const odpovida = !q ||
       z.jmeno.toLowerCase().includes(q) ||
       z.prijmeni.toLowerCase().includes(q) ||
+      (z.firma ?? "").toLowerCase().includes(q) ||
+      (z.ico ?? "").includes(q) ||
       z.email.toLowerCase().includes(q) ||
       z.telefon.includes(q) ||
       z.mesto.toLowerCase().includes(q)
@@ -102,7 +210,8 @@ export default function Zakaznici() {
   async function ulozEdit() {
     if (!editId) return
     setUkladam(true)
-    await supabase.from("zakaznici").update(editForm).eq("id", editId)
+    const db = createClient()
+    await db.from("zakaznici").update(editForm).eq("id", editId)
     await nacti()
     setEditId(null)
     setUkladam(false)
@@ -110,39 +219,43 @@ export default function Zakaznici() {
 
   async function ulozNoveho() {
     setUkladam(true)
-    await supabase.from("zakaznici").insert([novyForm])
+    const db = createClient()
+    await db.from("zakaznici").insert([novyForm])
     await nacti()
     setNovyModal(false)
-    setNovyForm({ jmeno: "", prijmeni: "", ulice: "", mesto: "", psc: "", email: "", telefon: "", projekty: [] })
+    setNovyForm(EMPTY_FORM)
     setUkladam(false)
   }
 
   async function smazat(id: number) {
-    await supabase.from("zakaznici").delete().eq("id", id)
+    const db = createClient()
+    await db.from("zakaznici").delete().eq("id", id)
     setMazaniId(null)
     setZakaznici(prev => prev.filter(z => z.id !== id))
   }
 
-  function toggleProjekt(p: string, projekty: string[], onChange: (v: string[]) => void) {
-    if (projekty.includes(p)) onChange(projekty.filter(x => x !== p))
-    else onChange([...projekty, p])
+  function toggleProjekt(p: string, form: FormData, setForm: (f: FormData) => void) {
+    const projekty = form.projekty.includes(p)
+      ? form.projekty.filter(x => x !== p)
+      : [...form.projekty, p]
+    setForm({ ...form, projekty })
   }
 
-  const inputCls = [
-    "w-full border rounded-lg px-3 py-2 text-sm bg-white",
-    "focus:outline-none focus:ring-2 focus:ring-[rgba(255,106,139,.35)]",
-  ].join(" ")
-  const inputStyle = { borderColor: "var(--line-strong)", color: "var(--ink)" }
+  const inputCls = "w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[rgba(99,102,241,.3)]"
+  const inputStyle: React.CSSProperties = { borderColor: "var(--line-strong)", color: "var(--ink)" }
 
-  // stat counts
-  const celkem    = zakaznici.length
-  const svatebnich = zakaznici.filter(z => (z.projekty ?? []).includes("Svatby")).length
-  const pujcovnich = zakaznici.filter(z => (z.projekty ?? []).includes("Půjčovna")).length
+  // Stats
+  const celkem     = zakaznici.length
+  const pocty      = PROJEKTY.map(p => ({
+    label: p,
+    value: zakaznici.filter(z => (z.projekty ?? []).includes(p)).length,
+    color: PROJ_STYLE[p].color,
+  }))
 
   return (
     <AppShell module={module}>
 
-      {/* ── Page header ── */}
+      {/* ── Header ── */}
       <div style={{ padding: "28px 32px 0" }}>
         <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontFamily: "var(--font-mono)", color: "var(--muted)", marginBottom: 4 }}>
           CRM · Kontakty
@@ -151,36 +264,29 @@ export default function Zakaznici() {
           <h1 style={{ fontFamily: "var(--font-serif)", fontStyle: "normal", fontWeight: 700, fontSize: 26, color: "var(--ink)", margin: 0 }}>
             Zákazníci
           </h1>
-          <button
-            onClick={() => setNovyModal(true)}
-            style={{
-              display: "flex", alignItems: "center", gap: 7,
-              padding: "9px 18px", borderRadius: 11,
-              background: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))",
-              color: "white", border: "none", cursor: "pointer",
-              fontSize: 13, fontWeight: 500,
-              boxShadow: "0 4px 14px rgba(255,106,139,.3)",
-            }}
-          >
+          <button onClick={() => setNovyModal(true)} style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "9px 18px", borderRadius: 11,
+            background: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))",
+            color: "white", border: "none", cursor: "pointer",
+            fontSize: 13, fontWeight: 500,
+            boxShadow: "0 4px 14px rgba(255,106,139,.3)",
+          }}>
             <Ico d={IC.plus} size={13} />
             Nový zákazník
           </button>
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: "flex", gap: 24, marginTop: 16, paddingBottom: 20, borderBottom: "1px solid var(--line)" }}>
-          {[
-            { label: "Celkem", value: celkem, color: "var(--ink)" },
-            { label: "Svatby",   value: svatebnich, color: "#b1174a" },
-            { label: "Půjčovna", value: pujcovnich, color: "#0a7a5a" },
-          ].map(s => (
+        {/* Stats */}
+        <div style={{ display: "flex", gap: 24, marginTop: 16, paddingBottom: 20, borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ fontFamily: "var(--font-serif)", fontStyle: "normal", fontWeight: 700, fontSize: 28, color: "var(--ink)", lineHeight: 1 }}>{celkem}</span>
+            <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)", letterSpacing: ".08em", textTransform: "uppercase", marginTop: 3 }}>Celkem</span>
+          </div>
+          {pocty.map(s => (
             <div key={s.label} style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontFamily: "var(--font-serif)", fontStyle: "normal", fontWeight: 700, fontSize: 28, color: s.color, lineHeight: 1 }}>
-                {s.value}
-              </span>
-              <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)", letterSpacing: ".08em", textTransform: "uppercase", marginTop: 3 }}>
-                {s.label}
-              </span>
+              <span style={{ fontFamily: "var(--font-serif)", fontStyle: "normal", fontWeight: 700, fontSize: 28, color: s.color, lineHeight: 1 }}>{s.value}</span>
+              <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)", letterSpacing: ".08em", textTransform: "uppercase", marginTop: 3 }}>{s.label}</span>
             </div>
           ))}
         </div>
@@ -188,27 +294,23 @@ export default function Zakaznici() {
 
       {/* ── Search + filter ── */}
       <div style={{ padding: "20px 32px 0", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        {/* Search */}
         <div style={{ position: "relative", flex: "1 1 260px", maxWidth: 440 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }}>
             <Ico d={IC.search} size={14} />
           </span>
           <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Hledat dle jména, tel., e-mailu, města…"
+            value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Hledat dle jména, firmy, IČO, e-mailu…"
             style={{
               width: "100%", paddingLeft: 36, paddingRight: 12, paddingTop: 8, paddingBottom: 8,
               border: "1px solid var(--line-strong)", borderRadius: 11, fontSize: 13,
-              background: "white", color: "var(--ink)",
-              outline: "none", boxSizing: "border-box",
+              background: "white", color: "var(--ink)", outline: "none", boxSizing: "border-box",
             }}
           />
         </div>
 
-        {/* Project filter pills */}
-        <div style={{ display: "flex", gap: 6 }}>
-          {["Vše", "Svatby", "Půjčovna"].map(p => {
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {["Vše", ...PROJEKTY].map(p => {
             const active = projektFilter === p
             const ps = PROJ_STYLE[p]
             return (
@@ -230,12 +332,12 @@ export default function Zakaznici() {
         </span>
       </div>
 
-      {/* ── Cards grid ── */}
+      {/* ── Cards ── */}
       <div style={{ padding: "20px 32px 56px" }}>
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12 }}>
             {[1,2,3,4,5,6].map(i => (
-              <div key={i} style={{ height: 140, background: "white", borderRadius: 14, border: "1px solid var(--line)", opacity: 0.6 }} className="animate-pulse" />
+              <div key={i} style={{ height: 160, background: "white", borderRadius: 14, border: "1px solid var(--line)", opacity: 0.6 }} className="animate-pulse" />
             ))}
           </div>
         ) : filtrovani.length === 0 ? (
@@ -244,117 +346,79 @@ export default function Zakaznici() {
             <p style={{ fontSize: 15 }}>Žádní zákazníci nenalezeni</p>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12 }}>
             {filtrovani.map(z => (
-              <div key={z.id} style={{
-                background: "white",
-                border: "1px solid var(--line)",
-                borderRadius: 14,
-                boxShadow: "var(--shadow-1)",
-                overflow: "hidden",
-              }}>
+              <div key={z.id} style={{ background: "white", border: "1px solid var(--line)", borderRadius: 14, boxShadow: "var(--shadow-1)", overflow: "hidden" }}>
 
                 {editId === z.id ? (
-                  /* ── Edit form ── */
-                  <div style={{ padding: "16px" }}>
+                  /* ── Edit inline ── */
+                  <div style={{ padding: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Upravit kontakt</span>
                       <button onClick={() => setEditId(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 2 }}>
                         <Ico d={IC.x} size={15} />
                       </button>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                        <input value={editForm.jmeno ?? ""} onChange={e => setEditForm({ ...editForm, jmeno: e.target.value })} placeholder="Jméno" className={inputCls} style={inputStyle} />
-                        <input value={editForm.prijmeni ?? ""} onChange={e => setEditForm({ ...editForm, prijmeni: e.target.value })} placeholder="Příjmení" className={inputCls} style={inputStyle} />
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                        <input value={editForm.telefon ?? ""} onChange={e => setEditForm({ ...editForm, telefon: e.target.value })} placeholder="Telefon" className={inputCls} style={inputStyle} />
-                        <input value={editForm.email ?? ""} onChange={e => setEditForm({ ...editForm, email: e.target.value })} placeholder="E-mail" className={inputCls} style={inputStyle} />
-                      </div>
-                      <input value={editForm.ulice ?? ""} onChange={e => setEditForm({ ...editForm, ulice: e.target.value })} placeholder="Ulice" className={inputCls} style={inputStyle} />
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
-                        <input value={editForm.mesto ?? ""} onChange={e => setEditForm({ ...editForm, mesto: e.target.value })} placeholder="Město" className={inputCls} style={inputStyle} />
-                        <input value={editForm.psc ?? ""} onChange={e => setEditForm({ ...editForm, psc: e.target.value })} placeholder="PSČ" className={inputCls} style={{ ...inputStyle, width: 80 }} />
-                      </div>
-                      {/* Project toggles */}
-                      <div style={{ display: "flex", gap: 8, paddingTop: 2 }}>
-                        {["Svatby", "Půjčovna"].map(p => {
-                          const checked = (editForm.projekty ?? []).includes(p)
-                          const ps = PROJ_STYLE[p]
-                          return (
-                            <button key={p} type="button"
-                              onClick={() => toggleProjekt(p, editForm.projekty ?? [], v => setEditForm({ ...editForm, projekty: v }))}
-                              style={{
-                                padding: "5px 12px", borderRadius: 99, border: "1px solid", fontSize: 11, fontWeight: 600,
-                                cursor: "pointer", transition: "all .15s",
-                                background: checked ? ps.bg : "white",
-                                color: checked ? ps.color : "var(--muted)",
-                                borderColor: checked ? ps.color : "var(--line-strong)",
-                              }}
-                            >
-                              {p}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
-                        <button onClick={ulozEdit} disabled={ukladam} style={{
-                          flex: 1, padding: "8px 0", borderRadius: 9, border: "none", cursor: "pointer",
-                          background: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))",
-                          color: "white", fontSize: 12, fontWeight: 600, opacity: ukladam ? 0.6 : 1,
-                        }}>
-                          {ukladam ? "Ukládám…" : "Uložit"}
-                        </button>
-                        <button onClick={() => setEditId(null)} style={{
-                          padding: "8px 14px", borderRadius: 9, border: "1px solid var(--line-strong)",
-                          cursor: "pointer", background: "white", color: "var(--ink-2)", fontSize: 12, fontWeight: 500,
-                        }}>
-                          Zrušit
-                        </button>
-                      </div>
+                    <CustomerForm
+                      form={editForm}
+                      onChange={setEditForm}
+                      onToggleProjekt={p => toggleProjekt(p, editForm, setEditForm)}
+                      inputCls={inputCls}
+                      inputStyle={inputStyle}
+                    />
+                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                      <button onClick={ulozEdit} disabled={ukladam} style={{
+                        flex: 1, padding: "8px 0", borderRadius: 9, border: "none", cursor: "pointer",
+                        background: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))",
+                        color: "white", fontSize: 12, fontWeight: 600, opacity: ukladam ? 0.6 : 1,
+                      }}>
+                        {ukladam ? "Ukládám…" : "Uložit"}
+                      </button>
+                      <button onClick={() => setEditId(null)} style={{
+                        padding: "8px 14px", borderRadius: 9, border: "1px solid var(--line-strong)",
+                        cursor: "pointer", background: "white", color: "var(--ink-2)", fontSize: 12, fontWeight: 500,
+                      }}>
+                        Zrušit
+                      </button>
                     </div>
                   </div>
                 ) : (
                   /* ── Card view ── */
-                  <div style={{ padding: "16px" }}>
+                  <div style={{ padding: 16 }}>
                     <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                      {/* Avatar */}
                       <div style={{
                         width: 44, height: 44, borderRadius: 12, flexShrink: 0,
                         background: avatarGradient(z.jmeno, z.prijmeni),
                         display: "grid", placeItems: "center",
                         color: "white", fontWeight: 700, fontSize: 14,
-                        letterSpacing: ".02em",
                       }}>
                         {initials(z.jmeno, z.prijmeni)}
                       </div>
-
-                      {/* Name + badges */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)", marginBottom: 4, lineHeight: 1.2 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)", lineHeight: 1.2 }}>
                           {z.jmeno} {z.prijmeni}
                         </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {z.firma && (
+                          <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {z.firma}
+                          </div>
+                        )}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
                           {(z.projekty ?? []).map(p => {
                             const ps = PROJ_STYLE[p]
                             return (
                               <span key={p} style={{
                                 fontSize: 10, fontWeight: 700, letterSpacing: ".05em",
                                 textTransform: "uppercase", padding: "2px 8px", borderRadius: 99,
-                                background: ps?.bg ?? "var(--bg)",
-                                color: ps?.color ?? "var(--muted)",
-                              }}>
-                                {p}
-                              </span>
+                                background: ps?.bg ?? "var(--bg)", color: ps?.color ?? "var(--muted)",
+                              }}>{p}</span>
                             )
                           })}
                         </div>
                       </div>
                     </div>
 
-                    {/* Contact info */}
-                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 5 }}>
+                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4 }}>
                       {z.telefon && (
                         <a href={`tel:${z.telefon}`} style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--ink-2)", textDecoration: "none", fontSize: 12 }}>
                           <span style={{ color: "var(--muted)", flexShrink: 0 }}><Ico d={IC.phone} size={13} /></span>
@@ -375,26 +439,31 @@ export default function Zakaznici() {
                           </span>
                         </div>
                       )}
+                      {(z.ico || z.dic) && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--muted)" }}>
+                          <span style={{ flexShrink: 0 }}><Ico d={IC.hash} size={13} /></span>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
+                            {z.ico ? `IČO: ${z.ico}` : ""}
+                            {z.ico && z.dic ? "  ·  " : ""}
+                            {z.dic ? `DIČ: ${z.dic}` : ""}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Footer: date + actions */}
-                    <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
                         {new Date(z.created_at).toLocaleDateString("cs-CZ", { day: "numeric", month: "short", year: "numeric" })}
                       </span>
                       <div style={{ display: "flex", gap: 6 }}>
                         {mazaniId === z.id ? (
                           <>
-                            <button onClick={() => smazat(z.id)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", cursor: "pointer", background: "#ef4444", color: "white", fontSize: 11, fontWeight: 600 }}>
-                              Potvrdit
-                            </button>
-                            <button onClick={() => setMazaniId(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--line-strong)", cursor: "pointer", background: "white", color: "var(--ink-2)", fontSize: 11 }}>
-                              Zrušit
-                            </button>
+                            <button onClick={() => smazat(z.id)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", cursor: "pointer", background: "#ef4444", color: "white", fontSize: 11, fontWeight: 600 }}>Potvrdit</button>
+                            <button onClick={() => setMazaniId(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--line-strong)", cursor: "pointer", background: "white", color: "var(--ink-2)", fontSize: 11 }}>Zrušit</button>
                           </>
                         ) : (
                           <>
-                            <button onClick={() => { setEditId(z.id); setEditForm({ ...z }) }} style={{
+                            <button onClick={() => { setEditId(z.id); setEditForm({ jmeno: z.jmeno, prijmeni: z.prijmeni, firma: z.firma ?? "", ico: z.ico ?? "", dic: z.dic ?? "", ulice: z.ulice, mesto: z.mesto, psc: z.psc, email: z.email, telefon: z.telefon, projekty: z.projekty ?? [] }) }} style={{
                               display: "flex", alignItems: "center", gap: 5,
                               padding: "5px 10px", borderRadius: 8,
                               border: "1px solid var(--line-strong)", cursor: "pointer",
@@ -406,7 +475,7 @@ export default function Zakaznici() {
                               display: "flex", alignItems: "center", gap: 5,
                               padding: "5px 10px", borderRadius: 8,
                               border: "1px solid rgba(239,68,68,.2)", cursor: "pointer",
-                              background: "rgba(239,68,68,.04)", color: "#ef4444", fontSize: 11, fontWeight: 500,
+                              background: "rgba(239,68,68,.04)", color: "#ef4444", fontSize: 11,
                             }}>
                               <Ico d={IC.trash} size={12} />
                             </button>
@@ -422,16 +491,19 @@ export default function Zakaznici() {
         )}
       </div>
 
-      {/* ── Modal — nový zákazník ── */}
+      {/* ── Modal: nový zákazník ── */}
       {novyModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(10,10,14,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
-          <div style={{ background: "white", borderRadius: 20, boxShadow: "0 24px 64px rgba(0,0,0,.22)", width: "100%", maxWidth: 440, overflow: "hidden" }}>
-            {/* Header */}
-            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(10,10,14,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}
+          onClick={() => setNovyModal(false)}
+        >
+          <div
+            style={{ background: "white", borderRadius: 20, boxShadow: "0 24px 64px rgba(0,0,0,.22)", width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div>
-                <div style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", fontFamily: "var(--font-mono)", color: "var(--muted)", marginBottom: 2 }}>
-                  Nový kontakt
-                </div>
+                <div style={{ fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", fontFamily: "var(--font-mono)", color: "var(--muted)", marginBottom: 2 }}>Nový kontakt</div>
                 <h2 style={{ fontSize: 17, fontWeight: 600, color: "var(--ink)", margin: 0 }}>Přidat zákazníka</h2>
               </div>
               <button onClick={() => setNovyModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 4 }}>
@@ -439,55 +511,17 @@ export default function Zakaznici() {
               </button>
             </div>
 
-            {/* Form */}
-            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <input value={novyForm.jmeno} onChange={e => setNovyForm({ ...novyForm, jmeno: e.target.value })} placeholder="Jméno" className={inputCls} style={inputStyle} />
-                <input value={novyForm.prijmeni} onChange={e => setNovyForm({ ...novyForm, prijmeni: e.target.value })} placeholder="Příjmení" className={inputCls} style={inputStyle} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <input value={novyForm.telefon} onChange={e => setNovyForm({ ...novyForm, telefon: e.target.value })} placeholder="Telefon" className={inputCls} style={inputStyle} />
-                <input value={novyForm.email} onChange={e => setNovyForm({ ...novyForm, email: e.target.value })} placeholder="E-mail" className={inputCls} style={inputStyle} />
-              </div>
-              <input value={novyForm.ulice} onChange={e => setNovyForm({ ...novyForm, ulice: e.target.value })} placeholder="Ulice a č.p." className={inputCls} style={inputStyle} />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>
-                <input value={novyForm.mesto} onChange={e => setNovyForm({ ...novyForm, mesto: e.target.value })} placeholder="Město" className={inputCls} style={inputStyle} />
-                <input value={novyForm.psc} onChange={e => setNovyForm({ ...novyForm, psc: e.target.value })} placeholder="PSČ" className={inputCls} style={{ ...inputStyle, width: 84 }} />
-              </div>
-
-              {/* Project selector */}
-              <div style={{ paddingTop: 4 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", letterSpacing: ".08em", textTransform: "uppercase", fontFamily: "var(--font-mono)", marginBottom: 8 }}>
-                  Projekty
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {["Svatby", "Půjčovna"].map(p => {
-                    const checked = novyForm.projekty.includes(p)
-                    const ps = PROJ_STYLE[p]
-                    return (
-                      <button key={p} type="button"
-                        onClick={() => {
-                          if (checked) setNovyForm({ ...novyForm, projekty: novyForm.projekty.filter(x => x !== p) })
-                          else setNovyForm({ ...novyForm, projekty: [...novyForm.projekty, p] })
-                        }}
-                        style={{
-                          flex: 1, padding: "8px 0", borderRadius: 10, border: "1px solid",
-                          fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all .15s",
-                          background: checked ? ps.bg : "white",
-                          color: checked ? ps.color : "var(--muted)",
-                          borderColor: checked ? ps.color : "var(--line-strong)",
-                        }}
-                      >
-                        {p}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+            <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
+              <CustomerForm
+                form={novyForm}
+                onChange={setNovyForm}
+                onToggleProjekt={p => toggleProjekt(p, novyForm, setNovyForm)}
+                inputCls={inputCls}
+                inputStyle={inputStyle}
+              />
             </div>
 
-            {/* Footer */}
-            <div style={{ padding: "0 24px 24px", display: "flex", gap: 10 }}>
+            <div style={{ padding: "0 24px 24px", display: "flex", gap: 10, flexShrink: 0 }}>
               <button onClick={ulozNoveho} disabled={ukladam} style={{
                 flex: 1, padding: "10px 0", borderRadius: 11, border: "none", cursor: "pointer",
                 background: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))",
