@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
+import RezervacePopup from "@/components/RezervacePopup"
 
 type Polozka = {
   id: number
@@ -73,6 +73,7 @@ export default function SeznamRezervaci() {
   const [loading, setLoading] = useState(true)
   const [hledani, setHledani] = useState("")
   const [aktivniStav, setAktivniStav] = useState<string | null>(null)
+  const [openRezId, setOpenRezId] = useState<number | null>(null)
 
   useEffect(() => {
     async function nacti() {
@@ -149,7 +150,7 @@ export default function SeznamRezervaci() {
     poctyStavu[r.stav] = (poctyStavu[r.stav] ?? 0) + 1
   }
 
-  function RezervaceRadek({ r }: { r: Rezervace }) {
+  function RezervaceRadek({ r, onOpen }: { r: Rezervace; onOpen: () => void }) {
     const dniDo = Math.round((new Date(r.start_date).getTime() - new Date(dnesStr).getTime()) / 86400000)
     const dniZbyvá = Math.round((new Date(r.end_date).getTime() - new Date(dnesStr).getTime()) / 86400000)
     const dni = pocetDni(r.start_date, r.end_date)
@@ -179,7 +180,7 @@ export default function SeznamRezervaci() {
     const pill = cdPill()
 
     return (
-      <Link href={`/pujcovna/rezervace/${r.id}`} className="block hover:bg-gray-50 transition-colors">
+      <div onClick={onOpen} className="block hover:bg-gray-50 transition-colors cursor-pointer">
 
         {/* Mobile card */}
         <div className="flex flex-col pl-4 pr-4 py-3.5 gap-1.5 ipad:hidden border-l-4" style={{ borderColor: r.color }}>
@@ -239,7 +240,7 @@ export default function SeznamRezervaci() {
           </div>
         </div>
 
-      </Link>
+      </div>
     )
   }
 
@@ -346,7 +347,7 @@ export default function SeznamRezervaci() {
           </div>
         ) : (
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-            {filtrovane.map(r => <RezervaceRadek key={r.id} r={r} />)}
+            {filtrovane.map(r => <RezervaceRadek key={r.id} r={r} onOpen={() => setOpenRezId(r.id)} />)}
           </div>
         )}
 
@@ -358,6 +359,19 @@ export default function SeznamRezervaci() {
         )}
 
       </div>
+      {openRezId && (
+        <RezervacePopup
+          rezervaceId={openRezId}
+          onClose={() => setOpenRezId(null)}
+          onSave={async () => {
+            const [{ data: rez }] = await Promise.all([
+              supabase.from("pujcovna_rezervace").select("*").order("start_date", { ascending: false }),
+            ])
+            setRezervace(rez ?? [])
+            setOpenRezId(null)
+          }}
+        />
+      )}
     </AppShell>
   )
 }

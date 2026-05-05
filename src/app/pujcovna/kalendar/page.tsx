@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 import AppShell from "@/components/AppShell"
+import RezervacePopup from "@/components/RezervacePopup"
 
 type Polozka = {
   id: number
@@ -124,6 +125,7 @@ function Pujcovna() {
     rezervace?: Rezervace
     startDate?: string
   } | null>(null)
+  const [detailPopup, setDetailPopup] = useState<{ id: number; mode: "detail" | "edit" } | null>(null)
 
   const ROK = new Date().getFullYear()
   // Sezóna: 1. dubna – 31. října
@@ -152,11 +154,10 @@ function Pujcovna() {
       setRezervace(rezData)
       setSvatebnidny((zakazky ?? []).map(z => z.datum_svatby).filter(Boolean))
       setLoading(false)
-      // Otevřít edit modal pokud přišel ?edit=id
+      // Otevřít detail popup pokud přišel ?edit=id
       const editId = searchParams.get("edit")
       if (editId) {
-        const r = rezData.find(x => x.id === Number(editId))
-        if (r) setModal({ mode: "edit", rezervace: r })
+        setDetailPopup({ id: Number(editId), mode: "edit" })
       }
     }
     nacti()
@@ -207,7 +208,7 @@ function Pujcovna() {
 
   function klikNaRezervaci(e: React.MouseEvent, rez: Rezervace) {
     e.stopPropagation()
-    router.push(`/pujcovna/rezervace/${rez.id}`)
+    setDetailPopup({ id: rez.id, mode: "detail" })
   }
 
   const dnesIndex = Math.round((new Date().setHours(0,0,0,0) - SEZONA_START.getTime()) / (1000 * 60 * 60 * 24))
@@ -415,7 +416,7 @@ function Pujcovna() {
         </div>
       )}
 
-      {/* Modal — nová / edit rezervace */}
+      {/* Modal — nová rezervace */}
       {modal && (
         <ModalRezervace
           mode={modal.mode}
@@ -430,6 +431,24 @@ function Pujcovna() {
             const { data } = await supabase.from("pujcovna_rezervace").select("*")
             setRezervace(data ?? [])
             setModal(null)
+          }}
+        />
+      )}
+
+      {/* Popup — detail / úprava existující rezervace */}
+      {detailPopup && (
+        <RezervacePopup
+          rezervaceId={detailPopup.id}
+          initialMode={detailPopup.mode}
+          onClose={() => {
+            setDetailPopup(null)
+            router.replace("/pujcovna/kalendar")
+          }}
+          onSave={async () => {
+            const { data } = await supabase.from("pujcovna_rezervace").select("*")
+            setRezervace(data ?? [])
+            setDetailPopup(null)
+            router.replace("/pujcovna/kalendar")
           }}
         />
       )}
