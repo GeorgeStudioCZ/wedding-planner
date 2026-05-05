@@ -1,11 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
+import RezervacePopup from "@/components/RezervacePopup"
 
 type Polozka = {
   id: number
@@ -152,12 +151,12 @@ function Card({ children }: { children: React.ReactNode }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function PujcovnaDashboard() {
-  const router = useRouter()
   const [polozky, setPolozky] = useState<Polozka[]>([])
   const [rezervace, setRezervace] = useState<Rezervace[]>([])
   const [stupne, setStupne] = useState<Stupen[]>([])
   const [loading, setLoading] = useState(true)
   const [statRozsireno, setStatRozsireno] = useState(false)
+  const [openRezId, setOpenRezId] = useState<number | null>(null)
 
   useEffect(() => {
     async function nacti() {
@@ -299,7 +298,7 @@ export default function PujcovnaDashboard() {
     const startDate = new Date(r.start_date)
 
     return (
-      <Link href={`/pujcovna/rezervace/${r.id}`} className="block hover:bg-gray-50 transition-colors">
+      <div onClick={() => setOpenRezId(r.id)} className="block hover:bg-gray-50 transition-colors cursor-pointer">
 
         {/* Mobile card */}
         <div className="flex flex-col pl-4 pr-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor: r.color }}>
@@ -374,7 +373,7 @@ export default function PujcovnaDashboard() {
           </div>
         </div>
 
-      </Link>
+      </div>
     )
   }
 
@@ -581,6 +580,18 @@ export default function PujcovnaDashboard() {
         )}
 
       </div>
+
+      {openRezId && (
+        <RezervacePopup
+          rezervaceId={openRezId}
+          onClose={() => setOpenRezId(null)}
+          onSave={async () => {
+            const { data } = await supabase.from("pujcovna_rezervace").select("*")
+            setRezervace(data ?? [])
+            setOpenRezId(null)
+          }}
+        />
+      )}
     </AppShell>
   )
 }
