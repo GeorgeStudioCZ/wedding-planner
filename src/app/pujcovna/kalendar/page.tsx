@@ -769,7 +769,8 @@ function ModalRezervace({
                 })
               const majakouCenu = cenaStan !== null || radkyPrisl.some(r => r.cena !== null)
               if (!majakouCenu) return null
-              const celkem = (cenaStan ?? 0) + radkyPrisl.reduce((s, r) => s + (r.cena ?? 0), 0)
+              const montaz = jeStanVybran && dni <= 4 ? 500 : 0
+              const celkem = (cenaStan ?? 0) + radkyPrisl.reduce((s, r) => s + (r.cena ?? 0), 0) + montaz
               return (
                 <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
                   <div className="space-y-1.5">
@@ -785,6 +786,12 @@ function ModalRezervace({
                         <span className="font-medium text-gray-900">{r.cena.toLocaleString("cs-CZ")} Kč</span>
                       </div>
                     ))}
+                    {montaz > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Poplatek za montáž <span className="text-gray-400">(≤ 4 dny)</span></span>
+                        <span className="font-medium text-gray-900">500 Kč</span>
+                      </div>
+                    )}
                     <div className="flex justify-between pt-2 border-t border-emerald-200 mt-1">
                       <span className="text-sm font-bold text-gray-700">Celkem</span>
                       <span className="text-base font-bold text-emerald-700">{celkem.toLocaleString("cs-CZ")} Kč</span>

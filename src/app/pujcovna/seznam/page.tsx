@@ -114,9 +114,11 @@ export default function SeznamRezervaci() {
   function celkovaCenaRezervace(r: Rezervace): number | null {
     const pol = polozky.find(p => p.id === r.item_id)
     if (!pol) return null
-    const zakladni = vypocitejCenuPolozky(pol, pocetDni(r.start_date, r.end_date))
+    const dni = pocetDni(r.start_date, r.end_date)
+    const zakladni = vypocitejCenuPolozky(pol, dni)
     if (zakladni === null) return null
     let celkem = zakladni
+    if (pol.category === "Stany" && dni <= 4) celkem += 500
     if (r.group_id) {
       const prisl = rezervace.filter(x => x.group_id === r.group_id && x.id !== r.id)
       for (const pr of prisl) {

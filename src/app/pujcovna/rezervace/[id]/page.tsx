@@ -206,7 +206,8 @@ export default function DetailRezervace() {
     vypocet: p ? vypocitejCenu(p, stupne, pocetDni(r.start_date, r.end_date)) : null,
   }))
   const majakoukolicenu = cenaStan || cenyPrisl.some(c => c.vypocet)
-  const celkem = (cenaStan?.celkem ?? 0) + cenyPrisl.reduce((s, c) => s + (c.vypocet?.celkem ?? 0), 0)
+  const montazPoplatek = polozka.category === "Stany" && dni <= 4 ? 500 : 0
+  const celkem = (cenaStan?.celkem ?? 0) + cenyPrisl.reduce((s, c) => s + (c.vypocet?.celkem ?? 0), 0) + montazPoplatek
 
   return (
     <AppShell module="van">
@@ -379,6 +380,17 @@ export default function DetailRezervace() {
                   </p>
                 </div>
               ))}
+
+              {/* Montáž */}
+              {montazPoplatek > 0 && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Poplatek za montáž</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Zápůjčka ≤ 4 dny</p>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900 shrink-0 ml-4">{formatCena(montazPoplatek)}</p>
+                </div>
+              )}
 
               {/* Celkem */}
               <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
