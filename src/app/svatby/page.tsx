@@ -824,12 +824,12 @@ export default function Home() {
 
           {/* Kalendář */}
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
+            <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--line)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 10px" }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Kalendář</h3>
-              <span style={{ color: "var(--muted)", fontSize: 12.5, marginLeft: 4 }}>6 měsíců</span>
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+              <span style={{ color: "var(--muted)", fontSize: 12.5 }}>6 měsíců</span>
+              <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 10px", fontSize: 10, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
                 {([["předrezervace", "#fbbf24"], ["foto", "#3b82f6"], ["video", "#f43f5e"], ["foto+video", "#f97316"]] as const).map(([label, color]) => (
-                  <span key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span key={label} style={{ display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: "inline-block", flexShrink: 0 }} />
                     {label}
                   </span>
