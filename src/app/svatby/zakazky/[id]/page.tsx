@@ -544,10 +544,10 @@ export default function DetailZakazky() {
 
       {/* ── HERO without photo ── */}
       {!zakazka.foto_url && (
-        <div style={{
+        <div className="mx-4 ipad:mx-8" style={{
           background: "var(--surface)", border: "1px solid var(--line)",
           borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-card)",
-          margin: "24px 32px 0",
+          marginTop: 24,
           overflow: "hidden",
           borderTop: `4px solid ${stavBorderColor}`,
         }}>
@@ -665,7 +665,7 @@ export default function DetailZakazky() {
       )}
 
       {/* ── Main content ── */}
-      <div style={{ padding: "24px 32px 64px" }}>
+      <div className="px-4 ipad:px-8" style={{ paddingTop: 24, paddingBottom: 64 }}>
 
         {/* ── STATUS BAR ── */}
         <div style={{
@@ -803,12 +803,7 @@ export default function DetailZakazky() {
         )}
 
         {/* ── 2-column grid ── */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 340px",
-          gap: 16,
-          alignItems: "start",
-        }}>
+        <div className="grid grid-cols-1 ipad:grid-cols-[1fr_340px]" style={{ gap: 16, alignItems: "start" }}>
 
           {/* ── LEFT COLUMN ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -827,7 +822,7 @@ export default function DetailZakazky() {
                   </a>
                 </div>
               )}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px" }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "12px 24px" }}>
                 <Row label="Nevěsta" value={zakazka.jmeno_nevesty} />
                 <Row label="Ženich" value={zakazka.jmeno_zenicha} />
                 <Row label="Telefon" value={zakazka.zakaznici?.telefon ?? "—"} />
@@ -842,7 +837,7 @@ export default function DetailZakazky() {
 
             {/* Info o svatbě */}
             <SectionCard title="Info o svatbě" accent="#3b82f6">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px" }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "12px 24px" }}>
                 <Row label="Datum svatby" value={formatDatum(zakazka.datum_svatby)} />
                 <Row label="Čas obřadu" value={formatCas(zakazka.cas_obradu)} />
                 <Row label="Čas příjezdu" value={formatCas(zakazka.cas_prijezdu)} />
