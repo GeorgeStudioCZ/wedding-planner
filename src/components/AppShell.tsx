@@ -189,8 +189,8 @@ export default function AppShell({ module, children }: { module: AppModule; chil
       {/* Mobile scrim */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 lg:hidden"
-          style={{ background: "rgba(10,10,14,.45)" }}
+          className="fixed inset-0 lg:hidden"
+          style={{ background: "rgba(10,10,14,.45)", zIndex: 490 }}
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -213,11 +213,11 @@ export default function AppShell({ module, children }: { module: AppModule; chil
       {/* ── Mobile sidebar — fixed + translate ── */}
       <aside
         className={[
-          "flex flex-col shrink-0 h-screen overflow-y-auto z-40 lg:hidden",
+          "flex flex-col shrink-0 h-screen overflow-y-auto lg:hidden",
           "fixed inset-y-0 left-0 transition-transform duration-200",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
-        style={{ width: 248, background: "#0e0f14", borderRight: "1px solid rgba(255,255,255,.05)" }}
+        style={{ width: 248, background: "#0e0f14", borderRight: "1px solid rgba(255,255,255,.05)", zIndex: 500 }}
       >
         {sidebarContent}
       </aside>
@@ -259,10 +259,10 @@ export default function AppShell({ module, children }: { module: AppModule; chil
             <Ico d={I.menu} size={18} />
           </button>
 
-          {/* Search */}
-          <div style={{
+          {/* Search — desktop: full input, mobile: icon only */}
+          <div className="hidden lg:flex" style={{
             flex: 1, maxWidth: 520,
-            display: "flex", alignItems: "center", gap: 8,
+            alignItems: "center", gap: 8,
             background: "white", border: "1px solid var(--line)",
             padding: "8px 12px", borderRadius: 12, color: "var(--muted)",
           }}>
@@ -276,6 +276,11 @@ export default function AppShell({ module, children }: { module: AppModule; chil
               borderRadius: 6, background: "#fafaf7", color: "var(--muted)",
             }}>⌘K</kbd>
           </div>
+          {/* Search icon — mobile only */}
+          <button className="lg:hidden flex items-center justify-center"
+            style={{ width: 36, height: 36, borderRadius: 10, background: "white", border: "1px solid var(--line)", cursor: "pointer", color: "var(--ink-2)", flexShrink: 0 }}>
+            <Ico d={I.search} size={17} />
+          </button>
 
           {/* Right actions */}
           <div className="flex items-center gap-2 ml-auto shrink-0">
@@ -295,16 +300,16 @@ export default function AppShell({ module, children }: { module: AppModule; chil
             </button>
 
             <Link href={ctaHref}
-              className="hidden sm:inline-flex items-center gap-2"
+              className="inline-flex items-center gap-2"
               style={{
-                padding: "8px 14px", borderRadius: 11,
+                padding: "8px 12px", borderRadius: 11,
                 color: "white", textDecoration: "none",
                 fontSize: 13, fontWeight: 500, whiteSpace: "nowrap",
                 background: accent,
                 boxShadow: `0 6px 20px ${accentGlow}`,
               }}>
-              <Ico d={I.plus} size={13} />
-              {ctaLabel}
+              <Ico d={I.plus} size={15} />
+              <span className="hidden sm:inline">{ctaLabel}</span>
             </Link>
 
             {/* Avatar */}
