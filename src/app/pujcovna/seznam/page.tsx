@@ -91,8 +91,12 @@ export default function SeznamRezervaci() {
     nacti()
   }, [])
 
-  // Všechny rezervace bez filtru na kategorii
-  const rezStanu = rezervace
+  // Hlavní rezervace: stany (primary item skupiny) + standalone položky bez group_id
+  const rezStanu = rezervace.filter(r => {
+    if (!r.group_id) return true                          // standalone (Thule, apod.)
+    const pol = polozky.find(p => p.id === r.item_id)
+    return pol?.category === "Stany"                      // jen hlavní stan skupiny
+  })
 
   function stanLabel(itemId: number, unitIndex: number) {
     const p = polozky.find(x => x.id === itemId)
