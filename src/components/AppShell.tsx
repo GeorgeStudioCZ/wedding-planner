@@ -72,7 +72,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
   }
 
   const ctaLabel = module === "wed" ? "Nová zakázka" : module === "van" ? "Nová rezervace" : "Nová aktivita"
-  const ctaHref  = module === "wed" ? "/svatby/zakazky/nova" : module === "van" ? "/pujcovna/kalendar" : "/george"
+  const ctaHref  = module === "wed" ? "/svatby/zakazky/nova" : module === "van" ? "/pujcovna/kalendar?nova=1" : "/george"
   const accent   = module === "wed"
     ? "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))"
     : module === "van"

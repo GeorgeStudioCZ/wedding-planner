@@ -159,6 +159,11 @@ function Pujcovna() {
       if (editId) {
         setDetailPopup({ id: Number(editId), mode: "edit" })
       }
+      // Otevřít formulář nové rezervace pokud přišel ?nova=1
+      if (searchParams.get("nova") === "1") {
+        const dnesStr = new Date().toISOString().slice(0, 10)
+        setModal({ mode: "nova", startDate: dnesStr })
+      }
     }
     nacti()
   }, [])
