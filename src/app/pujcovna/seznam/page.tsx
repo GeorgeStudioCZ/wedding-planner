@@ -91,8 +91,8 @@ export default function SeznamRezervaci() {
     nacti()
   }, [])
 
-  const stanyIds = new Set(polozky.filter(p => p.category === "Stany").map(p => p.id))
-  const rezStanu = rezervace.filter(r => stanyIds.has(r.item_id))
+  // Všechny rezervace bez filtru na kategorii
+  const rezStanu = rezervace
 
   function stanLabel(itemId: number, unitIndex: number) {
     const p = polozky.find(x => x.id === itemId)

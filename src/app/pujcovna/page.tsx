@@ -181,12 +181,14 @@ export default function PujcovnaDashboard() {
   const rezStanu = rezervace.filter(r => stanyIds.has(r.item_id))
 
   const letosRez = rezStanu.filter(r => new Date(r.start_date).getFullYear() === ROK)
-  const rezRezervace = rezStanu.filter(r => r.stav === "rezervace")
-  const cekamPlatbu  = rezStanu.filter(r => r.stav === "cekam-platbu")
-  const zaplaceno   = rezStanu.filter(r => r.stav === "zaplaceno")
-  const vypujceno   = rezStanu.filter(r => r.stav === "vypujceno")
-  const dokonceno   = rezStanu.filter(r => r.stav === "dokonceno")
-  const storno      = rezStanu.filter(r => r.stav === "storno")
+
+  // Všechny rezervace (nejen stany) — pro seznam na dashboardu
+  const rezRezervace = rezervace.filter(r => r.stav === "rezervace")
+  const cekamPlatbu  = rezervace.filter(r => r.stav === "cekam-platbu")
+  const zaplaceno   = rezervace.filter(r => r.stav === "zaplaceno")
+  const vypujceno   = rezervace.filter(r => r.stav === "vypujceno")
+  const dokonceno   = rezervace.filter(r => r.stav === "dokonceno")
+  const storno      = rezervace.filter(r => r.stav === "storno")
 
   const celkemDni = letosRez.reduce((s, r) => s + pocetDni(r.start_date, r.end_date), 0)
   const prumDelka = letosRez.length > 0 ? Math.round(celkemDni / letosRez.length) : 0
@@ -562,9 +564,9 @@ export default function PujcovnaDashboard() {
           </div>
         )}
 
-        {!loading && rezStanu.length === 0 && (
+        {!loading && rezervace.length === 0 && (
           <div style={{ marginTop: 32, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", padding: 32, textAlign: "center", color: "var(--muted)" }}>
-            Žádné rezervace stanů. Přidej první v Kalendáři.
+            Žádné rezervace. Přidej první v Kalendáři.
           </div>
         )}
 
