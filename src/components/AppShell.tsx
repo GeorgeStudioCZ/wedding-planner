@@ -149,7 +149,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
 
       {/* Module switcher */}
       <div style={{
-        margin: "auto 12px 12px",
+        margin: "20px 12px 12px",
         background: "#15161c",
         border: "1px solid rgba(255,255,255,.06)",
         borderRadius: 14, padding: 10,
@@ -190,7 +190,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
       {mobileOpen && (
         <div
           className="fixed inset-0 lg:hidden"
-          style={{ background: "rgba(10,10,14,.45)", zIndex: 490 }}
+          style={{ background: "rgba(10,10,14,.45)", zIndex: 1050 }}
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -217,7 +217,7 @@ export default function AppShell({ module, children }: { module: AppModule; chil
           "fixed inset-y-0 left-0 transition-transform duration-200",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
-        style={{ width: 248, background: "#0e0f14", borderRight: "1px solid rgba(255,255,255,.05)", zIndex: 500 }}
+        style={{ width: 248, background: "#0e0f14", borderRight: "1px solid rgba(255,255,255,.05)", zIndex: 1100 }}
       >
         {sidebarContent}
       </aside>
