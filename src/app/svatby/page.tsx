@@ -284,6 +284,14 @@ export default function Home() {
     setZakazky(prev => prev.map(z => z.id === id ? { ...z, vystup_odevzdan: !aktualniStav } : z))
   }
 
+  async function zmenStav(e: React.ChangeEvent<HTMLSelectElement>, id: string) {
+    e.stopPropagation()
+    const novyStav = e.target.value
+    await supabase.from("zakazky").update({ stav: novyStav }).eq("id", id)
+    await supabase.from("zakazky_historie").insert([{ zakazka_id: id, stav: novyStav }])
+    setZakazky(prev => prev.map(z => z.id === id ? { ...z, stav: novyStav } : z))
+  }
+
   const dnes = new Date()
   dnes.setHours(0, 0, 0, 0)
 
@@ -504,8 +512,23 @@ export default function Home() {
             <p className="font-semibold text-gray-900 flex-1 truncate text-sm">
               {z.jmeno_nevesty || "—"} & {z.jmeno_zenicha || "—"}
             </p>
-            <span className={`text-xs font-medium px-2 py-1 rounded whitespace-nowrap ${stavInfo(z.stav).barva}`}>
-              {stavInfo(z.stav).label}
+            <span onClick={e => e.preventDefault()}>
+              <select
+                value={z.stav}
+                onChange={e => zmenStav(e, z.id)}
+                className="text-xs font-semibold rounded cursor-pointer outline-none"
+                style={{
+                  padding: "3px 6px",
+                  background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
+                  color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
+                  border: "none",
+                  fontFamily: "var(--font-sans)",
+                }}
+              >
+                {STAVY.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -558,10 +581,27 @@ export default function Home() {
           </div>
           {/* 4 · Stav — 118px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ width: 118, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ background: WED_PILL[z.stav]?.bg ?? "#f2f1ec", color: WED_PILL[z.stav]?.color ?? "var(--ink-2)", borderRadius: 6, padding: "4px 9px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", letterSpacing: ".04em", textTransform: "uppercase" }}>
-              {stavInfo(z.stav).label}
-            </span>
+          <div style={{ width: 118, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+            onClick={e => e.preventDefault()}
+          >
+            <select
+              value={z.stav}
+              onChange={e => zmenStav(e, z.id)}
+              style={{
+                background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
+                color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
+                border: `1px solid ${STAV_BORDER[z.stav] ?? "#9ca3af"}`,
+                borderRadius: 6, padding: "4px 8px",
+                fontSize: 11, fontWeight: 700,
+                whiteSpace: "nowrap",
+                cursor: "pointer", outline: "none",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              {STAVY.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
           </div>
           {/* 5 · Cena — 86px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
@@ -638,17 +678,27 @@ export default function Home() {
 
           {/* 5 · Stav — 136 px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-          <div style={{ width: 136, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{
-              background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
-              color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
-              borderRadius: 6, padding: "5px 12px",
-              fontSize: 12, fontWeight: 700,
-              whiteSpace: "nowrap", letterSpacing: ".05em",
-              textTransform: "uppercase",
-            }}>
-              {stavInfo(z.stav).label}
-            </span>
+          <div style={{ width: 136, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+            onClick={e => e.preventDefault()}
+          >
+            <select
+              value={z.stav}
+              onChange={e => zmenStav(e, z.id)}
+              style={{
+                background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
+                color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
+                border: `1px solid ${STAV_BORDER[z.stav] ?? "#9ca3af"}`,
+                borderRadius: 6, padding: "5px 10px",
+                fontSize: 12, fontWeight: 700,
+                whiteSpace: "nowrap",
+                cursor: "pointer", outline: "none",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              {STAVY.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* 6 · Cena — 102 px */}

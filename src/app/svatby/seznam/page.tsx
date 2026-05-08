@@ -150,6 +150,12 @@ export default function SeznamSvateb() {
 
   const celkovaCena = filtered.reduce((s, z) => s + (z.cena || 0), 0)
 
+  async function zmenStav(id: string, novyStav: string) {
+    await supabase.from("zakazky").update({ stav: novyStav }).eq("id", id)
+    await supabase.from("zakazky_historie").insert([{ zakazka_id: id, stav: novyStav }])
+    setZakazky(prev => prev.map(z => z.id === id ? { ...z, stav: novyStav } : z))
+  }
+
   // Pipe — svislý oddělovač
   const Pipe = () => (
     <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
@@ -380,8 +386,24 @@ export default function SeznamSvateb() {
                                   {typLabel(z.typ_sluzby)}
                                 </span>
                               )}
-                              <span style={{ background: WED_PILL[z.stav]?.bg ?? "#f2f1ec", color: WED_PILL[z.stav]?.color ?? "var(--ink-2)", borderRadius: 4, padding: "2px 7px", fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>
-                                {STAV_LABEL[z.stav] ?? z.stav}
+                              <span onClick={e => e.preventDefault()}>
+                                <select
+                                  value={z.stav}
+                                  onChange={e => { e.stopPropagation(); zmenStav(z.id, e.target.value) }}
+                                  style={{
+                                    background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
+                                    color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
+                                    border: "none", borderRadius: 4,
+                                    padding: "2px 6px",
+                                    fontSize: 10.5, fontWeight: 700,
+                                    cursor: "pointer", outline: "none",
+                                    fontFamily: "var(--font-sans)",
+                                  }}
+                                >
+                                  {STAVOVE_FILTRY.filter(f => f.value !== "vse").map(f => (
+                                    <option key={f.value} value={f.value}>{f.label}</option>
+                                  ))}
+                                </select>
                               </span>
                               {z.cena > 0 && (
                                 <span style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
@@ -458,17 +480,28 @@ export default function SeznamSvateb() {
 
                           {/* 5 · Stav */}
                           <Pipe />
-                          <div style={{ width: W.stav, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{
-                              background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
-                              color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
-                              borderRadius: 6, padding: "5px 12px",
-                              fontSize: 12, fontWeight: 700,
-                              whiteSpace: "nowrap", letterSpacing: ".05em",
-                              textTransform: "uppercase",
-                            }}>
-                              {STAV_LABEL[z.stav] ?? z.stav}
-                            </span>
+                          <div
+                            style={{ width: W.stav, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                            onClick={e => e.preventDefault()}
+                          >
+                            <select
+                              value={z.stav}
+                              onChange={e => { e.stopPropagation(); zmenStav(z.id, e.target.value) }}
+                              style={{
+                                background: WED_PILL[z.stav]?.bg ?? "#f2f1ec",
+                                color: WED_PILL[z.stav]?.color ?? "var(--ink-2)",
+                                border: `1px solid ${STAV_BORDER[z.stav] ?? "#9ca3af"}`,
+                                borderRadius: 6, padding: "5px 10px",
+                                fontSize: 12, fontWeight: 700,
+                                whiteSpace: "nowrap",
+                                cursor: "pointer", outline: "none",
+                                fontFamily: "var(--font-sans)",
+                              }}
+                            >
+                              {STAVOVE_FILTRY.filter(f => f.value !== "vse").map(f => (
+                                <option key={f.value} value={f.value}>{f.label}</option>
+                              ))}
+                            </select>
                           </div>
 
                           {/* 6 · Balíček */}
