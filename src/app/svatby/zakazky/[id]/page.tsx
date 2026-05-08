@@ -592,7 +592,41 @@ export default function DetailZakazky() {
               </div>
             </div>
             {/* Action buttons */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
+              {/* Status dropdown */}
+              <select
+                value={stavKey}
+                onChange={e => zmenStav(e.target.value)}
+                style={{
+                  height: 38, padding: "0 10px",
+                  borderRadius: "var(--radius-md)",
+                  border: `1px solid ${stavBorderColor}`,
+                  background: stavPill.bg,
+                  color: stavPill.color,
+                  fontSize: 12.5, fontWeight: 600,
+                  cursor: "pointer", outline: "none",
+                  fontFamily: "var(--font-sans)",
+                }}
+              >
+                {STAV_BTN_LIST.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+              {/* Odevzdat */}
+              <button
+                onClick={toggleOdevzdani}
+                style={{
+                  height: 38, padding: "0 14px",
+                  borderRadius: "var(--radius-md)",
+                  border: zakazka.vystup_odevzdan ? "1px solid #4ade80" : "1px solid #fb923c",
+                  background: zakazka.vystup_odevzdan ? "#e6f7ee" : "#fff2dd",
+                  color: zakazka.vystup_odevzdan ? "#156a3a" : "#8a5a00",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+                  fontFamily: "var(--font-sans)",
+                }}
+              >
+                {zakazka.vystup_odevzdan ? "✓ Odevzdáno" : "Odevzdat"}
+              </button>
               <button
                 onClick={() => router.push(`/svatby/zakazky/${zakazka.id}/edit`)}
                 title="Upravit"
@@ -667,64 +701,44 @@ export default function DetailZakazky() {
       {/* ── Main content ── */}
       <div className="px-4 ipad:px-8" style={{ paddingTop: 24, paddingBottom: 64 }}>
 
-        {/* ── STATUS BAR ── */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6,
-          overflowX: "auto", paddingBottom: 4, marginBottom: 24,
-        }}>
-          {STAV_BTN_LIST.map(s => {
-            const isActive = zakazka.stav === s.value
-            const pill = WED_PILL[s.value] ?? { bg: "var(--surface)", color: "var(--ink-2)" }
-            const bColor = STAV_BORDER[s.value] ?? "#9ca3af"
-            return (
-              <button
-                key={s.value}
-                onClick={() => zmenStav(s.value)}
-                style={{
-                  borderRadius: 99, padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  whiteSpace: "nowrap", flexShrink: 0, border: `1px solid ${isActive ? bColor : "var(--line)"}`,
-                  background: isActive ? pill.bg : "var(--surface)",
-                  color: isActive ? pill.color : "var(--ink-2)",
-                  boxShadow: isActive ? `0 0 0 3px ${bColor}30` : "none",
-                  transition: "all .15s",
-                  fontFamily: "var(--font-sans)",
-                }}
-                onMouseOver={e => {
-                  if (!isActive) e.currentTarget.style.background = "var(--bg)"
-                }}
-                onMouseOut={e => {
-                  if (!isActive) e.currentTarget.style.background = "var(--surface)"
-                }}
-              >
-                {s.label}
-              </button>
-            )
-          })}
-          {/* Odevzdat button */}
-          <button
-            onClick={toggleOdevzdani}
-            style={{
-              marginLeft: "auto", borderRadius: 99, padding: "5px 16px",
-              fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
-              border: zakazka.vystup_odevzdan ? "1px solid #4ade80" : "1px solid #fb923c",
-              background: zakazka.vystup_odevzdan ? "#e6f7ee" : "#fff2dd",
-              color: zakazka.vystup_odevzdan ? "#156a3a" : "#8a5a00",
-              fontFamily: "var(--font-sans)",
-            }}
-            onMouseOver={e => {
-              e.currentTarget.style.opacity = "0.85"
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.opacity = "1"
-            }}
-          >
-            {zakazka.vystup_odevzdan ? "✓ Odevzdáno" : "Odevzdat"}
-          </button>
-        </div>
-
         {/* Photo hero action row (shown when foto_url exists) */}
         {zakazka.foto_url && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+            {/* Status dropdown */}
+            <select
+              value={stavKey}
+              onChange={e => zmenStav(e.target.value)}
+              style={{
+                height: 38, padding: "0 10px",
+                borderRadius: "var(--radius-md)",
+                border: `1px solid ${stavBorderColor}`,
+                background: stavPill.bg,
+                color: stavPill.color,
+                fontSize: 12.5, fontWeight: 600,
+                cursor: "pointer", outline: "none",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              {STAV_BTN_LIST.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+            {/* Odevzdat */}
+            <button
+              onClick={toggleOdevzdani}
+              style={{
+                height: 38, padding: "0 14px",
+                borderRadius: "var(--radius-md)",
+                border: zakazka.vystup_odevzdan ? "1px solid #4ade80" : "1px solid #fb923c",
+                background: zakazka.vystup_odevzdan ? "#e6f7ee" : "#fff2dd",
+                color: zakazka.vystup_odevzdan ? "#156a3a" : "#8a5a00",
+                fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              {zakazka.vystup_odevzdan ? "✓ Odevzdáno" : "Odevzdat"}
+            </button>
+            {/* Edit */}
             <button
               onClick={() => router.push(`/svatby/zakazky/${zakazka.id}/edit`)}
               title="Upravit"
