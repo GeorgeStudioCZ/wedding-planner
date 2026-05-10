@@ -28,6 +28,9 @@ function pocetDni(a: string, b: string) { return Math.round((+new Date(b) - +new
 function formatCena(c: number) { return c.toLocaleString("cs-CZ") + " Kč" }
 function formatDatum(d: string) { return new Date(d).toLocaleDateString("cs-CZ",{day:"numeric",month:"long",year:"numeric"}) }
 function dnesIso() { return new Date().toISOString().slice(0,10) }
+function pridejDen(iso: string) {
+  const d = new Date(iso); d.setDate(d.getDate() + 1); return d.toISOString().slice(0,10)
+}
 
 function barvaPolozky(pol: Polozka): string {
   if (pol.category !== "Stany") return "#10b981"
@@ -350,7 +353,12 @@ export default function RezervacePage() {
                 <label style={lbl}>Vyzvednutí</label>
                 <div style={{position:"relative"}}>
                   <input type="date" value={dateFrom} min={dnesIso()}
-                    onChange={e => { setDateFrom(e.target.value); if (dateTo && e.target.value > dateTo) setDateTo(e.target.value) }}
+                    onChange={e => {
+                    const novy = e.target.value
+                    setDateFrom(novy)
+                    // Vrácení musí být nejdříve den po vyzvednutí
+                    if (novy && (!dateTo || dateTo <= novy)) setDateTo(pridejDen(novy))
+                  }}
                     style={{...inp, color: dateFrom ? "#111827" : "transparent"}} />
                   {!dateFrom && (
                     <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:13,fontSize:14,color:"#9ca3af",pointerEvents:"none",userSelect:"none"}}>
@@ -362,7 +370,7 @@ export default function RezervacePage() {
               <div>
                 <label style={lbl}>Vrácení</label>
                 <div style={{position:"relative"}}>
-                  <input type="date" value={dateTo} min={dateFrom || dnesIso()}
+                  <input type="date" value={dateTo} min={dateFrom ? pridejDen(dateFrom) : pridejDen(dnesIso())}
                     onChange={e => setDateTo(e.target.value)}
                     style={{...inp, color: dateTo ? "#111827" : "transparent"}} />
                   {!dateTo && (
