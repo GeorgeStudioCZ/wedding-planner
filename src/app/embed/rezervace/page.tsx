@@ -33,8 +33,14 @@ function barvaPolozky(pol: Polozka): string {
 function cenaPolozky(pol: Polozka, stupne: Stupen[], dni: number): number | null {
   if (pol.cena_typ === "kusova") return pol.cena_fixni ?? null
   if (pol.cena_typ === "fixni")  return pol.cena_fixni != null ? pol.cena_fixni * dni : null
+  // Přesný tier (dni_od <= dni <= dni_do, nebo dni_do = null = neomezeno)
   const tier = stupne.find(s => s.polozka_id === pol.id && s.dni_od <= dni && (s.dni_do === null || s.dni_do >= dni))
-  return tier ? tier.cena_za_den * dni : null
+  if (tier) return tier.cena_za_den * dni
+  // Záloha: nejvyšší tier jehož dni_od <= dni (pokryje mezery v ceníku)
+  const fallback = stupne
+    .filter(s => s.polozka_id === pol.id && s.dni_od <= dni)
+    .sort((a, b) => b.dni_od - a.dni_od)[0]
+  return fallback ? fallback.cena_za_den * dni : null
 }
 function cenaPopis(pol: Polozka, stupne: Stupen[]): string {
   if (pol.cena_typ === "kusova" && pol.cena_fixni) return formatCena(pol.cena_fixni)
