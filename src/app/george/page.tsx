@@ -563,28 +563,47 @@ export default function GeorgePage() {
               </div>
               {lastTen.map(z => {
                 const kat = kategorie.find(k => k.id === z.kategorie_id)
+                const zak = zakaznici.find(c => c.id === z.zakaznik_id)
+                const zakName = zak
+                  ? (zak.firma?.trim() || `${zak.jmeno} ${zak.prijmeni}`.trim())
+                  : null
                 const dur = formatDuration(z.start_at, z.end_at)
+                const datumStr = new Date(z.start_at).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" })
+                const casOd  = formatTime(z.start_at)
+                const casDo  = z.end_at ? formatTime(z.end_at) : "…"
                 return (
                   <div key={z.id} style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,.03)",
+                    padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.04)",
                   }}>
-                    <span style={{
-                      width: 7, height: 7, borderRadius: 99, flexShrink: 0,
-                      background: kat?.barva ?? "#3a3b44",
-                    }} />
-                    <span style={{
-                      flex: 1, fontSize: 12, color: "#7a7b85",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}>
-                      {z.nazev || "(bez názvu)"}
-                    </span>
-                    <span style={{
-                      fontSize: 11, color: "#4a4b55",
-                      fontVariantNumeric: "tabular-nums", flexShrink: 0,
-                    }}>
-                      {dur}
-                    </span>
+                    {/* Řádek 1: tečka + název + délka */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <span style={{
+                        width: 7, height: 7, borderRadius: 99, flexShrink: 0, marginTop: 1,
+                        background: kat?.barva ?? "#3a3b44",
+                      }} />
+                      <span style={{
+                        flex: 1, fontSize: 12.5, fontWeight: 500, color: "#a9aab5",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
+                        {z.nazev || "(bez názvu)"}
+                      </span>
+                      <span style={{
+                        fontSize: 11, color: "#5a5b66",
+                        fontVariantNumeric: "tabular-nums", flexShrink: 0,
+                      }}>
+                        {dur}
+                      </span>
+                    </div>
+                    {/* Řádek 2: klient */}
+                    {zakName && (
+                      <div style={{ paddingLeft: 14, marginTop: 2, fontSize: 11, color: "#5a5b66", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {zakName}
+                      </div>
+                    )}
+                    {/* Řádek 3: datum a čas */}
+                    <div style={{ paddingLeft: 14, marginTop: 1, fontSize: 10.5, color: "#3e3f4a", fontVariantNumeric: "tabular-nums" }}>
+                      {datumStr} · {casOd} – {casDo}
+                    </div>
                   </div>
                 )
               })}
