@@ -103,7 +103,7 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete }: {
         </div>
         <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 1, display: "flex", gap: 8, flexWrap: "wrap" }}>
           {kat && <span>{kat.name}</span>}
-          {zak && <span>· {zak.jmeno} {zak.prijmeni}</span>}
+          {zak && <span>· {zak.firma?.trim() || `${zak.jmeno} ${zak.prijmeni}`.trim()}</span>}
           <span>· {formatTime(z.start_at)}{z.end_at ? ` – ${formatTime(z.end_at)}` : ""}</span>
         </div>
       </div>
@@ -478,7 +478,9 @@ export default function GeorgePage() {
               >
                 <option value="">— bez zákazníka —</option>
                 {studioZakaznici.map(z => (
-                  <option key={z.id} value={z.id}>{z.jmeno} {z.prijmeni}</option>
+                  <option key={z.id} value={z.id}>
+                    {z.firma?.trim() || `${z.jmeno} ${z.prijmeni}`.trim() || "—"}
+                  </option>
                 ))}
               </select>
             </div>

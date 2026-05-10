@@ -7,12 +7,19 @@ export type Zakaznik = {
   id: number
   jmeno: string
   prijmeni: string
+  firma?: string | null
   ulice: string
   mesto: string
   psc: string
   email: string
   telefon: string
   projekty: string[]
+}
+
+/** Vrátí primární zobrazované jméno — firma pokud je vyplněna, jinak jméno + příjmení */
+export function zakaznikDisplayName(z: Pick<Zakaznik, "jmeno" | "prijmeni" | "firma">) {
+  if (z.firma?.trim()) return z.firma.trim()
+  return [z.jmeno, z.prijmeni].filter(Boolean).join(" ") || "—"
 }
 
 type Props = {
@@ -50,7 +57,7 @@ export function ZakaznikSearch({ onSelect, projekt, accentColor = "rose" }: Prop
       const { data } = await supabase
         .from("zakaznici")
         .select("*")
-        .or(`jmeno.ilike.%${query}%,prijmeni.ilike.%${query}%,telefon.ilike.%${query}%,email.ilike.%${query}%`)
+        .or(`jmeno.ilike.%${query}%,prijmeni.ilike.%${query}%,firma.ilike.%${query}%,telefon.ilike.%${query}%,email.ilike.%${query}%`)
         .limit(8)
       setVysledky(data ?? [])
       setOpen(true)
@@ -68,7 +75,7 @@ export function ZakaznikSearch({ onSelect, projekt, accentColor = "rose" }: Prop
       .single()
     if (data) {
       onSelect(data)
-      setQuery(`${data.jmeno} ${data.prijmeni}`.trim())
+      setQuery(zakaznikDisplayName(data))
     }
     setNovyForm(false)
     setOpen(false)
@@ -99,10 +106,11 @@ export function ZakaznikSearch({ onSelect, projekt, accentColor = "rose" }: Prop
               key={z.id}
               type="button"
               className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors"
-              onClick={() => { onSelect(z); setQuery(`${z.jmeno} ${z.prijmeni}`.trim()); setOpen(false) }}
+              onClick={() => { onSelect(z); setQuery(zakaznikDisplayName(z)); setOpen(false) }}
             >
-              <p className="text-sm font-medium text-gray-900">{z.jmeno} {z.prijmeni}</p>
+              <p className="text-sm font-medium text-gray-900">{zakaznikDisplayName(z)}</p>
               <p className="text-xs text-gray-500 mt-0.5">
+                {z.firma && (z.jmeno || z.prijmeni) ? `${z.jmeno} ${z.prijmeni}`.trim() + " · " : ""}
                 {z.telefon}{z.email ? ` · ${z.email}` : ""}{z.mesto ? ` · ${z.mesto}` : ""}
               </p>
             </button>

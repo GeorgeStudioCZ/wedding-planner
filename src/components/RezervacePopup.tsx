@@ -47,6 +47,7 @@ type ZakaznikData = {
   id: number
   jmeno: string
   prijmeni: string
+  firma?: string | null
   telefon: string
   email: string
 }
@@ -438,7 +439,7 @@ export default function RezervacePopup({
           {/* Zákazník */}
           <div className="rounded-xl border border-gray-100 p-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Zákazník</p>
-            <p className="font-semibold text-gray-900">{zakaznik ? `${zakaznik.jmeno} ${zakaznik.prijmeni}` : rez.customer}</p>
+            <p className="font-semibold text-gray-900">{zakaznik ? (zakaznik.firma?.trim() || `${zakaznik.jmeno} ${zakaznik.prijmeni}`.trim()) : rez.customer}</p>
             {zakaznik?.telefon && <a href={`tel:${zakaznik.telefon}`} className="text-emerald-600 text-sm mt-1 block hover:underline">{zakaznik.telefon}</a>}
             {zakaznik?.email && <a href={`mailto:${zakaznik.email}`} className="text-emerald-600 text-sm block hover:underline">{zakaznik.email}</a>}
           </div>

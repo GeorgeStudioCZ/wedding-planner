@@ -714,7 +714,7 @@ function ModalRezervace({
                   setZakaznikId(z.id)
                   setForm(f => ({
                     ...f,
-                    customer: `${z.jmeno} ${z.prijmeni}`.trim() || f.customer,
+                    customer: z.firma?.trim() || `${z.jmeno} ${z.prijmeni}`.trim() || f.customer,
                   }))
                 }}
               />

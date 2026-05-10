@@ -50,13 +50,22 @@ const GRADIENTS = [
   ["#0ea5e9", "#6366f1"],
   ["#ec4899", "#f43f5e"],
 ]
-function avatarGradient(jmeno: string, prijmeni: string) {
-  const idx = ((jmeno.charCodeAt(0) || 65) + (prijmeni.charCodeAt(0) || 65)) % GRADIENTS.length
+function displayName(z: { jmeno: string; prijmeni: string; firma?: string | null }) {
+  if (z.firma?.trim()) return z.firma.trim()
+  return [z.jmeno, z.prijmeni].filter(Boolean).join(" ") || "—"
+}
+function avatarGradient(z: { jmeno: string; prijmeni: string; firma?: string | null }) {
+  const seed = z.firma?.trim() || (z.jmeno + z.prijmeni)
+  const idx = ((seed.charCodeAt(0) || 65) + (seed.charCodeAt(1) || 65)) % GRADIENTS.length
   const [a, b] = GRADIENTS[idx]
   return `linear-gradient(135deg, ${a}, ${b})`
 }
-function initials(jmeno: string, prijmeni: string) {
-  return ((jmeno[0] ?? "") + (prijmeni[0] ?? "")).toUpperCase() || "?"
+function initials(z: { jmeno: string; prijmeni: string; firma?: string | null }) {
+  if (z.firma?.trim()) {
+    const words = z.firma.trim().split(/\s+/)
+    return ((words[0]?.[0] ?? "") + (words[1]?.[0] ?? "")).toUpperCase() || "?"
+  }
+  return ((z.jmeno[0] ?? "") + (z.prijmeni[0] ?? "")).toUpperCase() || "?"
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -388,19 +397,19 @@ function ZakazníciInner() {
                     <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                       <div style={{
                         width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-                        background: avatarGradient(z.jmeno, z.prijmeni),
+                        background: avatarGradient(z),
                         display: "grid", placeItems: "center",
                         color: "white", fontWeight: 700, fontSize: 14,
                       }}>
-                        {initials(z.jmeno, z.prijmeni)}
+                        {initials(z)}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)", lineHeight: 1.2 }}>
-                          {z.jmeno} {z.prijmeni}
+                          {displayName(z)}
                         </div>
-                        {z.firma && (
+                        {z.firma?.trim() && (z.jmeno || z.prijmeni) && (
                           <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {z.firma}
+                            {z.jmeno} {z.prijmeni}
                           </div>
                         )}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
