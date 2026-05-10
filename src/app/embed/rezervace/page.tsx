@@ -16,7 +16,8 @@ type Stupen = { polozka_id: number; dni_od: number; dni_do: number | null; cena_
 type RezRow  = { id: number; item_id: number; unit_index: number; start_date: string; end_date: string; group_id: string | null }
 type Step    = "vybrat" | "overuji" | "formular" | "odesilam" | "hotovo"
 
-const PRISL_CATS = new Set(["Příčníky","Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
+// Příčníky jsou záměrně vynechány — zobrazují se inline pod přepínačem v sekci Vozidlo
+const PRISL_CATS = new Set(["Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
 const BARVY_STANU: Record<string, string> = { "malý":"#F23753", "střední":"#3477F5", "velký":"#F3940E" }
 const HODINY = Array.from({ length: 14 }, (_,i) => i + 8).map(h => `${h}:00 – ${h+1}:00`)
 
@@ -132,7 +133,8 @@ export default function RezervacePage() {
     polozky.find(p => p.id === selItem) ?? null, [polozky, selItem])
   const jeStany    = selPolozka?.category === "Stany"
   const prislusenstvi = useMemo(() => polozky.filter(p => PRISL_CATS.has(p.category)), [polozky])
-  const katPrisl   = useMemo(() => [...new Set(prislusenstvi.map(p => p.category))], [prislusenstvi])
+  const katPrisl      = useMemo(() => [...new Set(prislusenstvi.map(p => p.category))], [prislusenstvi])
+  const pricnikyItems = useMemo(() => polozky.filter(p => p.category === "Příčníky"), [polozky])
 
   const dni        = dateFrom && dateTo ? pocetDni(dateFrom, dateTo) : 0
   const cenaStan   = selPolozka && dni > 0 ? cenaPolozky(selPolozka, stupne, dni) : null
@@ -494,7 +496,18 @@ export default function RezervacePage() {
                 <label style={lbl}>Příčníky na vozidle *</label>
                 <div style={{display:"flex",gap:8}}>
                   {[{v:"vlastni",l:"Mám vlastní"},{v:"pujcit",l:"Chci půjčit"}].map(o => (
-                    <button key={o.v} type="button" onClick={() => upd("pricniky",o.v)}
+                    <button key={o.v} type="button"
+                      onClick={() => {
+                        upd("pricniky", o.v)
+                        // Přepnutí na "vlastní" — vyčisti případně přidané příčníky
+                        if (o.v === "vlastni") {
+                          setPrisl(prev => {
+                            const next = {...prev}
+                            for (const p of pricnikyItems) delete next[p.id]
+                            return next
+                          })
+                        }
+                      }}
                       style={{
                         flex:1, padding:"9px 6px", borderRadius:9, cursor:"pointer",
                         border: form.pricniky===o.v ? "2px solid #10b981" : "1.5px solid #e5e7eb",
@@ -505,6 +518,38 @@ export default function RezervacePage() {
                       }}>{o.l}</button>
                   ))}
                 </div>
+
+                {/* Inline výběr příčníků — zobrazí se jen když chce půjčit */}
+                {form.pricniky === "pujcit" && pricnikyItems.length > 0 && (
+                  <div style={{marginTop:8,padding:"10px 12px",background:"#f9fafb",borderRadius:9,border:"1px solid #e5e7eb"}}>
+                    <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:".12em",color:"#9ca3af",marginBottom:8}}>
+                      Vyberte typ příčníků
+                    </div>
+                    {pricnikyItems.map(p => {
+                      const vol = p.neomezene ? 999 : (dostupPrisl[p.id] ?? 0)
+                      const vyb = prisl[p.id] ?? 0
+                      const c   = cenaPolozky(p, stupne, dni)
+                      return (
+                        <div key={p.id} style={{display:"flex",alignItems:"center",padding:"7px 0",borderBottom:"1px solid #f3f4f6"}}>
+                          <div style={{flex:1}}>
+                            <span style={{fontSize:13.5,fontWeight:500,color:"#111827"}}>{p.name}</span>
+                            {c !== null && <span style={{fontSize:11.5,color:"#6b7280",marginLeft:8}}>{formatCena(c)}</span>}
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:4}}>
+                            <span style={{fontSize:11,color:"#9ca3af",marginRight:4}}>{p.neomezene?"∞":`${vol} vol.`}</span>
+                            <button type="button" disabled={vyb===0}
+                              onClick={() => setPrisl(prev => ({...prev,[p.id]:Math.max(0,vyb-1)}))}
+                              style={{width:26,height:26,borderRadius:6,border:"1.5px solid #e5e7eb",background:"white",cursor:vyb===0?"default":"pointer",fontSize:15,fontWeight:700,color:"#374151",display:"flex",alignItems:"center",justifyContent:"center",opacity:vyb===0?.4:1}}>−</button>
+                            <span style={{width:20,textAlign:"center",fontSize:14,fontWeight:600,color:"#111827"}}>{vyb}</span>
+                            <button type="button" disabled={!p.neomezene && vyb>=vol}
+                              onClick={() => setPrisl(prev => ({...prev,[p.id]:vyb+1}))}
+                              style={{width:26,height:26,borderRadius:6,border:"1.5px solid #10b981",background:"#f0fdf4",cursor:(!p.neomezene&&vyb>=vol)?"default":"pointer",fontSize:15,fontWeight:700,color:"#10b981",display:"flex",alignItems:"center",justifyContent:"center",opacity:(!p.neomezene&&vyb>=vol)?.4:1}}>+</button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div>
