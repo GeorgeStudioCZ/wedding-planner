@@ -37,6 +37,7 @@ type Rezervace = {
 }
 
 const STAVY = [
+  { value: "web-rezervace", label: "Rezervace · web", barva: "bg-purple-100 text-purple-700" },
   { value: "rezervace",    label: "Rezervace",    barva: "bg-gray-100 text-gray-600" },
   { value: "cekam-platbu", label: "Čekám platbu", barva: "bg-orange-100 text-orange-700" },
   { value: "zaplaceno",    label: "Zaplaceno",    barva: "bg-green-100 text-green-700" },
@@ -50,6 +51,7 @@ function stavInfo(stav: string) {
 }
 
 const STAV_PILL: Record<string, { bg: string; color: string }> = {
+  "web-rezervace": { bg: "#f3e8ff", color: "#7e22ce" },
   "rezervace":    { bg: "#f2f1ec", color: "var(--ink-2)" },
   "cekam-platbu": { bg: "#fff2dd", color: "#8a5a00" },
   "zaplaceno":    { bg: "#e6f7ee", color: "#156a3a" },
@@ -188,6 +190,7 @@ export default function PujcovnaDashboard() {
     const pol = polozky.find(p => p.id === r.item_id)
     return pol?.category === "Stany"
   })
+  const webRezervace = hlavni.filter(r => r.stav === "web-rezervace")
   const rezRezervace = hlavni.filter(r => r.stav === "rezervace")
   const cekamPlatbu  = hlavni.filter(r => r.stav === "cekam-platbu")
   const zaplaceno   = hlavni.filter(r => r.stav === "zaplaceno")
@@ -577,6 +580,7 @@ export default function PujcovnaDashboard() {
 
         {!loading && (
           <div style={{ marginTop: 32 }}>
+            <Blok titulek="Rezervace · web" dot="#a855f7" rezervace={webRezervace} />
             <Blok titulek="Rezervace"    dot="#9ca3af" rezervace={rezRezervace} />
             <Blok titulek="Čekám platbu" dot="#fb923c" rezervace={cekamPlatbu} />
             <Blok titulek="Zaplaceno"    dot="#4ade80" rezervace={zaplaceno} />
