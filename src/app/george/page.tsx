@@ -51,10 +51,18 @@ function formatTime(iso: string) {
 
 function isoDate(iso: string) { return iso.slice(0, 10) }
 
-function isoToLocalInput(iso: string) {
+function isoToDate(iso: string) {
   const d = new Date(iso)
   const pad = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+}
+function isoToTime(iso: string) {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+function localToIso(date: string, time: string) {
+  return new Date(`${date}T${time}`).toISOString()
 }
 
 function dateLabel(iso: string) {
@@ -138,7 +146,7 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit }: {
 }
 
 // ── EditPopup ─────────────────────────────────────────────────────────────────
-type EditForm = { nazev: string; startAt: string; endAt: string; zakaznikId: string; kategorieId: string; poznamka: string }
+type EditForm = { nazev: string; datum: string; casOd: string; casDo: string; zakaznikId: string; kategorieId: string; poznamka: string }
 
 function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
   zaznam: Zaznam; kategorie: Kategorie[]; zakaznici: Zakaznik[]
@@ -147,8 +155,9 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
 }) {
   const [form, setForm] = useState<EditForm>({
     nazev:       zaznam.nazev,
-    startAt:     isoToLocalInput(zaznam.start_at),
-    endAt:       zaznam.end_at ? isoToLocalInput(zaznam.end_at) : "",
+    datum:       isoToDate(zaznam.start_at),
+    casOd:       isoToTime(zaznam.start_at),
+    casDo:       zaznam.end_at ? isoToTime(zaznam.end_at) : "",
     zakaznikId:  zaznam.zakaznik_id  ? String(zaznam.zakaznik_id)  : "",
     kategorieId: zaznam.kategorie_id ? String(zaznam.kategorie_id) : "",
     poznamka:    zaznam.poznamka ?? "",
@@ -158,11 +167,12 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
   const studioZak = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
 
   async function handleSave() {
+    if (!form.datum || !form.casOd) return
     setSaving(true)
     await onSave(zaznam.id, {
       nazev:        form.nazev.trim(),
-      start_at:     new Date(form.startAt).toISOString(),
-      end_at:       form.endAt ? new Date(form.endAt).toISOString() : null,
+      start_at:     localToIso(form.datum, form.casOd),
+      end_at:       form.casDo ? localToIso(form.datum, form.casDo) : null,
       zakaznik_id:  form.zakaznikId  ? Number(form.zakaznikId)  : null,
       kategorie_id: form.kategorieId ? Number(form.kategorieId) : null,
       poznamka:     form.poznamka,
@@ -208,17 +218,21 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
               placeholder="Název úkolu" style={inp} />
           </div>
 
-          {/* Začátek + Konec */}
+          {/* Datum */}
+          <div>
+            <label style={lbl}>Datum</label>
+            <input type="date" value={form.datum} onChange={e => upd({ datum: e.target.value })} style={inp} />
+          </div>
+
+          {/* Čas od | Čas do */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <label style={lbl}>Začátek</label>
-              <input type="datetime-local" value={form.startAt}
-                onChange={e => upd({ startAt: e.target.value })} style={inp} />
+              <label style={lbl}>Čas od</label>
+              <input type="time" value={form.casOd} onChange={e => upd({ casOd: e.target.value })} style={inp} />
             </div>
             <div>
-              <label style={lbl}>Konec</label>
-              <input type="datetime-local" value={form.endAt}
-                onChange={e => upd({ endAt: e.target.value })} style={inp} />
+              <label style={lbl}>Čas do</label>
+              <input type="time" value={form.casDo} onChange={e => upd({ casDo: e.target.value })} style={inp} />
             </div>
           </div>
 
@@ -256,12 +270,12 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
 
           {/* Buttons */}
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <button onClick={handleSave} disabled={saving} style={{
+            <button onClick={handleSave} disabled={saving || !form.datum || !form.casOd} style={{
               flex: 1, padding: "10px", borderRadius: 9, border: "none",
               cursor: saving ? "default" : "pointer",
               background: "linear-gradient(135deg, #6366f1, #f97316)",
               color: "white", fontSize: 14, fontWeight: 600,
-              opacity: saving ? .6 : 1, transition: "opacity .15s",
+              opacity: saving || !form.datum || !form.casOd ? .5 : 1, transition: "opacity .15s",
             }}>
               {saving ? "Ukládám…" : "Uložit"}
             </button>
