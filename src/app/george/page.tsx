@@ -165,9 +165,10 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
   const [saving, setSaving] = useState(false)
 
   const studioZak = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
+  const casDoInvalid = !!form.casDo && !!form.casOd && form.casDo <= form.casOd
 
   async function handleSave() {
-    if (!form.datum || !form.casOd) return
+    if (!form.datum || !form.casOd || casDoInvalid) return
     setSaving(true)
     await onSave(zaznam.id, {
       nazev:        form.nazev.trim(),
@@ -232,7 +233,13 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
             </div>
             <div>
               <label style={lbl}>Čas do</label>
-              <input type="time" value={form.casDo} onChange={e => upd({ casDo: e.target.value })} style={inp} />
+              <input type="time" value={form.casDo} onChange={e => upd({ casDo: e.target.value })}
+                style={{ ...inp, borderColor: casDoInvalid ? "#ef4444" : "#e5e7eb" }} />
+              {casDoInvalid && (
+                <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "#ef4444" }}>
+                  Čas do musí být pozdější než čas od
+                </p>
+              )}
             </div>
           </div>
 
@@ -270,12 +277,12 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
 
           {/* Buttons */}
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <button onClick={handleSave} disabled={saving || !form.datum || !form.casOd} style={{
+            <button onClick={handleSave} disabled={saving || !form.datum || !form.casOd || casDoInvalid} style={{
               flex: 1, padding: "10px", borderRadius: 9, border: "none",
               cursor: saving ? "default" : "pointer",
               background: "linear-gradient(135deg, #6366f1, #f97316)",
               color: "white", fontSize: 14, fontWeight: 600,
-              opacity: saving || !form.datum || !form.casOd ? .5 : 1, transition: "opacity .15s",
+              opacity: saving || !form.datum || !form.casOd || casDoInvalid ? .5 : 1, transition: "opacity .15s",
             }}>
               {saving ? "Ukládám…" : "Uložit"}
             </button>
