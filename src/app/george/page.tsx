@@ -51,6 +51,12 @@ function formatTime(iso: string) {
 
 function isoDate(iso: string) { return iso.slice(0, 10) }
 
+function isoToLocalInput(iso: string) {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function dateLabel(iso: string) {
   const d = new Date(iso)
   const today     = new Date()
@@ -83,16 +89,24 @@ const IC = {
   pause: ["M6 4h4v16H6z", "M14 4h4v16h-4z"],
   clock: ["M12 22a10 10 0 100-20 10 10 0 000 20z", "M12 6v6l4 2"],
   trash: ["M3 6h18", "M8 6V4h8v2", "M19 6l-1 14H6L5 6"],
+  edit:  ["M12 20h9", "M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"],
+  close: "M18 6L6 18M6 6l12 12",
 }
 
 // ── ZaznamRadek ───────────────────────────────────────────────────────────────
-function ZaznamRadek({ z, kategorie, zakaznici, onDelete }: {
-  z: Zaznam; kategorie: Kategorie[]; zakaznici: Zakaznik[]; onDelete: (id: number) => void
+function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit }: {
+  z: Zaznam; kategorie: Kategorie[]; zakaznici: Zakaznik[]
+  onDelete: (id: number) => void; onEdit: (z: Zaznam) => void
 }) {
   const kat      = kategorie.find(k => k.id === z.kategorie_id)
   const zak      = zakaznici.find(c => c.id === z.zakaznik_id)
   const earnings = calcEarnings(z, kategorie)
   const dur      = z.end_at ? formatDuration(z.start_at, z.end_at) : null
+
+  const iconBtn: React.CSSProperties = {
+    color: "var(--muted)", background: "none", border: "none",
+    cursor: "pointer", padding: "4px", borderRadius: 6, flexShrink: 0,
+  }
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
@@ -113,10 +127,153 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete }: {
           {earnings > 0 && <div style={{ fontSize: 11, color: "#4338ca", marginTop: 1 }}>{earnings.toLocaleString("cs-CZ")} Kč</div>}
         </div>
       )}
-      <button onClick={() => onDelete(z.id)}
-        style={{ color: "var(--muted)", background: "none", border: "none", cursor: "pointer", padding: "4px", borderRadius: 6, flexShrink: 0 }}>
+      <button onClick={() => onEdit(z)} style={iconBtn} title="Upravit">
+        <Ico d={IC.edit} size={14} />
+      </button>
+      <button onClick={() => onDelete(z.id)} style={iconBtn} title="Smazat">
         <Ico d={IC.trash} size={14} />
       </button>
+    </div>
+  )
+}
+
+// ── EditPopup ─────────────────────────────────────────────────────────────────
+type EditForm = { nazev: string; startAt: string; endAt: string; zakaznikId: string; kategorieId: string; poznamka: string }
+
+function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
+  zaznam: Zaznam; kategorie: Kategorie[]; zakaznici: Zakaznik[]
+  onSave: (id: number, updates: Partial<Zaznam>) => Promise<void>
+  onClose: () => void
+}) {
+  const [form, setForm] = useState<EditForm>({
+    nazev:       zaznam.nazev,
+    startAt:     isoToLocalInput(zaznam.start_at),
+    endAt:       zaznam.end_at ? isoToLocalInput(zaznam.end_at) : "",
+    zakaznikId:  zaznam.zakaznik_id  ? String(zaznam.zakaznik_id)  : "",
+    kategorieId: zaznam.kategorie_id ? String(zaznam.kategorie_id) : "",
+    poznamka:    zaznam.poznamka ?? "",
+  })
+  const [saving, setSaving] = useState(false)
+
+  const studioZak = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
+
+  async function handleSave() {
+    setSaving(true)
+    await onSave(zaznam.id, {
+      nazev:        form.nazev.trim(),
+      start_at:     new Date(form.startAt).toISOString(),
+      end_at:       form.endAt ? new Date(form.endAt).toISOString() : null,
+      zakaznik_id:  form.zakaznikId  ? Number(form.zakaznikId)  : null,
+      kategorie_id: form.kategorieId ? Number(form.kategorieId) : null,
+      poznamka:     form.poznamka,
+    })
+    setSaving(false)
+  }
+
+  function upd(patch: Partial<EditForm>) { setForm(prev => ({ ...prev, ...patch })) }
+
+  const lbl: React.CSSProperties = { fontSize: 12, color: "#6b7280", display: "block", marginBottom: 4, fontWeight: 500 }
+  const inp: React.CSSProperties = {
+    width: "100%", boxSizing: "border-box", padding: "8px 11px",
+    borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13.5,
+    color: "#111827", outline: "none", fontFamily: "var(--font-sans)", background: "white",
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.55)",
+      zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
+    }} onClick={onClose}>
+      <div style={{
+        background: "white", borderRadius: 18, padding: "24px 26px",
+        width: "min(500px, calc(100vw - 32px))",
+        boxShadow: "0 24px 64px rgba(0,0,0,.3)",
+        maxHeight: "calc(100vh - 60px)", overflowY: "auto",
+      }} onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 16.5, fontWeight: 700, color: "#111827" }}>Upravit záznam</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4, lineHeight: 1 }}>
+            <Ico d={IC.close} size={18} />
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {/* Název */}
+          <div>
+            <label style={lbl}>Název úkolu</label>
+            <input value={form.nazev} onChange={e => upd({ nazev: e.target.value })}
+              placeholder="Název úkolu" style={inp} />
+          </div>
+
+          {/* Začátek + Konec */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={lbl}>Začátek</label>
+              <input type="datetime-local" value={form.startAt}
+                onChange={e => upd({ startAt: e.target.value })} style={inp} />
+            </div>
+            <div>
+              <label style={lbl}>Konec</label>
+              <input type="datetime-local" value={form.endAt}
+                onChange={e => upd({ endAt: e.target.value })} style={inp} />
+            </div>
+          </div>
+
+          {/* Zákazník */}
+          <div>
+            <label style={lbl}>Zákazník</label>
+            <select value={form.zakaznikId} onChange={e => upd({ zakaznikId: e.target.value })} style={inp}>
+              <option value="">— bez zákazníka —</option>
+              {studioZak.map(z => (
+                <option key={z.id} value={z.id}>
+                  {z.firma?.trim() || `${z.jmeno} ${z.prijmeni}`.trim() || "—"}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Kategorie */}
+          <div>
+            <label style={lbl}>Kategorie</label>
+            <select value={form.kategorieId} onChange={e => upd({ kategorieId: e.target.value })} style={inp}>
+              <option value="">— bez kategorie —</option>
+              {kategorie.map(k => (
+                <option key={k.id} value={k.id}>{k.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Poznámka */}
+          <div>
+            <label style={lbl}>Poznámka</label>
+            <textarea value={form.poznamka} onChange={e => upd({ poznamka: e.target.value })}
+              placeholder="Volitelná poznámka…" rows={3}
+              style={{ ...inp, resize: "vertical" as const, lineHeight: 1.5 }} />
+          </div>
+
+          {/* Buttons */}
+          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+            <button onClick={handleSave} disabled={saving} style={{
+              flex: 1, padding: "10px", borderRadius: 9, border: "none",
+              cursor: saving ? "default" : "pointer",
+              background: "linear-gradient(135deg, #6366f1, #f97316)",
+              color: "white", fontSize: 14, fontWeight: 600,
+              opacity: saving ? .6 : 1, transition: "opacity .15s",
+            }}>
+              {saving ? "Ukládám…" : "Uložit"}
+            </button>
+            <button onClick={onClose} style={{
+              padding: "10px 20px", borderRadius: 9, border: "1px solid #e5e7eb",
+              background: "white", color: "#6b7280", fontSize: 14, fontWeight: 500, cursor: "pointer",
+            }}>
+              Zrušit
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -135,6 +292,9 @@ export default function GeorgePage() {
   const intervalRef    = useRef<ReturnType<typeof setInterval> | null>(null)
   const pauseOffsetRef = useRef(0)           // accumulated paused ms
   const pausedAtRef    = useRef<number | null>(null)  // when current pause started
+
+  // Edit popup
+  const [editingZaznam, setEditingZaznam] = useState<Zaznam | null>(null)
 
   // Form
   const [nazev,       setNazev]       = useState("")
@@ -248,6 +408,16 @@ export default function GeorgePage() {
     }
   }
 
+  async function handleSaveEdit(id: number, updates: Partial<Zaznam>) {
+    const db = createClient()
+    const { data, error } = await db.from("george_zaznamy").update(updates).eq("id", id).select().single()
+    if (!error && data) {
+      setZaznamy(prev => prev.map(z => z.id === data.id ? data : z))
+      if (running?.id === data.id) setRunning(data)
+    }
+    setEditingZaznam(null)
+  }
+
   async function handleDelete(id: number) {
     const db = createClient()
     await db.from("george_zaznamy").delete().eq("id", id)
@@ -339,7 +509,8 @@ export default function GeorgePage() {
                     </span>
                   </div>
                   {g.items.map(z => (
-                    <ZaznamRadek key={z.id} z={z} kategorie={kategorie} zakaznici={zakaznici} onDelete={handleDelete} />
+                    <ZaznamRadek key={z.id} z={z} kategorie={kategorie} zakaznici={zakaznici}
+                      onDelete={handleDelete} onEdit={setEditingZaznam} />
                   ))}
                 </div>
               )
@@ -575,7 +746,7 @@ export default function GeorgePage() {
                   <div key={z.id} style={{
                     padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.04)",
                   }}>
-                    {/* Řádek 1: tečka + název + délka */}
+                    {/* Řádek 1: tečka + název + délka + edit */}
                     <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                       <span style={{
                         width: 7, height: 7, borderRadius: 99, flexShrink: 0, marginTop: 1,
@@ -593,6 +764,16 @@ export default function GeorgePage() {
                       }}>
                         {dur}
                       </span>
+                      <button onClick={() => setEditingZaznam(z)} title="Upravit" style={{
+                        background: "none", border: "none", cursor: "pointer", padding: "2px 3px",
+                        color: "#3a3b44", borderRadius: 4, flexShrink: 0, lineHeight: 1,
+                        transition: "color .15s",
+                      }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "#818cf8")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "#3a3b44")}
+                      >
+                        <Ico d={IC.edit} size={12} />
+                      </button>
                     </div>
                     {/* Řádek 2: klient */}
                     {zakName && (
@@ -612,6 +793,17 @@ export default function GeorgePage() {
 
         </div>{/* end right panel */}
       </div>
+
+      {/* ── Edit popup ────────────────────────────────────────────────── */}
+      {editingZaznam && (
+        <EditPopup
+          zaznam={editingZaznam}
+          kategorie={kategorie}
+          zakaznici={zakaznici}
+          onSave={handleSaveEdit}
+          onClose={() => setEditingZaznam(null)}
+        />
+      )}
 
       <style>{`
         @keyframes pulse {
