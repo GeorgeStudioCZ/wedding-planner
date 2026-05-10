@@ -345,17 +345,32 @@ export default function RezervacePage() {
         {selItem && (
           <div style={card}>
             <SecTitle>3. Termín</SecTitle>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
               <div>
                 <label style={lbl}>Vyzvednutí</label>
-                <input type="date" value={dateFrom} min={dnesIso()}
-                  onChange={e => { setDateFrom(e.target.value); if (dateTo && e.target.value > dateTo) setDateTo(e.target.value) }}
-                  style={inp} />
+                <div style={{position:"relative"}}>
+                  <input type="date" value={dateFrom} min={dnesIso()}
+                    onChange={e => { setDateFrom(e.target.value); if (dateTo && e.target.value > dateTo) setDateTo(e.target.value) }}
+                    style={{...inp, color: dateFrom ? "#111827" : "transparent"}} />
+                  {!dateFrom && (
+                    <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:13,fontSize:14,color:"#9ca3af",pointerEvents:"none",userSelect:"none"}}>
+                      dd.mm.rrrr
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label style={lbl}>Vrácení</label>
-                <input type="date" value={dateTo} min={dateFrom || dnesIso()}
-                  onChange={e => setDateTo(e.target.value)} style={inp} />
+                <div style={{position:"relative"}}>
+                  <input type="date" value={dateTo} min={dateFrom || dnesIso()}
+                    onChange={e => setDateTo(e.target.value)}
+                    style={{...inp, color: dateTo ? "#111827" : "transparent"}} />
+                  {!dateTo && (
+                    <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:13,fontSize:14,color:"#9ca3af",pointerEvents:"none",userSelect:"none"}}>
+                      dd.mm.rrrr
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
