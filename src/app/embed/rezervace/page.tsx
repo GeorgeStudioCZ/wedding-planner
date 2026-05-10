@@ -16,8 +16,10 @@ type Stupen = { polozka_id: number; dni_od: number; dni_do: number | null; cena_
 type RezRow  = { id: number; item_id: number; unit_index: number; start_date: string; end_date: string; group_id: string | null }
 type Step    = "vybrat" | "overuji" | "formular" | "odesilam" | "hotovo"
 
-// Příčníky jsou záměrně vynechány — zobrazují se inline pod přepínačem v sekci Vozidlo
+// PRISL_CATS = kategorie příslušenství zobrazené v sekci Příslušenství
 const PRISL_CATS = new Set(["Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
+// NOT_MAIN_CATS = všechny kategorie které NEJSOU samostatně půjčitelné (příslušenství + příčníky)
+const NOT_MAIN_CATS = new Set([...PRISL_CATS, "Příčníky"])
 const BARVY_STANU: Record<string, string> = { "malý":"#F23753", "střední":"#3477F5", "velký":"#F3940E" }
 const HODINY = Array.from({ length: 14 }, (_,i) => i + 8).map(h => `${h}:00 – ${h+1}:00`)
 
@@ -125,7 +127,7 @@ export default function RezervacePage() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const mainKats   = useMemo(() =>
-    [...new Set(polozky.filter(p => !PRISL_CATS.has(p.category)).map(p => p.category))],
+    [...new Set(polozky.filter(p => !NOT_MAIN_CATS.has(p.category)).map(p => p.category))],
     [polozky])
   const itemyKat   = useMemo(() =>
     selCat ? polozky.filter(p => p.category === selCat) : [], [polozky, selCat])
@@ -185,7 +187,8 @@ export default function RezervacePage() {
     }
     if (jeStany) {
       const dp: Record<number,number> = {}
-      for (const p of prislusenstvi)
+      // Příslušenství + příčníky (ty se zobrazují inline, ale taky potřebují dostupnost)
+      for (const p of [...prislusenstvi, ...pricnikyItems])
         dp[p.id] = volnych(p.id, p.unit_num, p.neomezene, dateFrom, dateTo, rez)
       setDostupPrisl(dp)
     }
