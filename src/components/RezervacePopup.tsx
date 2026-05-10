@@ -61,6 +61,7 @@ type HistorieZaznam = {
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const STAVY = [
+  { value: "web-rezervace", label: "Rezervace · web", barva: "bg-purple-100 text-purple-700" },
   { value: "rezervace",    label: "Rezervace",    barva: "bg-gray-100 text-gray-600" },
   { value: "cekam-platbu", label: "Čekám platbu", barva: "bg-orange-100 text-orange-700" },
   { value: "zaplaceno",    label: "Zaplaceno",    barva: "bg-green-100 text-green-700" },
