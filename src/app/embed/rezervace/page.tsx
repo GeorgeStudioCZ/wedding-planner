@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 
+// Poznámka: pujcovna_ceny_stupne má RLS — načítáme přes API route která má service role key
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Polozka = {
   id: number; name: string; category: string
@@ -154,14 +156,14 @@ export default function RezervacePage() {
 
   // ── Load ───────────────────────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([
-      supabase.from("pujcovna_polozky").select("*").order("sort_order"),
-      supabase.from("pujcovna_ceny_stupne").select("*"),
-    ]).then(([{data:pol},{data:st}]) => {
-      setPolozky(pol ?? [])
-      setStupne(st ?? [])
-      setLoading(false)
-    })
+    // Ceník načítáme přes API route (má service role key, obchází RLS)
+    fetch("/api/pujcovna/cenik")
+      .then(r => r.json())
+      .then(({ polozky: pol, stupne: st }) => {
+        setPolozky(pol ?? [])
+        setStupne(st ?? [])
+        setLoading(false)
+      })
   }, [])
 
   // ── Ověřit dostupnost ──────────────────────────────────────────────────────
