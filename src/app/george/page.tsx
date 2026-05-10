@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Zakaznik = { id: number; jmeno: string; prijmeni: string; projekty: string[] | null }
+type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
 type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number }
 type Zaznam = {
   id: number
@@ -155,10 +155,12 @@ export default function GeorgePage() {
     if (g) g.items.push(z); else grouped.push({ date: d, items: [z] })
   }
 
-  // Studio-only customers
-  const studioZakaznici = zakaznici.filter(z =>
-    Array.isArray(z.projekty) && z.projekty.includes("Studio")
-  )
+  // Studio-only customers (projekty může být array nebo JSON string)
+  const studioZakaznici = zakaznici.filter(z => {
+    if (!z.projekty) return false
+    const p = Array.isArray(z.projekty) ? z.projekty : []
+    return p.includes("Studio")
+  })
 
   // SVG ring — 1 revolution = 1 hour
   const ringProgress = running ? Math.min((elapsed % 3_600_000) / 3_600_000, 1) : 0
@@ -170,7 +172,7 @@ export default function GeorgePage() {
   // ── Data load ──────────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     const [{ data: zak }, { data: kat }, { data: zzn }] = await Promise.all([
-      supabase.from("zakaznici").select("id, jmeno, prijmeni, projekty").order("prijmeni"),
+      supabase.from("zakaznici").select("id, jmeno, prijmeni, firma, projekty").order("prijmeni"),
       supabase.from("george_kategorie").select("*").order("sort_order"),
       supabase.from("george_zaznamy").select("*").order("start_at", { ascending: false }).limit(200),
     ])
