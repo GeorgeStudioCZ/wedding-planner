@@ -93,9 +93,10 @@ export default function RezervacePage() {
   const [polozky,  setPolozky]  = useState<Polozka[]>([])
   const [stupne,   setStupne]   = useState<Stupen[]>([])
   const [vsechRez, setVsechRez] = useState<RezRow[]>([])
-  const [loading,  setLoading]  = useState(true)
-  const [step,     setStep]     = useState<Step>("vybrat")
-  const [chyba,    setChyba]    = useState<string | null>(null)
+  const [loading,      setLoading]      = useState(true)
+  const [step,         setStep]         = useState<Step>("vybrat")
+  const [chyba,        setChyba]        = useState<string | null>(null)
+  const [alternativy,  setAlternativy]  = useState<Polozka[]>([])
 
   // Krok 1
   const [selCat,  setSelCat]  = useState<string | null>(null)
@@ -175,20 +176,37 @@ export default function RezervacePage() {
   }, [])
 
   // ── Ověřit dostupnost ──────────────────────────────────────────────────────
-  async function overitDostupnost() {
-    if (!selItem || !dateFrom || !dateTo) { setChyba("Vyberte položku a termín."); return }
+  async function overitDostupnost(itemIdOverride?: number) {
+    const targetId = itemIdOverride ?? selItem
+    if (!targetId || !dateFrom || !dateTo) { setChyba("Vyberte položku a termín."); return }
     if (dateFrom > dateTo) { setChyba("Datum vrácení musí být stejné nebo pozdější než vyzvednutí."); return }
     setChyba(null)
+    setAlternativy([])
     setStep("overuji")
     const { data } = await supabase.from("pujcovna_rezervace")
       .select("id,item_id,unit_index,start_date,end_date,group_id")
     const rez = (data ?? []) as RezRow[]
     setVsechRez(rez)
-    const pol = polozky.find(p => p.id === selItem)!
+    const pol = polozky.find(p => p.id === targetId)!
     if (volnych(pol.id, pol.unit_num, pol.neomezene, dateFrom, dateTo, rez) === 0) {
-      setChyba("Tato položka není v daném termínu dostupná. Zkuste jiný termín.")
+      // Hledej alternativní stany ve stejném termínu
+      const jeStan = pol.category === "Stany"
+      const dostupneAlternativy = jeStan
+        ? polozky.filter(p =>
+            p.category === "Stany" &&
+            p.id !== targetId &&
+            volnych(p.id, p.unit_num, p.neomezene, dateFrom, dateTo, rez) > 0
+          )
+        : []
+      setAlternativy(dostupneAlternativy)
+      setChyba(
+        dostupneAlternativy.length > 0
+          ? `${pol.name} není v tomto termínu k dispozici.`
+          : "Tato položka není v daném termínu dostupná. Zkuste jiný termín."
+      )
       setStep("vybrat"); return
     }
+    if (itemIdOverride) setSelItem(itemIdOverride)
     if (jeStany) {
       const dp: Record<number,number> = {}
       // Příslušenství + příčníky (ty se zobrazují inline, ale taky potřebují dostupnost)
@@ -304,7 +322,7 @@ export default function RezervacePage() {
           <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(mainKats.length,3)},1fr)`,gap:8}}>
             {mainKats.map(cat => (
               <button key={cat} type="button"
-                onClick={() => { setSelCat(cat); setSelItem(null) }}
+                onClick={() => { setSelCat(cat); setSelItem(null); setChyba(null); setAlternativy([]) }}
                 style={{
                   padding:"13px 8px", borderRadius:10, cursor:"pointer", textAlign:"center",
                   border: selCat===cat ? "2px solid #10b981" : "2px solid #e5e7eb",
@@ -325,7 +343,7 @@ export default function RezervacePage() {
               {itemyKat.map(pol => {
                 const active = selItem === pol.id
                 return (
-                  <button key={pol.id} type="button" onClick={() => setSelItem(pol.id)}
+                  <button key={pol.id} type="button" onClick={() => { setSelItem(pol.id); setChyba(null); setAlternativy([]) }}
                     style={{
                       padding:"12px 14px", borderRadius:10, cursor:"pointer",
                       border: active ? "2px solid #10b981" : "2px solid #e5e7eb",
@@ -430,16 +448,51 @@ export default function RezervacePage() {
           </div>
         )}
 
-        {/* Chyba */}
+        {/* Chyba + alternativy */}
         {chyba && (
-          <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:9,padding:"11px 14px",marginBottom:12,color:"#dc2626",fontSize:13}}>
-            {chyba}
+          <div style={{marginBottom:12}}>
+            <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:9,padding:"11px 14px",color:"#dc2626",fontSize:13,marginBottom: alternativy.length > 0 ? 10 : 0}}>
+              {chyba}
+            </div>
+
+            {alternativy.length > 0 && (
+              <div style={{background:"#fffbeb",border:"1.5px solid #fde68a",borderRadius:9,padding:"12px 14px"}}>
+                <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:".1em",color:"#92400e",marginBottom:10}}>
+                  Ve Vašem termínu je k dispozici:
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {alternativy.map(alt => (
+                    <button key={alt.id} type="button"
+                      onClick={() => {
+                        setSelItem(alt.id)
+                        setChyba(null)
+                        setAlternativy([])
+                        overitDostupnost(alt.id)
+                      }}
+                      style={{
+                        display:"flex", alignItems:"center", justifyContent:"space-between",
+                        padding:"10px 13px", borderRadius:9, cursor:"pointer",
+                        border:"1.5px solid #10b981", background:"#f0fdf4",
+                        textAlign:"left", transition:"all .15s",
+                      }}>
+                      <div>
+                        <div style={{fontSize:14,fontWeight:600,color:"#065f46"}}>{alt.name}</div>
+                        <div style={{fontSize:12,color:"#6b7280",marginTop:1}}>{cenaPopis(alt, stupne)}</div>
+                      </div>
+                      <span style={{fontSize:13,fontWeight:700,color:"#10b981",flexShrink:0,marginLeft:10}}>
+                        Vybrat →
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* CTA */}
         {selItem && dateFrom && dateTo && (
-          <button onClick={overitDostupnost} disabled={step==="overuji"}
+          <button onClick={() => overitDostupnost()} disabled={step==="overuji"}
             style={{
               width:"100%", padding:"13px", borderRadius:12, border:"none",
               background: step==="overuji" ? "#d1fae5" : "#10b981",
