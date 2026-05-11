@@ -22,6 +22,14 @@ const PRISL_CATS = new Set(["Markýzy","Sedátka","Napájení","Ledničky","Redu
 // NOT_MAIN_CATS = všechny kategorie které NEJSOU samostatně půjčitelné (příslušenství + příčníky)
 const NOT_MAIN_CATS = new Set([...PRISL_CATS, "Příčníky"])
 const BARVY_STANU: Record<string, string> = { "malý":"#F23753", "střední":"#3477F5", "velký":"#F3940E" }
+
+// Virtuální kategorie Držáky kol — dvě varianty, obě odkazují na stejný produkt Thule
+const DRZAK_KAT       = "Držáky kol"
+const DRZAK_THULE_NAME = "Držák kol Thule"
+const DRZAK_VARIANTY  = [
+  { label: "Držák pro 3 kola", pocetKol: 3 },
+  { label: "Držák pro 4 kola", pocetKol: 4 },
+]
 const HODINY = Array.from({ length: 14 }, (_,i) => i + 8).map(h => `${h}:00 – ${h+1}:00`)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -97,6 +105,7 @@ export default function RezervacePage() {
   const [step,         setStep]         = useState<Step>("vybrat")
   const [chyba,        setChyba]        = useState<string | null>(null)
   const [alternativy,  setAlternativy]  = useState<Polozka[]>([])
+  const [drzakVariant, setDrzakVariant] = useState<string | null>(null)
 
   // Krok 1
   const [selCat,  setSelCat]  = useState<string | null>(null)
@@ -131,9 +140,11 @@ export default function RezervacePage() {
   }, [step])
 
   // ── Derived ────────────────────────────────────────────────────────────────
-  const mainKats   = useMemo(() =>
-    [...new Set(polozky.filter(p => !NOT_MAIN_CATS.has(p.category)).map(p => p.category))],
-    [polozky])
+  const mainKats   = useMemo(() => {
+    const fromDb = [...new Set(polozky.filter(p => !NOT_MAIN_CATS.has(p.category)).map(p => p.category))]
+    const hasDrzak = polozky.some(p => p.name === DRZAK_THULE_NAME)
+    return hasDrzak ? [...fromDb, DRZAK_KAT] : fromDb
+  }, [polozky])
   const itemyKat   = useMemo(() =>
     selCat ? polozky.filter(p => p.category === selCat) : [], [polozky, selCat])
   const selPolozka = useMemo(() =>
@@ -158,8 +169,10 @@ export default function RezervacePage() {
     [prisl, polozky, stupne, dni])
 
   const celkem     = (cenaStan ?? 0) + prislRadky.reduce((s,r) => s + (r.cena ?? 0) * r.cnt, 0) + montazPopl
+  const thulePolozka = useMemo(() => polozky.find(p => p.name === DRZAK_THULE_NAME) ?? null, [polozky])
+  // Příčníky jsou povinné jen pro stany
   const canSubmit  = !!(form.jmeno && form.prijmeni && form.email && form.telefon &&
-    form.vozidlo && form.pricniky && form.cas_vyzvednuti && form.cas_vraceni && gdpr && pujcRad)
+    form.vozidlo && (jeStany ? form.pricniky : true) && form.cas_vyzvednuti && form.cas_vraceni && gdpr && pujcRad)
 
   function upd(k: string, v: string) { setForm(f => ({...f, [k]: v})) }
 
@@ -252,7 +265,8 @@ export default function RezervacePage() {
     const { data: mainRez } = await supabase.from("pujcovna_rezervace").insert({
       item_id:selPolozka.id, unit_index:mainUnit, customer,
       start_date:dateFrom, end_date:dateTo, color:barvaPolozky(selPolozka),
-      notes:form.poznamka, group_id:groupId, zakaznik_id:zakaznikId,
+      notes:[form.poznamka, drzakVariant ? `Varianta: ${drzakVariant}` : ""].filter(Boolean).join("\n"),
+      group_id:groupId, zakaznik_id:zakaznikId,
       vozidlo:form.vozidlo, cas_vyzvednuti:form.cas_vyzvednuti,
       cas_vraceni:form.cas_vraceni, pricniky:form.pricniky, stav:"web-rezervace",
     }).select("id").single()
@@ -322,7 +336,7 @@ export default function RezervacePage() {
           <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(mainKats.length,3)},1fr)`,gap:8}}>
             {mainKats.map(cat => (
               <button key={cat} type="button"
-                onClick={() => { setSelCat(cat); setSelItem(null); setChyba(null); setAlternativy([]) }}
+                onClick={() => { setSelCat(cat); setSelItem(null); setDrzakVariant(null); setChyba(null); setAlternativy([]) }}
                 style={{
                   padding:"13px 8px", borderRadius:10, cursor:"pointer", textAlign:"center",
                   border: selCat===cat ? "2px solid #10b981" : "2px solid #e5e7eb",
@@ -340,25 +354,58 @@ export default function RezervacePage() {
           <div style={card}>
             <SecTitle>2. Typ</SecTitle>
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
-              {itemyKat.map(pol => {
-                const active = selItem === pol.id
-                return (
-                  <button key={pol.id} type="button" onClick={() => { setSelItem(pol.id); setChyba(null); setAlternativy([]) }}
-                    style={{
-                      padding:"12px 14px", borderRadius:10, cursor:"pointer",
-                      border: active ? "2px solid #10b981" : "2px solid #e5e7eb",
-                      background: active ? "#f0fdf4" : "white",
-                      display:"flex", alignItems:"center", justifyContent:"space-between",
-                      transition:"all .15s", textAlign:"left",
-                    }}>
-                    <div>
-                      <div style={{fontSize:14,fontWeight:600,color:active?"#16a34a":"#111827"}}>{pol.name}</div>
-                      <div style={{fontSize:12,color:"#6b7280",marginTop:1}}>{cenaPopis(pol,stupne)}</div>
-                    </div>
-                    {active && <span style={{color:"#10b981",fontSize:18}}>✓</span>}
-                  </button>
-                )
-              })}
+              {selCat === DRZAK_KAT ? (
+                // Virtuální varianty držáku — obě mapují na stejný produkt Thule
+                DRZAK_VARIANTY.map(v => {
+                  const active = selItem === thulePolozka?.id && drzakVariant === v.label
+                  return (
+                    <button key={v.label} type="button"
+                      onClick={() => {
+                        if (!thulePolozka) return
+                        setSelItem(thulePolozka.id)
+                        setDrzakVariant(v.label)
+                        setChyba(null)
+                        setAlternativy([])
+                      }}
+                      style={{
+                        padding:"12px 14px", borderRadius:10, cursor:"pointer",
+                        border: active ? "2px solid #10b981" : "2px solid #e5e7eb",
+                        background: active ? "#f0fdf4" : "white",
+                        display:"flex", alignItems:"center", justifyContent:"space-between",
+                        transition:"all .15s", textAlign:"left",
+                      }}>
+                      <div>
+                        <div style={{fontSize:14,fontWeight:600,color:active?"#16a34a":"#111827"}}>{v.label}</div>
+                        <div style={{fontSize:12,color:"#6b7280",marginTop:1}}>
+                          {thulePolozka ? cenaPopis(thulePolozka, stupne) : ""}
+                        </div>
+                      </div>
+                      {active && <span style={{color:"#10b981",fontSize:18}}>✓</span>}
+                    </button>
+                  )
+                })
+              ) : (
+                // Standardní položky z DB
+                itemyKat.map(pol => {
+                  const active = selItem === pol.id
+                  return (
+                    <button key={pol.id} type="button" onClick={() => { setSelItem(pol.id); setChyba(null); setAlternativy([]) }}
+                      style={{
+                        padding:"12px 14px", borderRadius:10, cursor:"pointer",
+                        border: active ? "2px solid #10b981" : "2px solid #e5e7eb",
+                        background: active ? "#f0fdf4" : "white",
+                        display:"flex", alignItems:"center", justifyContent:"space-between",
+                        transition:"all .15s", textAlign:"left",
+                      }}>
+                      <div>
+                        <div style={{fontSize:14,fontWeight:600,color:active?"#16a34a":"#111827"}}>{pol.name}</div>
+                        <div style={{fontSize:12,color:"#6b7280",marginTop:1}}>{cenaPopis(pol,stupne)}</div>
+                      </div>
+                      {active && <span style={{color:"#10b981",fontSize:18}}>✓</span>}
+                    </button>
+                  )
+                })
+              )}
             </div>
           </div>
         )}
@@ -583,7 +630,8 @@ export default function RezervacePage() {
                 <label style={lbl}>Značka a model vozu *</label>
                 <input value={form.vozidlo} onChange={e=>upd("vozidlo",e.target.value)} placeholder="např. Škoda Octavia Combi 2020" style={inp} disabled={isOdesilam} />
               </div>
-              <div>
+              {/* Příčníky — jen pro stany */}
+              {jeStany && <div>
                 <label style={lbl}>Příčníky na vozidle *</label>
                 <div style={{display:"flex",gap:8}}>
                   {[{v:"vlastni",l:"Mám vlastní"},{v:"pujcit",l:"Chci půjčit"}].map(o => (
@@ -641,7 +689,7 @@ export default function RezervacePage() {
                     })}
                   </div>
                 )}
-              </div>
+              </div>}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div>
                   <label style={lbl}>Čas vyzvednutí *</label>
