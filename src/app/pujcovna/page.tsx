@@ -328,7 +328,6 @@ export default function PujcovnaDashboard() {
               <>
                 <span className="text-gray-300">·</span>
                 <span className="font-semibold text-gray-700">{cena.toLocaleString("cs-CZ")} Kč</span>
-                <span className="text-gray-400 text-[10px]">(bez DPH {Math.round(bezDPH(cena)).toLocaleString("cs-CZ")} Kč)</span>
               </>
             )}
             {cdMobile && <span className="ml-auto">{cdMobile}</span>}
@@ -366,16 +365,10 @@ export default function PujcovnaDashboard() {
           </span>
           {/* Price */}
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, textAlign: "right" }}>
-            {cena !== null ? (
-              <>
-                {cena.toLocaleString("cs-CZ")} <span style={{ fontSize: 11, color: "var(--muted)" }}>Kč</span>
-                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2, fontFamily: "var(--font-sans)" }}>
-                  bez DPH {Math.round(bezDPH(cena)).toLocaleString("cs-CZ")} Kč
-                </div>
-              </>
-            ) : (
-              <span style={{ color: "var(--muted)" }}>—</span>
-            )}
+            {cena !== null
+              ? <>{cena.toLocaleString("cs-CZ")} <span style={{ fontSize: 11, color: "var(--muted)" }}>Kč</span></>
+              : <span style={{ color: "var(--muted)" }}>—</span>
+            }
           </div>
           {/* Countdown */}
           <div style={{
