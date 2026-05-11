@@ -161,6 +161,31 @@ export default function PujcovnaDashboard() {
   const [loading, setLoading] = useState(true)
   const [statRozsireno, setStatRozsireno] = useState(false)
   const [openRezId, setOpenRezId] = useState<number | null>(null)
+  const [fioSyncing,  setFioSyncing]  = useState(false)
+  const [fioVysledek, setFioVysledek] = useState<string | null>(null)
+
+  async function spustiFioSync() {
+    setFioSyncing(true)
+    setFioVysledek(null)
+    try {
+      const secret = process.env.NEXT_PUBLIC_CRON_SECRET ?? ""
+      const url = `/api/pujcovna/fio-sync${secret ? `?secret=${secret}` : ""}`
+      const res = await fetch(url)
+      const json = await res.json() as { ok: boolean; celkem?: number; prichozi?: number; sparovano?: number; chyby?: number; error?: string }
+      if (!json.ok) {
+        setFioVysledek(`❌ Chyba: ${json.error}`)
+      } else if (json.sparovano && json.sparovano > 0) {
+        setFioVysledek(`✅ Spárováno ${json.sparovano} plateb! Stránka se obnoví…`)
+        setTimeout(() => window.location.reload(), 2000)
+      } else {
+        setFioVysledek(`ℹ️ Žádné nové platby (pohybů: ${json.celkem ?? 0}, příchozích: ${json.prichozi ?? 0})`)
+      }
+    } catch (e) {
+      setFioVysledek(`❌ Síťová chyba: ${String(e)}`)
+    } finally {
+      setFioSyncing(false)
+    }
+  }
 
   useEffect(() => {
     async function nacti() {
@@ -437,7 +462,7 @@ export default function PujcovnaDashboard() {
 
         {/* Page header */}
         <div style={{ display: "flex", alignItems: "flex-end", marginBottom: 20, gap: 12 }}>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--muted)" }}>
               Autostany Planner · Sezóna {ROK}
             </div>
@@ -445,7 +470,34 @@ export default function PujcovnaDashboard() {
               Přehled <span style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", color: "var(--muted)", fontWeight: 400 }}>/ Dashboard</span>
             </h1>
           </div>
+
+          {/* Fio sync tlačítko */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <button
+              onClick={spustiFioSync}
+              disabled={fioSyncing}
+              style={{
+                display: "flex", alignItems: "center", gap: 7,
+                background: fioSyncing ? "#f3f4f6" : "#10b981",
+                color: fioSyncing ? "#9ca3af" : "white",
+                border: "none", borderRadius: 9, padding: "8px 16px",
+                fontSize: 13, fontWeight: 600, cursor: fioSyncing ? "default" : "pointer",
+                transition: "all .15s",
+              }}
+            >
+              {fioSyncing
+                ? <><span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #d1d5db", borderTop: "2px solid #9ca3af", borderRadius: "50%", animation: "spin .8s linear infinite" }} /> Kontroluji Fio…</>
+                : <>🏦 Synchronizovat platby</>
+              }
+            </button>
+            {fioVysledek && (
+              <div style={{ fontSize: 12, color: fioVysledek.startsWith("✅") ? "#16a34a" : fioVysledek.startsWith("ℹ️") ? "#6b7280" : "#dc2626", maxWidth: 280, textAlign: "right" }}>
+                {fioVysledek}
+              </div>
+            )}
+          </div>
         </div>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

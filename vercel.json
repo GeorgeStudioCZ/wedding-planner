@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/pujcovna/fio-sync",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

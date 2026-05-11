@@ -35,8 +35,19 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
+    // Ulož platební data (klient + položky) pro pozdější automatické párování z Fio
+    const sf_platba_data = {
+      klient: { ...body.klient, jmeno_display: body.klient.jmeno },
+      polozky: body.polozky,
+    }
+
     await sb.from("pujcovna_rezervace")
-      .update({ sf_proforma_id: faktura.id, sf_vs: faktura.vs, stav: "cekam-platbu" })
+      .update({
+        sf_proforma_id: faktura.id,
+        sf_vs:          faktura.vs,
+        stav:           "cekam-platbu",
+        sf_platba_data,
+      })
       .eq("group_id", body.groupId)
 
     await sb.from("pujcovna_rezervace_historie").insert({

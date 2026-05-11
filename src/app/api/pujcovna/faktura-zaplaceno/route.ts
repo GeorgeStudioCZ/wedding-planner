@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function htmlFaktura(jmeno: string, invoice_no: string, pdf_url: string): string {
+export function htmlFaktura(jmeno: string, invoice_no: string, pdf_url: string): string {
   return `<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"></head>
   <body style="margin:0;padding:0;background:#f3f4f6;font-family:system-ui,sans-serif">
   <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)">
