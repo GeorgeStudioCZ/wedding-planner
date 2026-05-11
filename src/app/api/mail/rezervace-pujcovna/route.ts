@@ -25,6 +25,12 @@ export interface RezervaceMailPayload {
   montazPopl: number
   celkem: number
   groupId: string
+  platba?: {
+    vs: string
+    invoice_no: string
+    iban: string
+    qr_url: string
+  }
 }
 
 function formatDatum(iso: string) {
@@ -107,6 +113,30 @@ function htmlZakaznik(d: RezervaceMailPayload): string {
 
       ${d.poznamka ? `<div style="background:#fef9c3;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#713f12">
         <strong>Vaše poznámka:</strong> ${d.poznamka}</div>` : ""}
+
+      <!-- platební údaje -->
+      ${d.platba ? `
+      <div style="background:#fffbeb;border-radius:8px;border:2px solid #f59e0b;padding:16px 20px;margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#b45309;margin-bottom:12px">
+          💳 Platební údaje — ${d.platba.invoice_no}
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          ${d.platba.iban ? `<tr><td style="padding:4px 0;color:#6b7280;width:44%">Číslo účtu (IBAN)</td>
+              <td style="padding:4px 0;color:#111827;font-weight:600;font-family:monospace">${d.platba.iban}</td></tr>` : ""}
+          <tr><td style="padding:4px 0;color:#6b7280">Variabilní symbol</td>
+              <td style="padding:4px 0;color:#111827;font-weight:700;font-size:16px;font-family:monospace">${d.platba.vs}</td></tr>
+          <tr><td style="padding:4px 0;color:#6b7280">Částka</td>
+              <td style="padding:4px 0;color:#111827;font-weight:700;font-size:16px">${formatKc(d.celkem)}</td></tr>
+          <tr><td style="padding:4px 0;color:#6b7280">Měna</td>
+              <td style="padding:4px 0;color:#111827">CZK</td></tr>
+        </table>
+        ${d.platba.qr_url ? `
+        <div style="margin-top:14px;text-align:center">
+          <img src="${d.platba.qr_url}" width="160" height="160" alt="QR platba"
+               style="border-radius:8px;border:1px solid #e5e7eb"/>
+          <div style="font-size:11px;color:#9ca3af;margin-top:4px">Naskenujte pro rychlou platbu</div>
+        </div>` : ""}
+      </div>` : ""}
 
       <p style="margin:0 0 6px;font-size:14px;color:#6b7280">Máte otázky? Napište nám:</p>
       <a href="mailto:info@stanujnaaute.cz" style="color:#10b981;font-weight:600;font-size:14px">info@stanujnaaute.cz</a>

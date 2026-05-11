@@ -160,12 +160,10 @@ export default function RezervacePage() {
     return () => ro.disconnect()
   }, [step])
 
-  // ── Scroll na vrch při "hotovo" ────────────────────────────────────────────
+  // ── Scroll na vrch při odesilam + hotovo ──────────────────────────────────
   useEffect(() => {
-    if (step !== "hotovo") return
-    // Scroll uvnitř iframe
+    if (step !== "odesilam" && step !== "hotovo") return
     window.scrollTo({ top: 0, behavior: "smooth" })
-    // Požádej parent stránku aby scrollla na začátek iframe
     window.parent?.postMessage({ type: "iframe-scroll-top" }, "*")
   }, [step])
 
@@ -357,7 +355,7 @@ export default function RezervacePage() {
       } catch (e) { console.error("SF záloha:", e) }
     }
 
-    // Potvrzovací email (fire-and-forget)
+    // Potvrzovací email (fire-and-forget) — obsahuje i platební údaje pokud jsou k dispozici
     fetch("/api/mail/rezervace-pujcovna", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -376,6 +374,12 @@ export default function RezervacePage() {
         montazPopl,
         celkem,
         groupId,
+        platba: platbaRef.current ? {
+          vs: platbaRef.current.vs,
+          invoice_no: platbaRef.current.invoice_no,
+          iban: platbaRef.current.iban,
+          qr_url: platbaRef.current.qr_url,
+        } : undefined,
       }),
     }).catch(console.error)
 

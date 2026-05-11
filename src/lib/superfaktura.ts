@@ -81,7 +81,10 @@ export async function vytvorZalohFakturu(
   }
 
   const json = await sfPost("/invoices/create", payload)
-  const inv  = (json.Invoice ?? json.invoice) as Record<string, unknown>
+  // SF vrací buď přímo json.Invoice nebo json.data.Invoice
+  const wrapper = (json.data ?? json) as Record<string, unknown>
+  const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
+  if (!inv?.id) throw new Error(`SF: nepodařilo se načíst Invoice z odpovědi: ${JSON.stringify(json).slice(0, 300)}`)
 
   return {
     id:         Number(inv.id),
@@ -120,7 +123,9 @@ export async function vytvorFakturuZeZalohy(
   }
 
   const json = await sfPost("/invoices/create", payload)
-  const inv  = (json.Invoice ?? json.invoice) as Record<string, unknown>
+  const wrapper = (json.data ?? json) as Record<string, unknown>
+  const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
+  if (!inv?.id) throw new Error(`SF: nepodařilo se načíst Invoice z odpovědi: ${JSON.stringify(json).slice(0, 300)}`)
 
   return {
     id:         Number(inv.id),
