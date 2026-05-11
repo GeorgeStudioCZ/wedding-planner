@@ -126,7 +126,7 @@ export default function RezervacePage() {
   const [chyba,        setChyba]        = useState<string | null>(null)
   const [alternativy,  setAlternativy]  = useState<Polozka[]>([])
   const [drzakVariant, setDrzakVariant] = useState<string | null>(null)
-  const platbaRef = useRef<{vs:string;invoice_no:string;castka:number;iban:string;qr_url:string;pdf_url:string} | null>(null)
+  const platbaRef = useRef<{vs:string;invoice_no:string;castka:number;cislo_uctu:string;qr_url:string;pdf_url:string} | null>(null)
 
   // Krok 1
   const [selCat,  setSelCat]  = useState<string | null>(null)
@@ -331,8 +331,15 @@ export default function RezervacePage() {
     // ── Zálohová faktura v SuperFaktuře ────────────────────────────────────────
     const stanNazev = stanDetail(selPolozka)?.nazev ?? selPolozka.name
     const sfPolozky = [
-      ...(cenaStan != null ? [{ nazev: stanNazev, cena_sdph: cenaStan, pocet: 1, jednotka: `${dni} dní` }] : []),
-      ...prislRadky.filter(r => r.cena != null).map(r => ({ nazev: r.pol.name, cena_sdph: r.cena! * r.cnt, pocet: 1 })),
+      ...(cenaStan != null && dni > 0
+        ? [{ nazev: stanNazev, cena_sdph: cenaStan / dni, pocet: dni, jednotka: "den" }]
+        : []),
+      ...prislRadky.filter(r => r.cena != null).map(r => ({
+        nazev: r.pol.name + (r.cnt > 1 ? ` × ${r.cnt}` : ""),
+        cena_sdph: (r.cena! * r.cnt) / dni,
+        pocet: dni,
+        jednotka: "den",
+      })),
       ...(montazPopl > 0 ? [{ nazev: "Poplatek za montáž", cena_sdph: montazPopl, pocet: 1 }] : []),
     ]
     if (mainRez?.id && sfPolozky.length > 0) {
@@ -377,7 +384,7 @@ export default function RezervacePage() {
         platba: platbaRef.current ? {
           vs: platbaRef.current.vs,
           invoice_no: platbaRef.current.invoice_no,
-          iban: platbaRef.current.iban,
+          cislo_uctu: platbaRef.current.cislo_uctu,
           qr_url: platbaRef.current.qr_url,
         } : undefined,
       }),
@@ -427,9 +434,9 @@ export default function RezervacePage() {
             <div style={{flex:1}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:13.5}}>
                 <tbody>
-                  {platbaInfo.iban && (
+                  {platbaInfo.cislo_uctu && (
                     <tr><td style={{color:"#6b7280",paddingBottom:6,width:"44%"}}>Číslo účtu</td>
-                        <td style={{color:"#111827",fontWeight:600,fontFamily:"monospace",paddingBottom:6}}>{platbaInfo.iban}</td></tr>
+                        <td style={{color:"#111827",fontWeight:600,fontFamily:"monospace",paddingBottom:6}}>{platbaInfo.cislo_uctu}</td></tr>
                   )}
                   <tr><td style={{color:"#6b7280",paddingBottom:6}}>Variabilní symbol</td>
                       <td style={{color:"#111827",fontWeight:700,fontFamily:"monospace",fontSize:16,paddingBottom:6}}>{platbaInfo.vs}</td></tr>

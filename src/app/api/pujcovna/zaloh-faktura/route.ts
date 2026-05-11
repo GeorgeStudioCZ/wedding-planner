@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { vytvorZalohFakturu, qrPlatbaUrl, SFKlient, SFPolozka } from "@/lib/superfaktura"
 
-const SF_IBAN = process.env.SF_IBAN ?? ""
+const SF_IBAN       = process.env.SF_IBAN ?? ""
+const SF_CISLO_UCTU = process.env.SF_CISLO_UCTU ?? "2302601281/2010"
 
 export interface ZalohFakturaPayload {
   rezervaceId: number
@@ -17,7 +18,7 @@ export interface ZalohFakturaVystup {
   vs: string
   invoice_no: string
   castka: number
-  iban: string
+  cislo_uctu: string
   qr_url: string
   pdf_url: string
 }
@@ -45,12 +46,12 @@ export async function POST(req: NextRequest) {
 
     // 3. Vrať platební údaje
     const vystup: ZalohFakturaVystup = {
-      vs:         faktura.vs,
-      invoice_no: faktura.invoice_no,
-      castka:     body.celkem,
-      iban:       SF_IBAN,
-      qr_url:     SF_IBAN ? qrPlatbaUrl(SF_IBAN, faktura.vs, body.celkem) : "",
-      pdf_url:    faktura.pdf_url,
+      vs:          faktura.vs,
+      invoice_no:  faktura.invoice_no,
+      castka:      body.celkem,
+      cislo_uctu:  SF_CISLO_UCTU,
+      qr_url:      SF_IBAN ? qrPlatbaUrl(SF_IBAN, faktura.vs, body.celkem) : "",
+      pdf_url:     faktura.pdf_url,
     }
 
     return NextResponse.json({ ok: true, ...vystup })

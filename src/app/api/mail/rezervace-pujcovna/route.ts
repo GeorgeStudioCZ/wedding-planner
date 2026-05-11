@@ -28,7 +28,7 @@ export interface RezervaceMailPayload {
   platba?: {
     vs: string
     invoice_no: string
-    iban: string
+    cislo_uctu: string
     qr_url: string
   }
 }
@@ -121,8 +121,8 @@ function htmlZakaznik(d: RezervaceMailPayload): string {
           💳 Platební údaje — ${d.platba.invoice_no}
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:14px">
-          ${d.platba.iban ? `<tr><td style="padding:4px 0;color:#6b7280;width:44%">Číslo účtu (IBAN)</td>
-              <td style="padding:4px 0;color:#111827;font-weight:600;font-family:monospace">${d.platba.iban}</td></tr>` : ""}
+          ${d.platba.cislo_uctu ? `<tr><td style="padding:4px 0;color:#6b7280;width:44%">Číslo účtu</td>
+              <td style="padding:4px 0;color:#111827;font-weight:600;font-family:monospace">${d.platba.cislo_uctu}</td></tr>` : ""}
           <tr><td style="padding:4px 0;color:#6b7280">Variabilní symbol</td>
               <td style="padding:4px 0;color:#111827;font-weight:700;font-size:16px;font-family:monospace">${d.platba.vs}</td></tr>
           <tr><td style="padding:4px 0;color:#6b7280">Částka</td>
