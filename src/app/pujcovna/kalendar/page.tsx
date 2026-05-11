@@ -146,7 +146,7 @@ function Pujcovna() {
     async function nacti() {
       const [{ data: pol }, { data: rez }, { data: zakazky }] = await Promise.all([
         supabase.from("pujcovna_polozky").select("*").order("sort_order"),
-        supabase.from("pujcovna_rezervace").select("*"),
+        supabase.from("pujcovna_rezervace").select("*").neq("stav", "storno"),
         supabase.from("zakazky").select("datum_svatby").eq("stav", "zaplaceno"),
       ])
       setPolozky(pol ?? [])
@@ -433,7 +433,7 @@ function Pujcovna() {
           editRezervace={modal.rezervace}
           onClose={() => setModal(null)}
           onSave={async () => {
-            const { data } = await supabase.from("pujcovna_rezervace").select("*")
+            const { data } = await supabase.from("pujcovna_rezervace").select("*").neq("stav", "storno")
             setRezervace(data ?? [])
             setModal(null)
           }}
@@ -450,7 +450,7 @@ function Pujcovna() {
             router.replace("/pujcovna/kalendar")
           }}
           onSave={async () => {
-            const { data } = await supabase.from("pujcovna_rezervace").select("*")
+            const { data } = await supabase.from("pujcovna_rezervace").select("*").neq("stav", "storno")
             setRezervace(data ?? [])
             setDetailPopup(null)
             router.replace("/pujcovna/kalendar")

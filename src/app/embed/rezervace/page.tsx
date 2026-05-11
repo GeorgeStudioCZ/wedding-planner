@@ -236,6 +236,7 @@ export default function RezervacePage() {
     setStep("overuji")
     const { data } = await supabase.from("pujcovna_rezervace")
       .select("id,item_id,unit_index,start_date,end_date,group_id")
+      .neq("stav", "storno")
     const rez = (data ?? []) as RezRow[]
     setVsechRez(rez)
     const pol = polozky.find(p => p.id === targetId)!

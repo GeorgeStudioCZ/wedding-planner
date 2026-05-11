@@ -156,6 +156,7 @@ function Card({ children }: { children: React.ReactNode }) {
 export default function PujcovnaDashboard() {
   const [polozky, setPolozky] = useState<Polozka[]>([])
   const [rezervace, setRezervace] = useState<Rezervace[]>([])
+  const [stornoRez, setStornoRez] = useState<Rezervace[]>([])
   const [stupne, setStupne] = useState<Stupen[]>([])
   const [loading, setLoading] = useState(true)
   const [statRozsireno, setStatRozsireno] = useState(false)
@@ -164,13 +165,15 @@ export default function PujcovnaDashboard() {
   useEffect(() => {
     async function nacti() {
       const sb = createClient()
-      const [{ data: pol }, { data: rez }, { data: st }] = await Promise.all([
+      const [{ data: pol }, { data: rez }, { data: st }, { data: storno }] = await Promise.all([
         supabase.from("pujcovna_polozky").select("*").order("sort_order"),
-        supabase.from("pujcovna_rezervace").select("*"),
+        supabase.from("pujcovna_rezervace").select("*").neq("stav", "storno"),
         sb.from("pujcovna_ceny_stupne").select("*"),
+        supabase.from("pujcovna_rezervace").select("*").eq("stav", "storno"),
       ])
       setPolozky(pol ?? [])
       setRezervace(rez ?? [])
+      setStornoRez(storno ?? [])
       setStupne(st ?? [])
       setLoading(false)
     }
@@ -197,7 +200,7 @@ export default function PujcovnaDashboard() {
   const zaplaceno   = hlavni.filter(r => r.stav === "zaplaceno")
   const vypujceno   = hlavni.filter(r => r.stav === "vypujceno")
   const dokonceno   = hlavni.filter(r => r.stav === "dokonceno")
-  const storno      = hlavni.filter(r => r.stav === "storno")
+  const storno      = stornoRez.filter(r => { const pol = polozky.find(p => p.id === r.item_id); return !r.group_id || pol?.category === "Stany" })
 
   const celkemDni = letosRez.reduce((s, r) => s + pocetDni(r.start_date, r.end_date), 0)
   const prumDelka = letosRez.length > 0 ? Math.round(celkemDni / letosRez.length) : 0
@@ -599,8 +602,12 @@ export default function PujcovnaDashboard() {
           rezervaceId={openRezId}
           onClose={() => setOpenRezId(null)}
           onSave={async () => {
-            const { data } = await supabase.from("pujcovna_rezervace").select("*")
-            setRezervace(data ?? [])
+            const [{ data: rez }, { data: st }] = await Promise.all([
+              supabase.from("pujcovna_rezervace").select("*").neq("stav", "storno"),
+              supabase.from("pujcovna_rezervace").select("*").eq("stav", "storno"),
+            ])
+            setRezervace(rez ?? [])
+            setStornoRez(st ?? [])
             setOpenRezId(null)
           }}
         />
