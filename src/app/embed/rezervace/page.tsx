@@ -23,6 +23,19 @@ const PRISL_CATS = new Set(["Markýzy","Sedátka","Napájení","Ledničky","Redu
 const NOT_MAIN_CATS = new Set([...PRISL_CATS, "Příčníky"])
 const BARVY_STANU: Record<string, string> = { "mal":"#F23753", "střed":"#3477F5", "velk":"#F3940E" }
 
+// Zobrazovaný název a technické info autostanů — jen pro veřejný formulář, DB se nemění
+const STAN_DETAILS: Record<string, { nazev: string; info: string }> = {
+  "mal":   { nazev: "Autostan MALÁ Alaska pro 2 osoby",   info: "rozměr matrace: 135×235 cm | váha: 50 kg" },
+  "střed": { nazev: "Autostan STŘEDNÍ Alaska pro 3 osoby", info: "rozměr matrace: 155×235 cm | váha: 55 kg" },
+  "velk":  { nazev: "Autostan VELKÁ Alaska pro 4 osoby",   info: "rozměr matrace: 185×235 cm | váha: 65 kg" },
+}
+function stanDetail(pol: Polozka): { nazev: string; info: string } | null {
+  if (pol.category !== "Stany") return null
+  const n = pol.name.toLowerCase()
+  for (const [k, v] of Object.entries(STAN_DETAILS)) if (n.includes(k)) return v
+  return null
+}
+
 // Virtuální kategorie Držáky kol — dvě varianty, obě odkazují na stejný produkt Thule
 const DRZAK_KAT       = "Držáky kol"
 const DRZAK_THULE_NAME = "Držák kol Thule"
@@ -391,7 +404,11 @@ export default function RezervacePage() {
               ) : (
                 // Standardní položky z DB
                 itemyKat.map(pol => {
-                  const active = selItem === pol.id
+                  const active  = selItem === pol.id
+                  const detail  = stanDetail(pol)
+                  const nazev   = detail?.nazev ?? pol.name
+                  const cena    = cenaPopis(pol, stupne)
+                  const infoStr = detail ? `${cena} | ${detail.info}` : cena
                   return (
                     <button key={pol.id} type="button" onClick={() => { setSelItem(pol.id); setChyba(null); setAlternativy([]) }}
                       style={{
@@ -402,10 +419,10 @@ export default function RezervacePage() {
                         transition:"all .15s", textAlign:"left",
                       }}>
                       <div>
-                        <div style={{fontSize:14,fontWeight:600,color:active?"#16a34a":"#111827"}}>{pol.name}</div>
-                        <div style={{fontSize:12,color:"#6b7280",marginTop:1}}>{cenaPopis(pol,stupne)}</div>
+                        <div style={{fontSize:14,fontWeight:600,color:active?"#16a34a":"#111827"}}>{nazev}</div>
+                        <div style={{fontSize:12,color:"#6b7280",marginTop:1}}>{infoStr}</div>
                       </div>
-                      {active && <span style={{color:"#10b981",fontSize:18}}>✓</span>}
+                      {active && <span style={{color:"#10b981",fontSize:18,flexShrink:0,marginLeft:8}}>✓</span>}
                     </button>
                   )
                 })
