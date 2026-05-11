@@ -55,7 +55,7 @@ const NAV_STUDIO = [
 ]
 
 // ── Component ───────────────────────────────────────────────────────────────
-export default function AppShell({ module, children }: { module: AppModule; children: React.ReactNode }) {
+export default function AppShell({ module, children, extraActions }: { module: AppModule; children: React.ReactNode; extraActions?: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -298,6 +298,8 @@ export default function AppShell({ module, children }: { module: AppModule; chil
                 boxShadow: "0 0 0 2px white",
               }} />
             </button>
+
+            {extraActions}
 
             <Link href={ctaHref}
               className="inline-flex items-center gap-2"

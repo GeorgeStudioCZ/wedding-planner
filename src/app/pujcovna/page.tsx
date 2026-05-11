@@ -456,8 +456,32 @@ export default function PujcovnaDashboard() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  const fioBtn = (
+    <>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <button
+        onClick={spustiFioSync}
+        disabled={fioSyncing}
+        title={fioVysledek ?? undefined}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          background: fioSyncing ? "rgba(255,255,255,.15)" : "rgba(255,255,255,.12)",
+          color: "white", border: "1.5px solid rgba(255,255,255,.25)",
+          borderRadius: 9, padding: "7px 13px",
+          fontSize: 13, fontWeight: 500, cursor: fioSyncing ? "default" : "pointer",
+          transition: "all .15s", whiteSpace: "nowrap",
+        }}
+      >
+        {fioSyncing
+          ? <><span style={{ display: "inline-block", width: 13, height: 13, border: "2px solid rgba(255,255,255,.4)", borderTop: "2px solid white", borderRadius: "50%", animation: "spin .8s linear infinite" }} /> Kontroluji…</>
+          : <>🏦 Kontrola plateb</>
+        }
+      </button>
+    </>
+  )
+
   return (
-    <AppShell module="van">
+    <AppShell module="van" extraActions={fioBtn}>
       <div style={{ padding: "22px 28px 60px" }}>
 
         {/* Page header */}
@@ -609,37 +633,8 @@ export default function PujcovnaDashboard() {
           </div>
         )}
 
-        {/* Fio sync */}
         {!loading && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0 8px" }}>
-            <button
-              onClick={spustiFioSync}
-              disabled={fioSyncing}
-              style={{
-                display: "flex", alignItems: "center", gap: 7,
-                background: fioSyncing ? "#f3f4f6" : "#10b981",
-                color: fioSyncing ? "#9ca3af" : "white",
-                border: "none", borderRadius: 9, padding: "9px 18px",
-                fontSize: 13, fontWeight: 600, cursor: fioSyncing ? "default" : "pointer",
-                transition: "all .15s", flexShrink: 0,
-              }}
-            >
-              {fioSyncing
-                ? <><span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #d1d5db", borderTop: "2px solid #9ca3af", borderRadius: "50%", animation: "spin .8s linear infinite" }} /> Kontroluji Fio…</>
-                : <>🏦 Synchronizovat platby z Fio</>
-              }
-            </button>
-            {fioVysledek && (
-              <span style={{ fontSize: 13, color: fioVysledek.startsWith("✅") ? "#16a34a" : fioVysledek.startsWith("ℹ️") ? "#6b7280" : "#dc2626" }}>
-                {fioVysledek}
-              </span>
-            )}
-          </div>
-        )}
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-
-        {!loading && (
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 32 }}>
             <Blok titulek="Rezervace · web" dot="#a855f7" rezervace={webRezervace} />
             <Blok titulek="Rezervace"    dot="#9ca3af" rezervace={rezRezervace} />
             <Blok titulek="Čekám platbu" dot="#fb923c" rezervace={cekamPlatbu} />
