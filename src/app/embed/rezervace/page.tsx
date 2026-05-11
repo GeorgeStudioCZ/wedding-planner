@@ -83,6 +83,11 @@ function ikonaKat(cat: string) {
   if (cat === "Paddleboardy") return "🏄"
   return "🚲"
 }
+// Zobrazovaný název kategorie (DB hodnota → UI label)
+function katLabel(cat: string) {
+  if (cat === "Stany") return "Autostany"
+  return cat
+}
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 const inp: React.CSSProperties = {
@@ -326,7 +331,6 @@ export default function RezervacePage() {
     <div style={{padding:"24px 16px"}}>
       <div style={{maxWidth:560,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:24}}>
-          <h1 style={{margin:"0 0 6px",fontSize:23,fontWeight:800,color:"#111827"}}>Rezervace půjčovny</h1>
           <p style={{margin:0,fontSize:13.5,color:"#6b7280"}}>Vyberte položku a termín, pak ověříme dostupnost</p>
         </div>
 
@@ -343,7 +347,7 @@ export default function RezervacePage() {
                   background: selCat===cat ? "#f0fdf4" : "white", transition:"all .15s",
                 }}>
                 <div style={{fontSize:24,marginBottom:4}}>{ikonaKat(cat)}</div>
-                <div style={{fontSize:12.5,fontWeight:600,color:selCat===cat?"#16a34a":"#374151"}}>{cat}</div>
+                <div style={{fontSize:12.5,fontWeight:600,color:selCat===cat?"#16a34a":"#374151"}}>{katLabel(cat)}</div>
               </button>
             ))}
           </div>
