@@ -159,6 +159,15 @@ export default function RezervacePage() {
     return () => ro.disconnect()
   }, [step])
 
+  // ── Scroll na vrch při "hotovo" ────────────────────────────────────────────
+  useEffect(() => {
+    if (step !== "hotovo") return
+    // Scroll uvnitř iframe
+    window.scrollTo({ top: 0, behavior: "smooth" })
+    // Požádej parent stránku aby scrollla na začátek iframe
+    window.parent?.postMessage({ type: "iframe-scroll-top" }, "*")
+  }, [step])
+
   // ── Derived ────────────────────────────────────────────────────────────────
   const mainKats   = useMemo(() => {
     const fromDb = [...new Set(polozky.filter(p => !NOT_MAIN_CATS.has(p.category)).map(p => p.category))]
