@@ -169,7 +169,9 @@ export default function RezervacePage() {
     selCat ? polozky.filter(p => p.category === selCat) : [], [polozky, selCat])
   const selPolozka = useMemo(() =>
     polozky.find(p => p.id === selItem) ?? null, [polozky, selItem])
-  const jeStany    = selPolozka?.category === "Stany"
+  const jeStany       = selPolozka?.category === "Stany"
+  // Paddleboard a držák kol nevyžadují info o vozidle
+  const jeBezvozidla  = selCat === "Paddleboardy" || selCat === DRZAK_KAT
   const prislusenstvi = useMemo(() => polozky.filter(p => PRISL_CATS.has(p.category)), [polozky])
   const katPrisl      = useMemo(() => {
     const cats = [...new Set(prislusenstvi.map(p => p.category))]
@@ -198,7 +200,7 @@ export default function RezervacePage() {
   const thulePolozka = useMemo(() => polozky.find(p => p.name === DRZAK_THULE_NAME) ?? null, [polozky])
   // Příčníky jsou povinné jen pro stany
   const canSubmit  = !!(form.jmeno && form.prijmeni && form.email && form.telefon &&
-    form.vozidlo && (jeStany ? form.pricniky : true) && form.cas_vyzvednuti && form.cas_vraceni && gdpr && pujcRad)
+    (jeBezvozidla || form.vozidlo) && (jeStany ? form.pricniky : true) && form.cas_vyzvednuti && form.cas_vraceni && gdpr && pujcRad)
 
   function upd(k: string, v: string) { setForm(f => ({...f, [k]: v})) }
 
@@ -655,10 +657,10 @@ export default function RezervacePage() {
           <div style={card}>
             <SecTitle>Vozidlo a logistika</SecTitle>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <div>
+              {!jeBezvozidla && <div>
                 <label style={lbl}>Značka a model vozu *</label>
                 <input value={form.vozidlo} onChange={e=>upd("vozidlo",e.target.value)} placeholder="např. Škoda Octavia Combi 2020" style={inp} disabled={isOdesilam} />
-              </div>
+              </div>}
               {/* Příčníky — jen pro stany */}
               {jeStany && <div>
                 <label style={lbl}>Příčníky na vozidle *</label>
