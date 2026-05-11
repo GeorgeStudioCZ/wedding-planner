@@ -19,6 +19,8 @@ type Step    = "vybrat" | "overuji" | "formular" | "odesilam" | "hotovo"
 
 // PRISL_CATS = kategorie příslušenství zobrazené v sekci Příslušenství
 const PRISL_CATS = new Set(["Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
+// PRISL_ORDER = požadované pořadí zobrazení kategorií příslušenství (Ostatní až na konec)
+const PRISL_ORDER = ["Markýzy","Napájení","Ledničky","Redukce","Camping sety","Stolky","Sedátka","Vařiče","Reproduktory","Ostatní"]
 // NOT_MAIN_CATS = všechny kategorie které NEJSOU samostatně půjčitelné (příslušenství + příčníky)
 const NOT_MAIN_CATS = new Set([...PRISL_CATS, "Příčníky"])
 const BARVY_STANU: Record<string, string> = { "mal":"#F23753", "střed":"#3477F5", "velk":"#F3940E" }
@@ -169,7 +171,13 @@ export default function RezervacePage() {
     polozky.find(p => p.id === selItem) ?? null, [polozky, selItem])
   const jeStany    = selPolozka?.category === "Stany"
   const prislusenstvi = useMemo(() => polozky.filter(p => PRISL_CATS.has(p.category)), [polozky])
-  const katPrisl      = useMemo(() => [...new Set(prislusenstvi.map(p => p.category))], [prislusenstvi])
+  const katPrisl      = useMemo(() => {
+    const cats = [...new Set(prislusenstvi.map(p => p.category))]
+    return cats.sort((a, b) => {
+      const ia = PRISL_ORDER.indexOf(a); const ib = PRISL_ORDER.indexOf(b)
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
+    })
+  }, [prislusenstvi])
   const pricnikyItems = useMemo(() => polozky.filter(p => p.category === "Příčníky"), [polozky])
 
   const dni        = dateFrom && dateTo ? pocetDni(dateFrom, dateTo) : 0
