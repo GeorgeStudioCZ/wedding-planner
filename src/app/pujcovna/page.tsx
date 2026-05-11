@@ -471,33 +471,7 @@ export default function PujcovnaDashboard() {
             </h1>
           </div>
 
-          {/* Fio sync tlačítko */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <button
-              onClick={spustiFioSync}
-              disabled={fioSyncing}
-              style={{
-                display: "flex", alignItems: "center", gap: 7,
-                background: fioSyncing ? "#f3f4f6" : "#10b981",
-                color: fioSyncing ? "#9ca3af" : "white",
-                border: "none", borderRadius: 9, padding: "8px 16px",
-                fontSize: 13, fontWeight: 600, cursor: fioSyncing ? "default" : "pointer",
-                transition: "all .15s",
-              }}
-            >
-              {fioSyncing
-                ? <><span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #d1d5db", borderTop: "2px solid #9ca3af", borderRadius: "50%", animation: "spin .8s linear infinite" }} /> Kontroluji Fio…</>
-                : <>🏦 Synchronizovat platby</>
-              }
-            </button>
-            {fioVysledek && (
-              <div style={{ fontSize: 12, color: fioVysledek.startsWith("✅") ? "#16a34a" : fioVysledek.startsWith("ℹ️") ? "#6b7280" : "#dc2626", maxWidth: 280, textAlign: "right" }}>
-                {fioVysledek}
-              </div>
-            )}
-          </div>
         </div>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -635,8 +609,37 @@ export default function PujcovnaDashboard() {
           </div>
         )}
 
+        {/* Fio sync */}
         {!loading && (
-          <div style={{ marginTop: 32 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0 8px" }}>
+            <button
+              onClick={spustiFioSync}
+              disabled={fioSyncing}
+              style={{
+                display: "flex", alignItems: "center", gap: 7,
+                background: fioSyncing ? "#f3f4f6" : "#10b981",
+                color: fioSyncing ? "#9ca3af" : "white",
+                border: "none", borderRadius: 9, padding: "9px 18px",
+                fontSize: 13, fontWeight: 600, cursor: fioSyncing ? "default" : "pointer",
+                transition: "all .15s", flexShrink: 0,
+              }}
+            >
+              {fioSyncing
+                ? <><span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid #d1d5db", borderTop: "2px solid #9ca3af", borderRadius: "50%", animation: "spin .8s linear infinite" }} /> Kontroluji Fio…</>
+                : <>🏦 Synchronizovat platby z Fio</>
+              }
+            </button>
+            {fioVysledek && (
+              <span style={{ fontSize: 13, color: fioVysledek.startsWith("✅") ? "#16a34a" : fioVysledek.startsWith("ℹ️") ? "#6b7280" : "#dc2626" }}>
+                {fioVysledek}
+              </span>
+            )}
+          </div>
+        )}
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+        {!loading && (
+          <div style={{ marginTop: 8 }}>
             <Blok titulek="Rezervace · web" dot="#a855f7" rezervace={webRezervace} />
             <Blok titulek="Rezervace"    dot="#9ca3af" rezervace={rezRezervace} />
             <Blok titulek="Čekám platbu" dot="#fb923c" rezervace={cekamPlatbu} />
