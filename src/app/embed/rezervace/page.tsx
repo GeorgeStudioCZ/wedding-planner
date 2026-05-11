@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
+import { dphRozpad, formatKc } from "@/lib/dph"
 
 // Poznámka: pujcovna_ceny_stupne má RLS — načítáme přes API route která má service role key
 
@@ -407,9 +408,20 @@ export default function RezervacePage() {
                     </div>
                   )}
                   {cenaStan !== null && (
-                    <div style={{display:"flex",justifyContent:"space-between",paddingTop:6,marginTop:2,borderTop:"1px solid #bbf7d0"}}>
-                      <span style={{fontSize:14,fontWeight:700,color:"#111827"}}>Zatím celkem</span>
-                      <span style={{fontSize:16,fontWeight:800,color:"#16a34a"}}>{formatCena((cenaStan ?? 0) + montazPopl)}</span>
+                    <div style={{paddingTop:6,marginTop:2,borderTop:"1px solid #bbf7d0"}}>
+                      <div style={{display:"flex",justifyContent:"space-between"}}>
+                        <span style={{fontSize:14,fontWeight:700,color:"#111827"}}>Zatím celkem s DPH</span>
+                        <span style={{fontSize:16,fontWeight:800,color:"#16a34a"}}>{formatCena((cenaStan ?? 0) + montazPopl)}</span>
+                      </div>
+                      {(() => {
+                        const r = dphRozpad((cenaStan ?? 0) + montazPopl)
+                        return (
+                          <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+                            <span style={{fontSize:11,color:"#6b7280"}}>z toho DPH 21 % · základ bez DPH</span>
+                            <span style={{fontSize:11,color:"#6b7280"}}>{formatKc(r.dph)} · {formatKc(r.bezdph)}</span>
+                          </div>
+                        )
+                      })()}
                     </div>
                   )}
                 </div>
@@ -660,9 +672,20 @@ export default function RezervacePage() {
                   <span style={{fontWeight:600,color:"#111827",flexShrink:0}}>500 Kč</span>
                 </div>
               )}
-              <div style={{display:"flex",justifyContent:"space-between",paddingTop:8,marginTop:2,borderTop:"1.5px solid #bbf7d0"}}>
-                <span style={{fontSize:15,fontWeight:700,color:"#111827"}}>Celkem</span>
-                <span style={{fontSize:19,fontWeight:800,color:"#16a34a"}}>{formatCena(celkem)}</span>
+              <div style={{paddingTop:8,marginTop:2,borderTop:"1.5px solid #bbf7d0"}}>
+                <div style={{display:"flex",justifyContent:"space-between"}}>
+                  <span style={{fontSize:15,fontWeight:700,color:"#111827"}}>Celkem s DPH</span>
+                  <span style={{fontSize:19,fontWeight:800,color:"#16a34a"}}>{formatCena(celkem)}</span>
+                </div>
+                {(() => {
+                  const r = dphRozpad(celkem)
+                  return (
+                    <div style={{display:"flex",justifyContent:"space-between",marginTop:5}}>
+                      <span style={{fontSize:11.5,color:"#6b7280"}}>z toho DPH 21 % · základ bez DPH</span>
+                      <span style={{fontSize:11.5,color:"#6b7280",flexShrink:0}}>{formatKc(r.dph)} · {formatKc(r.bezdph)}</span>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           </div>

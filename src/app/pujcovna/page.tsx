@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
 import RezervacePopup from "@/components/RezervacePopup"
+import { bezDPH, castDPH, formatKc } from "@/lib/dph"
 
 type Polozka = {
   id: number
@@ -256,15 +257,16 @@ export default function PujcovnaDashboard() {
     )
     const pocet = rezMesice.length
     const hruba = rezMesice.reduce((s, r) => s + (celkovaCenaRezervace(r) ?? 0), 0)
-    const cisty = Math.round(hruba / 1.21)
-    return { label, pocet, cisty }
+    const cisty = Math.round(bezDPH(hruba))
+    return { label, pocet, hruba, cisty }
   })
   const maxPocet = Math.max(...mesicniStats.map(m => m.pocet), 1)
   const maxCisty = Math.max(...mesicniStats.map(m => m.cisty), 1)
 
   // ── Derived KPI values ──────────────────────────────────────────────────────
-  const peakKap = kapacita.reduce((best, k) => k.pct > best.pct ? k : best, { label: "—", pct: 0 })
-  const prijemYTD = mesicniStats.reduce((s, m) => s + m.cisty, 0)
+  const peakKap     = kapacita.reduce((best, k) => k.pct > best.pct ? k : best, { label: "—", pct: 0 })
+  const prijemYTD   = mesicniStats.reduce((s, m) => s + m.hruba, 0)   // s DPH
+  const prijemBezDPH = mesicniStats.reduce((s, m) => s + m.cisty, 0)  // bez DPH
 
   // ── Inner components (need closure over state) ────────────────────────────
 
@@ -326,6 +328,7 @@ export default function PujcovnaDashboard() {
               <>
                 <span className="text-gray-300">·</span>
                 <span className="font-semibold text-gray-700">{cena.toLocaleString("cs-CZ")} Kč</span>
+                <span className="text-gray-400 text-[10px]">(bez DPH {Math.round(bezDPH(cena)).toLocaleString("cs-CZ")} Kč)</span>
               </>
             )}
             {cdMobile && <span className="ml-auto">{cdMobile}</span>}
@@ -363,10 +366,16 @@ export default function PujcovnaDashboard() {
           </span>
           {/* Price */}
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, textAlign: "right" }}>
-            {cena !== null
-              ? <>{cena.toLocaleString("cs-CZ")} <span style={{ fontSize: 11, color: "var(--muted)" }}>Kč</span></>
-              : <span style={{ color: "var(--muted)" }}>—</span>
-            }
+            {cena !== null ? (
+              <>
+                {cena.toLocaleString("cs-CZ")} <span style={{ fontSize: 11, color: "var(--muted)" }}>Kč</span>
+                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2, fontFamily: "var(--font-sans)" }}>
+                  bez DPH {Math.round(bezDPH(cena)).toLocaleString("cs-CZ")} Kč
+                </div>
+              </>
+            ) : (
+              <span style={{ color: "var(--muted)" }}>—</span>
+            )}
           </div>
           {/* Countdown */}
           <div style={{
@@ -478,8 +487,8 @@ export default function PujcovnaDashboard() {
             value={loading ? "—" : `${Math.round(prijemYTD / 1000)}k`}
             foot={
               <>
-                <span>Kč bez DPH</span>
-                <span style={{ fontFamily: "var(--font-mono)" }}>↑ 22%</span>
+                <span>Kč s DPH</span>
+                <span style={{ fontFamily: "var(--font-mono)", opacity: .75 }}>bez DPH {Math.round(prijemBezDPH / 1000)}k</span>
               </>
             }
           />
@@ -518,10 +527,10 @@ export default function PujcovnaDashboard() {
             </div>
           </div>
 
-          {/* Rezervace a příjem bez DPH */}
+          {/* Rezervace a příjem */}
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: "1px solid var(--line)" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Rezervace a příjem bez DPH</h3>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Rezervace a příjem</h3>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto", fontSize: 11, color: "var(--muted)" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
                   <span style={{ width: 10, height: 10, borderRadius: 3, background: "linear-gradient(180deg, var(--van-grad-a), var(--van-grad-b))", display: "inline-block" }} />

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
+import { bezDPH, castDPH } from "@/lib/dph"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
@@ -132,7 +133,12 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit }: {
       {dur && (
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{dur}</div>
-          {earnings > 0 && <div style={{ fontSize: 11, color: "#4338ca", marginTop: 1 }}>{earnings.toLocaleString("cs-CZ")} Kč</div>}
+          {earnings > 0 && (
+            <div style={{ fontSize: 11, color: "#4338ca", marginTop: 1 }}>
+              {earnings.toLocaleString("cs-CZ")} Kč
+              <span style={{ color: "var(--muted)", marginLeft: 4 }}>· bez DPH {Math.round(bezDPH(earnings)).toLocaleString("cs-CZ")} Kč</span>
+            </div>
+          )}
         </div>
       )}
       <button onClick={() => onEdit(z)} style={iconBtn} title="Upravit">
@@ -471,7 +477,7 @@ export default function GeorgePage() {
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
               {[
                 { label: "Dnes odpracováno", value: formatElapsed(todaySeconds * 1000) },
-                { label: "Dnes výdělek",     value: `${todayEarnings.toLocaleString("cs-CZ")} Kč` },
+                { label: "Dnes výdělek (s DPH)", value: `${todayEarnings.toLocaleString("cs-CZ")} Kč` },
                 { label: "Záznamy dnes",     value: String(todayZaznamy.length) },
               ].map(kpi => (
                 <div key={kpi.label} style={{
@@ -525,8 +531,14 @@ export default function GeorgePage() {
                 <div key={g.date} style={{ marginBottom: 24 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-2)" }}>{dateLabel(g.date + "T12:00:00")}</span>
-                    <span style={{ fontSize: 12, color: "var(--muted)" }}>
-                      {formatElapsed(gMs)}{gEarnings > 0 ? ` · ${gEarnings.toLocaleString("cs-CZ")} Kč` : ""}
+                    <span style={{ fontSize: 12, color: "var(--muted)", textAlign: "right" }}>
+                      {formatElapsed(gMs)}
+                      {gEarnings > 0 && (
+                        <>
+                          {` · `}<span style={{ color: "#4338ca", fontWeight: 500 }}>{gEarnings.toLocaleString("cs-CZ")} Kč</span>
+                          <span style={{ fontSize: 10.5, marginLeft: 4 }}>(bez DPH {Math.round(bezDPH(gEarnings)).toLocaleString("cs-CZ")} Kč)</span>
+                        </>
+                      )}
                     </span>
                   </div>
                   {g.items.map(z => (
