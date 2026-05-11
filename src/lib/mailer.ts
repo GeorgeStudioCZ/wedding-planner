@@ -12,7 +12,7 @@ const SLUZBY: Record<MailSluzba, { user: string; pass: string; from: string }> =
   stany: {
     user: process.env.SMTP_USER_STANY!,
     pass: process.env.SMTP_PASS_STANY!,
-    from: `"Stanuj na autě" <${process.env.SMTP_USER_STANY}>`,
+    from: `"Jiří ze Stanujnaautě.cz" <${process.env.SMTP_USER_STANY}>`,
   },
   george: {
     user: process.env.SMTP_USER_GEORGE!,
