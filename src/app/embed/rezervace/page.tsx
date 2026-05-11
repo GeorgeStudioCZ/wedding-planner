@@ -126,6 +126,7 @@ export default function RezervacePage() {
   const [chyba,        setChyba]        = useState<string | null>(null)
   const [alternativy,  setAlternativy]  = useState<Polozka[]>([])
   const [drzakVariant, setDrzakVariant] = useState<string | null>(null)
+  const [platbaInfo,   setPlatbaInfo]   = useState<{vs:string;invoice_no:string;castka:number;iban:string;qr_url:string;pdf_url:string} | null>(null)
 
   // Krok 1
   const [selCat,  setSelCat]  = useState<string | null>(null)
@@ -328,8 +329,34 @@ export default function RezervacePage() {
     if (mainRez?.id)
       await supabase.from("pujcovna_rezervace_historie").insert({ rezervace_id:mainRez.id, stav:"web-rezervace" })
 
-    // Odeslat potvrzovací emaily (zákazník + notifikace)
+    // ── Zálohová faktura v SuperFaktuře ────────────────────────────────────────
     const stanNazev = stanDetail(selPolozka)?.nazev ?? selPolozka.name
+    const sfPolozky = [
+      ...(cenaStan != null ? [{ nazev: stanNazev, cena_sdph: cenaStan, pocet: 1, jednotka: `${dni} dní` }] : []),
+      ...prislRadky.filter(r => r.cena != null).map(r => ({ nazev: r.pol.name, cena_sdph: r.cena! * r.cnt, pocet: 1 })),
+      ...(montazPopl > 0 ? [{ nazev: "Poplatek za montáž", cena_sdph: montazPopl, pocet: 1 }] : []),
+    ]
+    if (mainRez?.id && sfPolozky.length > 0) {
+      try {
+        const sfRes = await fetch("/api/pujcovna/zaloh-faktura", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rezervaceId: mainRez.id,
+            groupId,
+            klient: { jmeno:`${form.jmeno} ${form.prijmeni}`.trim(), email:form.email, telefon:form.telefon,
+                      ulice:form.ulice, mesto:form.mesto, psc:form.psc },
+            polozky: sfPolozky,
+            celkem,
+            poznamka: form.poznamka || undefined,
+          }),
+        })
+        const sfData = await sfRes.json()
+        if (sfData.ok) setPlatbaInfo(sfData)
+      } catch (e) { console.error("SF záloha:", e) }
+    }
+
+    // Potvrzovací email (fire-and-forget)
     fetch("/api/mail/rezervace-pujcovna", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -349,7 +376,7 @@ export default function RezervacePage() {
         celkem,
         groupId,
       }),
-    }).catch(console.error) // fire-and-forget, neblokuje zobrazení "hotovo"
+    }).catch(console.error)
 
     setStep("hotovo")
   }
@@ -366,18 +393,71 @@ export default function RezervacePage() {
 
   // ── Hotovo ─────────────────────────────────────────────────────────────────
   if (step === "hotovo") return (
-    <div style={{padding:"32px 16px",maxWidth:520,margin:"0 auto",textAlign:"center"}}>
-      <div style={{fontSize:52,marginBottom:12}}>✅</div>
-      <h2 style={{margin:"0 0 8px",fontSize:21,fontWeight:800,color:"#111827"}}>Rezervace přijata!</h2>
-      <p style={{margin:"0 0 20px",color:"#6b7280",lineHeight:1.6}}>Děkujeme, brzy se Vám ozveme s potvrzením termínu.</p>
-      <div style={{background:"#f0fdf4",borderRadius:12,padding:"14px 18px",textAlign:"left",border:"1px solid #bbf7d0"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#16a34a",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Shrnutí</div>
+    <div style={{padding:"32px 16px",maxWidth:520,margin:"0 auto"}}>
+      <div style={{textAlign:"center",marginBottom:24}}>
+        <div style={{fontSize:52,marginBottom:8}}>✅</div>
+        <h2 style={{margin:"0 0 8px",fontSize:21,fontWeight:800,color:"#111827"}}>Rezervace přijata!</h2>
+        <p style={{margin:0,color:"#6b7280",lineHeight:1.6}}>Zkontrolujte prosím níže platební údaje a proveďte platbu.</p>
+      </div>
+
+      {/* Shrnutí rezervace */}
+      <div style={{background:"#f0fdf4",borderRadius:12,padding:"14px 18px",border:"1px solid #bbf7d0",marginBottom:16}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#16a34a",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Shrnutí rezervace</div>
         <div style={{fontSize:14,color:"#374151",lineHeight:1.8}}>
-          <div><strong>{selPolozka?.name}</strong></div>
+          <div><strong>{stanDetail(selPolozka!)?.nazev ?? selPolozka?.name}</strong></div>
           <div>{formatDatum(dateFrom)} – {formatDatum(dateTo)}</div>
-          {celkem > 0 && <div>Předběžná cena: <strong>{formatCena(celkem)}</strong></div>}
+          {celkem > 0 && <div>Celková cena: <strong>{formatCena(celkem)}</strong></div>}
         </div>
       </div>
+
+      {/* Platební údaje */}
+      {platbaInfo ? (
+        <div style={{background:"#fff",borderRadius:12,padding:"18px 20px",border:"2px solid #f59e0b",marginBottom:16}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#b45309",textTransform:"uppercase",letterSpacing:".08em",marginBottom:12}}>
+            💳 Platební údaje — {platbaInfo.invoice_no}
+          </div>
+          <div style={{display:"flex",gap:16,alignItems:"flex-start"}}>
+            <div style={{flex:1}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13.5}}>
+                <tbody>
+                  {platbaInfo.iban && (
+                    <tr><td style={{color:"#6b7280",paddingBottom:6,width:"44%"}}>Číslo účtu</td>
+                        <td style={{color:"#111827",fontWeight:600,fontFamily:"monospace",paddingBottom:6}}>{platbaInfo.iban}</td></tr>
+                  )}
+                  <tr><td style={{color:"#6b7280",paddingBottom:6}}>Variabilní symbol</td>
+                      <td style={{color:"#111827",fontWeight:700,fontFamily:"monospace",fontSize:16,paddingBottom:6}}>{platbaInfo.vs}</td></tr>
+                  <tr><td style={{color:"#6b7280",paddingBottom:6}}>Částka</td>
+                      <td style={{color:"#111827",fontWeight:700,fontSize:16,paddingBottom:6}}>{formatCena(platbaInfo.castka)}</td></tr>
+                  <tr><td style={{color:"#6b7280"}}>Měna</td>
+                      <td style={{color:"#111827"}}>CZK</td></tr>
+                </tbody>
+              </table>
+              {platbaInfo.pdf_url && (
+                <a href={platbaInfo.pdf_url} target="_blank" rel="noopener noreferrer"
+                   style={{display:"inline-block",marginTop:14,fontSize:13,color:"#b45309",fontWeight:600,textDecoration:"none"}}>
+                  📄 Stáhnout zálohovou fakturu
+                </a>
+              )}
+            </div>
+            {platbaInfo.qr_url && (
+              <div style={{flexShrink:0,textAlign:"center"}}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={platbaInfo.qr_url} alt="QR platba" width={110} height={110}
+                     style={{borderRadius:8,border:"1px solid #e5e7eb"}} />
+                <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>QR platba</div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div style={{background:"#fef9c3",borderRadius:10,padding:"12px 16px",fontSize:13,color:"#713f12",marginBottom:16}}>
+          Platební údaje budou zaslány na váš email.
+        </div>
+      )}
+
+      <p style={{margin:0,fontSize:13,color:"#9ca3af",textAlign:"center"}}>
+        Potvrzení bylo zasláno na <strong>{form.email}</strong>
+      </p>
     </div>
   )
 

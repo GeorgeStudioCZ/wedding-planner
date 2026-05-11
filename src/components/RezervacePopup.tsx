@@ -42,6 +42,8 @@ type Rezervace = {
   cas_vraceni: string
   pricniky: string
   stav: string
+  sf_proforma_id: number | null
+  sf_vs: string | null
 }
 
 type ZakaznikData = {
@@ -273,6 +275,37 @@ export default function RezervacePopup({
           polozka: polozka.name,
           dateFrom: rez.start_date,
           dateTo: rez.end_date,
+        }),
+      }).catch(console.error)
+    }
+
+    // Zaplaceno → ostrá faktura ze zálohy + email zákazníkovi
+    if (novyStav === "zaplaceno" && rez.sf_proforma_id && polozka && zakaznik) {
+      const dniRez = pocetDni(rez.start_date, rez.end_date)
+      const cenaSt = vypocitejCenu(polozka, stupne, dniRez)
+      const sfPolozky = [
+        ...(cenaSt ? [{ nazev: polozka.name, cena_sdph: cenaSt.celkem, pocet: 1, jednotka: `${dniRez} dní` }] : []),
+        ...prislData
+          .map(({ polozka: p, rez: r }) => {
+            if (!p) return null
+            const c = vypocitejCenu(p, stupne, pocetDni(r.start_date, r.end_date))
+            return c ? { nazev: p.name, cena_sdph: c.celkem, pocet: 1 } : null
+          })
+          .filter(Boolean) as { nazev: string; cena_sdph: number; pocet: number }[],
+      ]
+      fetch("/api/pujcovna/faktura-zaplaceno", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rezervaceId: rez.id,
+          proformaId: rez.sf_proforma_id,
+          klient: {
+            jmeno: zakaznik.firma?.trim() || `${zakaznik.jmeno} ${zakaznik.prijmeni}`.trim(),
+            jmeno_display: `${zakaznik.jmeno} ${zakaznik.prijmeni}`.trim(),
+            email: zakaznik.email,
+            telefon: zakaznik.telefon,
+          },
+          polozky: sfPolozky,
         }),
       }).catch(console.error)
     }
