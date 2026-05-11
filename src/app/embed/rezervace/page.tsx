@@ -466,6 +466,28 @@ export default function RezervacePage() {
   }
 
   // ── Krok 1: výběr ─────────────────────────────────────────────────────────
+  // ── Odesílám ──────────────────────────────────────────────────────────────
+  if (step === "odesilam") return (
+    <div style={{padding:"60px 16px",maxWidth:480,margin:"0 auto",textAlign:"center"}}>
+      {/* Spinner */}
+      <div style={{
+        width:56,height:56,margin:"0 auto 24px",
+        border:"5px solid #e5e7eb",
+        borderTop:"5px solid #10b981",
+        borderRadius:"50%",
+        animation:"spin 0.9s linear infinite",
+      }}/>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <h2 style={{margin:"0 0 10px",fontSize:19,fontWeight:800,color:"#111827"}}>
+        Zpracováváme vaši rezervaci…
+      </h2>
+      <p style={{margin:0,fontSize:14,color:"#6b7280",lineHeight:1.7}}>
+        Ověřujeme dostupnost a vystavujeme zálohovou fakturu.<br/>
+        <strong>Nezavírejte stránku ani neklikejte, prosím čekejte.</strong>
+      </p>
+    </div>
+  )
+
   if (step === "vybrat" || step === "overuji") return (
     <div style={{padding:"24px 16px"}}>
       <div style={{maxWidth:560,margin:"0 auto"}}>
@@ -702,7 +724,6 @@ export default function RezervacePage() {
   )
 
   // ── Krok 2: formulář ──────────────────────────────────────────────────────
-  const isOdesilam = step === "odesilam"
 
   return (
     <div style={{padding:"20px 16px"}}>
@@ -729,42 +750,42 @@ export default function RezervacePage() {
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div>
                   <label style={lbl}>Jméno *</label>
-                  <input value={form.jmeno} onChange={e=>upd("jmeno",e.target.value)} placeholder="Jan" style={inp} disabled={isOdesilam} />
+                  <input value={form.jmeno} onChange={e=>upd("jmeno",e.target.value)} placeholder="Jan" style={inp} disabled={false} />
                 </div>
                 <div>
                   <label style={lbl}>Příjmení *</label>
-                  <input value={form.prijmeni} onChange={e=>upd("prijmeni",e.target.value)} placeholder="Novák" style={inp} disabled={isOdesilam} />
+                  <input value={form.prijmeni} onChange={e=>upd("prijmeni",e.target.value)} placeholder="Novák" style={inp} disabled={false} />
                 </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div>
                   <label style={lbl}>E-mail *</label>
-                  <input type="email" value={form.email} onChange={e=>upd("email",e.target.value)} placeholder="jan@email.cz" style={inp} disabled={isOdesilam} />
+                  <input type="email" value={form.email} onChange={e=>upd("email",e.target.value)} placeholder="jan@email.cz" style={inp} disabled={false} />
                 </div>
                 <div>
                   <label style={lbl}>Telefon *</label>
-                  <input type="tel" value={form.telefon} onChange={e=>upd("telefon",e.target.value)} placeholder="+420 777 000 000" style={inp} disabled={isOdesilam} />
+                  <input type="tel" value={form.telefon} onChange={e=>upd("telefon",e.target.value)} placeholder="+420 777 000 000" style={inp} disabled={false} />
                 </div>
               </div>
               <div>
                 <label style={lbl}>Ulice a č.p.</label>
-                <input value={form.ulice} onChange={e=>upd("ulice",e.target.value)} placeholder="Václavské nám. 1" style={inp} disabled={isOdesilam} />
+                <input value={form.ulice} onChange={e=>upd("ulice",e.target.value)} placeholder="Václavské nám. 1" style={inp} disabled={false} />
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 90px",gap:10}}>
                 <div>
                   <label style={lbl}>Město</label>
-                  <input value={form.mesto} onChange={e=>upd("mesto",e.target.value)} placeholder="Praha" style={inp} disabled={isOdesilam} />
+                  <input value={form.mesto} onChange={e=>upd("mesto",e.target.value)} placeholder="Praha" style={inp} disabled={false} />
                 </div>
                 <div>
                   <label style={lbl}>PSČ</label>
-                  <input value={form.psc} onChange={e=>upd("psc",e.target.value)} placeholder="110 00" style={inp} disabled={isOdesilam} />
+                  <input value={form.psc} onChange={e=>upd("psc",e.target.value)} placeholder="110 00" style={inp} disabled={false} />
                 </div>
               </div>
               <div>
                 <label style={lbl}>Poznámka</label>
                 <textarea value={form.poznamka} onChange={e=>upd("poznamka",e.target.value)} rows={2}
                   placeholder="Volitelné — zvláštní přání, dotazy…"
-                  style={{...inp,resize:"vertical" as const,lineHeight:1.5}} disabled={isOdesilam} />
+                  style={{...inp,resize:"vertical" as const,lineHeight:1.5}} disabled={false} />
               </div>
             </div>
           </div>
@@ -775,7 +796,7 @@ export default function RezervacePage() {
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {!jeBezvozidla && <div>
                 <label style={lbl}>Značka a model vozu *</label>
-                <input value={form.vozidlo} onChange={e=>upd("vozidlo",e.target.value)} placeholder="např. Škoda Octavia Combi 2020" style={inp} disabled={isOdesilam} />
+                <input value={form.vozidlo} onChange={e=>upd("vozidlo",e.target.value)} placeholder="např. Škoda Octavia Combi 2020" style={inp} disabled={false} />
               </div>}
               {/* Příčníky — jen pro stany */}
               {jeStany && <div>
@@ -840,14 +861,14 @@ export default function RezervacePage() {
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div>
                   <label style={lbl}>Čas vyzvednutí *</label>
-                  <select value={form.cas_vyzvednuti} onChange={e=>upd("cas_vyzvednuti",e.target.value)} style={inp} disabled={isOdesilam}>
+                  <select value={form.cas_vyzvednuti} onChange={e=>upd("cas_vyzvednuti",e.target.value)} style={inp} disabled={false}>
                     <option value="">Vyberte…</option>
                     {HODINY.map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
                 <div>
                   <label style={lbl}>Čas vrácení *</label>
-                  <select value={form.cas_vraceni} onChange={e=>upd("cas_vraceni",e.target.value)} style={inp} disabled={isOdesilam}>
+                  <select value={form.cas_vraceni} onChange={e=>upd("cas_vraceni",e.target.value)} style={inp} disabled={false}>
                     <option value="">Vyberte…</option>
                     {HODINY.map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
@@ -953,15 +974,15 @@ export default function RezervacePage() {
           </div>
 
           {/* ── Submit ── */}
-          <button type="submit" disabled={!canSubmit || isOdesilam}
+          <button type="submit" disabled={!canSubmit || false}
             style={{
               width:"100%", padding:"13px", borderRadius:12, border:"none",
-              background: !canSubmit || isOdesilam ? "#f3f4f6" : "#10b981",
-              color: !canSubmit || isOdesilam ? "#9ca3af" : "white",
-              fontSize:15, fontWeight:700, cursor: !canSubmit || isOdesilam ? "default" : "pointer",
+              background: !canSubmit || false ? "#f3f4f6" : "#10b981",
+              color: !canSubmit || false ? "#9ca3af" : "white",
+              fontSize:15, fontWeight:700, cursor: !canSubmit || false ? "default" : "pointer",
               transition:"all .15s",
             }}>
-            {isOdesilam ? "⏳ Odesílám…" : "Odeslat rezervaci →"}
+            {false ? "⏳ Odesílám…" : "Odeslat rezervaci →"}
           </button>
           <p style={{textAlign:"center",fontSize:12,color:"#9ca3af",marginTop:8,marginBottom:0}}>* povinné pole</p>
         </form>
