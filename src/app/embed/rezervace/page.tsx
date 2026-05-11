@@ -319,6 +319,29 @@ export default function RezervacePage() {
     if (mainRez?.id)
       await supabase.from("pujcovna_rezervace_historie").insert({ rezervace_id:mainRez.id, stav:"web-rezervace" })
 
+    // Odeslat potvrzovací emaily (zákazník + notifikace)
+    const stanNazev = stanDetail(selPolozka)?.nazev ?? selPolozka.name
+    fetch("/api/mail/rezervace-pujcovna", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        zakaznik: { jmeno:form.jmeno, prijmeni:form.prijmeni, email:form.email, telefon:form.telefon },
+        polozka: selCat === DRZAK_KAT ? (drzakVariant ?? DRZAK_KAT) : stanNazev,
+        dateFrom, dateTo, dni,
+        vozidlo: form.vozidlo,
+        casVyzvednuti: form.cas_vyzvednuti,
+        casVraceni: form.cas_vraceni,
+        pricniky: form.pricniky,
+        poznamka: form.poznamka,
+        drzakVariant: drzakVariant ?? "",
+        prisl: prislRadky.map(r => ({ nazev: r.pol.name, cnt: r.cnt, cena: r.cena })),
+        cenaStan: cenaStan,
+        montazPopl,
+        celkem,
+        groupId,
+      }),
+    }).catch(console.error) // fire-and-forget, neblokuje zobrazení "hotovo"
+
     setStep("hotovo")
   }
 
