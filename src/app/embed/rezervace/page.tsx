@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { dphRozpad, formatKc } from "@/lib/dph"
 
@@ -126,7 +126,7 @@ export default function RezervacePage() {
   const [chyba,        setChyba]        = useState<string | null>(null)
   const [alternativy,  setAlternativy]  = useState<Polozka[]>([])
   const [drzakVariant, setDrzakVariant] = useState<string | null>(null)
-  const [platbaInfo,   setPlatbaInfo]   = useState<{vs:string;invoice_no:string;castka:number;iban:string;qr_url:string;pdf_url:string} | null>(null)
+  const platbaRef = useRef<{vs:string;invoice_no:string;castka:number;iban:string;qr_url:string;pdf_url:string} | null>(null)
 
   // Krok 1
   const [selCat,  setSelCat]  = useState<string | null>(null)
@@ -353,7 +353,7 @@ export default function RezervacePage() {
           }),
         })
         const sfData = await sfRes.json()
-        if (sfData.ok) setPlatbaInfo(sfData)
+        if (sfData.ok) platbaRef.current = sfData  // ref = synchronní, nezpůsobuje extra render
       } catch (e) { console.error("SF záloha:", e) }
     }
 
@@ -393,7 +393,9 @@ export default function RezervacePage() {
   )
 
   // ── Hotovo ─────────────────────────────────────────────────────────────────
-  if (step === "hotovo") return (
+  if (step === "hotovo") {
+  const platbaInfo = platbaRef.current
+  return (
     <div style={{padding:"32px 16px",maxWidth:520,margin:"0 auto"}}>
       <div style={{textAlign:"center",marginBottom:24}}>
         <div style={{fontSize:52,marginBottom:8}}>✅</div>
@@ -461,6 +463,7 @@ export default function RezervacePage() {
       </p>
     </div>
   )
+  }
 
   // ── Krok 1: výběr ─────────────────────────────────────────────────────────
   if (step === "vybrat" || step === "overuji") return (
