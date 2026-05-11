@@ -260,7 +260,13 @@ export default function RezervacePopup({
   async function zmenStav(novyStav: string) {
     if (!rez || novyStav === rez.stav) return
     const sb = createClient()
-    await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("id", rez.id)
+
+    if (novyStav === "storno" && rez.group_id) {
+      // Stornuj celou skupinu (stan + příslušenství)
+      await sb.from("pujcovna_rezervace").update({ stav: "storno" }).eq("group_id", rez.group_id)
+    } else {
+      await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("id", rez.id)
+    }
     await sb.from("pujcovna_rezervace_historie").insert([{ rezervace_id: rez.id, stav: novyStav }])
     setRez({ ...rez, stav: novyStav })
     nactiHistorii(rez.id)
