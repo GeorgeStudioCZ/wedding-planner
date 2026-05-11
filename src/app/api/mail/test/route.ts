@@ -10,6 +10,18 @@ export async function GET(req: NextRequest) {
 
   if (!to) return NextResponse.json({ error: "Chybí parametr ?to=" }, { status: 400 })
 
+  // Debug: ukáže co skutečně čteme z env (hesla maskována)
+  const envDebug = {
+    SMTP_HOST: process.env.SMTP_HOST ?? "(undefined)",
+    SMTP_PORT: process.env.SMTP_PORT ?? "(undefined)",
+    SMTP_USER_STANY:  process.env.SMTP_USER_STANY  ?? "(undefined)",
+    SMTP_USER_SVATBY: process.env.SMTP_USER_SVATBY ?? "(undefined)",
+    SMTP_USER_GEORGE: process.env.SMTP_USER_GEORGE ?? "(undefined)",
+    SMTP_PASS_STANY:  process.env.SMTP_PASS_STANY  ? "✓ set" : "(undefined)",
+    SMTP_PASS_SVATBY: process.env.SMTP_PASS_SVATBY ? "✓ set" : "(undefined)",
+    SMTP_PASS_GEORGE: process.env.SMTP_PASS_GEORGE ? "✓ set" : "(undefined)",
+  }
+
   try {
     await sendMail({
       sluzba,
@@ -18,9 +30,9 @@ export async function GET(req: NextRequest) {
       html: `<p>Tento email byl odeslán z CRM přes SMTP (<strong>${sluzba}</strong>).</p>
              <p>Pokud ho vidíš, napojení funguje ✅</p>`,
     })
-    return NextResponse.json({ ok: true, sluzba, to })
+    return NextResponse.json({ ok: true, sluzba, to, envDebug })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 })
+    return NextResponse.json({ ok: false, error: msg, envDebug }, { status: 500 })
   }
 }
