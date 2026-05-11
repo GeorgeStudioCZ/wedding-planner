@@ -74,9 +74,9 @@ const STAVY = [
 const KATEGORIE_ORDER = ["Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Ostatní"]
 
 const BARVY_STANU = [
-  { klic: "malý",    barva: "#F23753" },
-  { klic: "střední", barva: "#3477F5" },
-  { klic: "velký",   barva: "#F3940E" },
+  { klic: "mal",   barva: "#F23753" },
+  { klic: "střed", barva: "#3477F5" },
+  { klic: "velk",  barva: "#F3940E" },
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

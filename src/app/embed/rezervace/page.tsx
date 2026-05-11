@@ -21,7 +21,7 @@ type Step    = "vybrat" | "overuji" | "formular" | "odesilam" | "hotovo"
 const PRISL_CATS = new Set(["Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
 // NOT_MAIN_CATS = všechny kategorie které NEJSOU samostatně půjčitelné (příslušenství + příčníky)
 const NOT_MAIN_CATS = new Set([...PRISL_CATS, "Příčníky"])
-const BARVY_STANU: Record<string, string> = { "malý":"#F23753", "střední":"#3477F5", "velký":"#F3940E" }
+const BARVY_STANU: Record<string, string> = { "mal":"#F23753", "střed":"#3477F5", "velk":"#F3940E" }
 
 // Virtuální kategorie Držáky kol — dvě varianty, obě odkazují na stejný produkt Thule
 const DRZAK_KAT       = "Držáky kol"
