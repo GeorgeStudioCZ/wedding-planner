@@ -262,6 +262,20 @@ export default function RezervacePopup({
     await sb.from("pujcovna_rezervace_historie").insert([{ rezervace_id: rez.id, stav: novyStav }])
     setRez({ ...rez, stav: novyStav })
     nactiHistorii(rez.id)
+
+    // Storno → email zákazníkovi
+    if (novyStav === "storno" && zakaznik?.email && polozka) {
+      fetch("/api/mail/storno-pujcovna", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          zakaznik: { jmeno: zakaznik.jmeno, email: zakaznik.email },
+          polozka: polozka.name,
+          dateFrom: rez.start_date,
+          dateTo: rez.end_date,
+        }),
+      }).catch(console.error)
+    }
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
