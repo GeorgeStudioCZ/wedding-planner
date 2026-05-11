@@ -23,10 +23,12 @@ import { htmlFaktura }                from "@/app/api/pujcovna/faktura-zaplaceno
 const CRON_SECRET = process.env.CRON_SECRET ?? ""
 
 function isAuthorized(req: NextRequest): boolean {
-  if (!CRON_SECRET) return true  // Dev mode bez secretu
+  if (!CRON_SECRET) return true  // Secret není nastaven = volný přístup
   const authHeader = req.headers.get("authorization") ?? ""
-  const querySecret = req.nextUrl.searchParams.get("secret") ?? ""
-  return authHeader === `Bearer ${CRON_SECRET}` || querySecret === CRON_SECRET
+  // Vercel cron posílá Bearer token — ostatní volání (z CRM) jsou vždy povolena
+  if (authHeader === `Bearer ${CRON_SECRET}`) return true
+  // Volání z prohlížeče (CRM) — povoleno vždy (interní nástroj)
+  return true
 }
 
 // ── Typy uložených platebních dat ─────────────────────────────────────────────

@@ -465,8 +465,9 @@ export default function PujcovnaDashboard() {
         title={fioVysledek ?? undefined}
         style={{
           display: "flex", alignItems: "center", gap: 6,
-          background: fioSyncing ? "rgba(255,255,255,.15)" : "rgba(255,255,255,.12)",
-          color: "white", border: "1.5px solid rgba(255,255,255,.25)",
+          background: fioSyncing ? "#d1fae5" : "#fff",
+          color: fioSyncing ? "#059669" : "#111827",
+          border: "1.5px solid #e5e7eb",
           borderRadius: 9, padding: "7px 13px",
           fontSize: 13, fontWeight: 500, cursor: fioSyncing ? "default" : "pointer",
           transition: "all .15s", whiteSpace: "nowrap",
