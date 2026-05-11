@@ -42,6 +42,13 @@ function parseTransaction(t: Record<string, RawColumn>): FioTransaction {
   }
 }
 
+// ── Nastav zarážku na dané datum (posune ukazatel posledního stažení) ─────────
+
+async function nastavZarazku(token: string, isoDate: string): Promise<void> {
+  const url = `${FIO_BASE}/set-last-date/${token}/${isoDate}/`
+  await fetch(url, { cache: "no-store" })
+}
+
 // ── Stáhni pohyby od posledního dotazu (zarážka je serverová — automatická) ──
 
 export async function fetchNewTransactions(): Promise<FioTransaction[]> {
@@ -51,6 +58,18 @@ export async function fetchNewTransactions(): Promise<FioTransaction[]> {
   const url = `${FIO_BASE}/last/${token}/transactions.json`
 
   const res = await fetch(url, { cache: "no-store" })
+
+  // HTTP 422 = zarážka ukazuje na datum starší než 90 dní → automaticky ji posuneme
+  // na včerejšek a vrátíme prázdný seznam (příští volání już bude fungovat)
+  if (res.status === 422) {
+    const vcera = new Date()
+    vcera.setDate(vcera.getDate() - 1)
+    const isoVcera = vcera.toISOString().slice(0, 10)
+    await nastavZarazku(token, isoVcera)
+    console.log(`[fio] Zarážka posunuta na ${isoVcera}, příští sync stáhne nové pohyby`)
+    return []   // toto volání vrátí prázdný seznam, příště bude OK
+  }
+
   if (!res.ok) throw new Error(`Fio HTTP ${res.status}: ${await res.text()}`)
 
   type FioJson = {
