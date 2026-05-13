@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
       //    fio_id_pohybu IS NULL = ještě nebylo zpracováno (idempotency)
       const { data: rez } = await sb
         .from("pujcovna_rezervace")
-        .select("id, group_id, customer, sf_proforma_id, sf_platba_data")
+        .select("id, group_id, customer, sf_proforma_id, sf_platba_data, start_date, end_date")
         .eq("sf_vs", t.vs!)
         .eq("stav", "cekam-platbu")
         .is("fio_id_pohybu", null)
@@ -126,8 +126,15 @@ export async function GET(req: NextRequest) {
         await sendMail({
           sluzba: "stany",
           to:      platba.klient.email,
-          subject: `Faktura ${faktura.invoice_no} – Stanuj na autě`,
-          html:    htmlFaktura(platba.klient.jmeno_display, faktura.invoice_no, faktura.pdf_url),
+          subject: `Platba přijata – rezervace potvrzena ✅`,
+          html:    htmlFaktura({
+            jmeno:      platba.klient.jmeno_display,
+            invoice_no: faktura.invoice_no,
+            pdf_url:    faktura.pdf_url,
+            polozka:    platba.polozky[0]?.nazev,
+            startDate:  rez.start_date,
+            endDate:    rez.end_date,
+          }),
         })
       }
 
