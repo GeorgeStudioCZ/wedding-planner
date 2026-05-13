@@ -85,6 +85,9 @@ export default function TimerPopup() {
   // PWA install prompt
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt: () => void } | null>(null)
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {})
+    }
     const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e as Event & { prompt: () => void }) }
     window.addEventListener("beforeinstallprompt", handler)
     return () => window.removeEventListener("beforeinstallprompt", handler)
