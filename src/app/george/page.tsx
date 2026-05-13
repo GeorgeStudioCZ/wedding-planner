@@ -560,6 +560,33 @@ export default function GeorgePage() {
           overflowY: "auto",
         }}>
 
+          {/* Tlačítko "otevřít v okně" */}
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 12px 0" }}>
+            <button
+              title="Otevřít timer v samostatném okně"
+              onClick={() => window.open(
+                "/george/timer",
+                "GeorgeTimer",
+                "width=360,height=680,resizable=yes,scrollbars=yes"
+              )}
+              style={{
+                background: "none", border: "1px solid rgba(255,255,255,.08)",
+                borderRadius: 7, padding: "5px 9px", cursor: "pointer",
+                color: "#5a5b66", display: "flex", alignItems: "center", gap: 5,
+                fontSize: 11, fontWeight: 500, transition: "all .15s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#a9aab5"; e.currentTarget.style.borderColor = "rgba(255,255,255,.2)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = "#5a5b66"; e.currentTarget.style.borderColor = "rgba(255,255,255,.08)" }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <path d="M15 3h6v6" />
+                <path d="M10 14L21 3" />
+              </svg>
+              Otevřít v okně
+            </button>
+          </div>
+
           {/* ── Clock widget ── */}
           <div style={{
             padding: "28px 20px 22px",
