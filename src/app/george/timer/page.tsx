@@ -82,6 +82,14 @@ export default function TimerPopup() {
   const [zakaznikId,  setZakaznikId]  = useState<number | null>(null)
   const [kategorieId, setKategorieId] = useState<number | null>(null)
 
+  // PWA install prompt
+  const [installPrompt, setInstallPrompt] = useState<Event & { prompt: () => void } | null>(null)
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e as Event & { prompt: () => void }) }
+    window.addEventListener("beforeinstallprompt", handler)
+    return () => window.removeEventListener("beforeinstallprompt", handler)
+  }, [])
+
   // Nastavit title okna
   useEffect(() => { document.title = "Timer · George Studio" }, [])
 
@@ -208,9 +216,23 @@ export default function TimerPopup() {
             George Studio · Timer
           </span>
         </div>
-        <span style={{ fontSize: 11, color: "#3a3b44", fontVariantNumeric: "tabular-nums" }}>
-          Dnes: {formatElapsed(todaySeconds * 1000)}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {installPrompt && (
+            <button onClick={() => { installPrompt.prompt(); setInstallPrompt(null) }} style={{
+              background: "rgba(99,102,241,.15)", border: "1px solid rgba(99,102,241,.35)",
+              borderRadius: 7, padding: "4px 10px", color: "#818cf8", fontSize: 11,
+              fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
+            }}>
+              <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v13M7 11l5 5 5-5" /><rect x="3" y="18" width="18" height="3" rx="1.5" fill="currentColor" stroke="none" />
+              </svg>
+              Nainstalovat
+            </button>
+          )}
+          <span style={{ fontSize: 11, color: "#3a3b44", fontVariantNumeric: "tabular-nums" }}>
+            Dnes: {formatElapsed(todaySeconds * 1000)}
+          </span>
+        </div>
       </div>
 
       {/* ── Ring ── */}
