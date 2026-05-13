@@ -109,7 +109,7 @@ export function htmlFaktura(opts: HtmlFakturaOpts): string {
       <div style="background:#fffbeb;border-radius:10px;padding:16px 18px;margin-bottom:20px;border:1px solid #fde68a">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#b45309;margin-bottom:6px">💰 Kauce při vyzvednutí</div>
         <p style="margin:0;font-size:14px;color:#374151;line-height:1.6">
-          Při převzetí autostanu je splatná <strong>kauce 5&nbsp;000&nbsp;Kč</strong> v hotovosti nebo převodem na místě.
+          Při převzetí autostanu je splatná <strong>kauce 5&nbsp;000&nbsp;Kč v hotovosti</strong>.
           Kauce bude vrácena po vrácení veškeré výbavy v pořádku.
         </p>
       </div>
