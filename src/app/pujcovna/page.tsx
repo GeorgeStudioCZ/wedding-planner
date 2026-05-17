@@ -213,12 +213,17 @@ export default function PujcovnaDashboard() {
 
   const letosRez = rezStanu.filter(r => new Date(r.start_date).getFullYear() === ROK)
 
-  // Hlavní kategorie = ty, které mohou být hlavní rezervací (ne příslušenství)
-  const HLAVNI_KAT = ["Stany", "Paddleboardy", "Držáky kol"]
+  // Příslušenství = kategorie které nejsou samostatně půjčitelné
+  const PRISL_KAT = new Set(["Příčníky","Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
   const jeHlavni = (r: { group_id: string | null; item_id: number }) => {
     if (!r.group_id) return true
     const pol = polozky.find(p => p.id === r.item_id)
-    return HLAVNI_KAT.includes(pol?.category ?? "")
+    if (!pol) return false
+    // Stany, Paddleboardy → hlavní kategorie
+    if (!PRISL_KAT.has(pol.category)) return true
+    // Thule je virtuální kategorie — v DB uložena jako "Ostatní"
+    if (pol.name === "Držák kol Thule") return true
+    return false
   }
 
   // Hlavní rezervace pro seznam: autostany + paddleboardy + držáky kol

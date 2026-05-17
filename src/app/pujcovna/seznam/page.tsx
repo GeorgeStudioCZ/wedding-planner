@@ -91,12 +91,15 @@ export default function SeznamRezervaci() {
     nacti()
   }, [])
 
-  // Hlavní rezervace: autostany + paddleboardy + držáky kol (ne příslušenství)
-  const HLAVNI_KAT = ["Stany", "Paddleboardy", "Držáky kol"]
+  // Příslušenství = kategorie které nejsou samostatně půjčitelné
+  const PRISL_KAT = new Set(["Příčníky","Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
   const rezStanu = rezervace.filter(r => {
     if (!r.group_id) return true
     const pol = polozky.find(p => p.id === r.item_id)
-    return HLAVNI_KAT.includes(pol?.category ?? "")
+    if (!pol) return false
+    if (!PRISL_KAT.has(pol.category)) return true       // Stany, Paddleboardy → hlavní
+    if (pol.name === "Držák kol Thule") return true      // Thule = virtuální kategorie, fyzicky "Ostatní"
+    return false
   })
 
   function stanLabel(itemId: number, unitIndex: number) {
