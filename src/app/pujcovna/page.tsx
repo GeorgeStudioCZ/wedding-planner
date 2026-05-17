@@ -213,19 +213,23 @@ export default function PujcovnaDashboard() {
 
   const letosRez = rezStanu.filter(r => new Date(r.start_date).getFullYear() === ROK)
 
-  // Hlavní rezervace pro seznam: stany + standalone položky bez group_id
-  const hlavni = rezervace.filter(r => {
+  // Hlavní kategorie = ty, které mohou být hlavní rezervací (ne příslušenství)
+  const HLAVNI_KAT = ["Stany", "Paddleboardy", "Držáky kol"]
+  const jeHlavni = (r: { group_id: string | null; item_id: number }) => {
     if (!r.group_id) return true
     const pol = polozky.find(p => p.id === r.item_id)
-    return pol?.category === "Stany"
-  })
+    return HLAVNI_KAT.includes(pol?.category ?? "")
+  }
+
+  // Hlavní rezervace pro seznam: autostany + paddleboardy + držáky kol
+  const hlavni = rezervace.filter(jeHlavni)
   const webRezervace = hlavni.filter(r => r.stav === "web-rezervace")
   const rezRezervace = hlavni.filter(r => r.stav === "rezervace")
   const cekamPlatbu  = hlavni.filter(r => r.stav === "cekam-platbu")
   const zaplaceno   = hlavni.filter(r => r.stav === "zaplaceno")
   const vypujceno   = hlavni.filter(r => r.stav === "vypujceno")
   const dokonceno   = hlavni.filter(r => r.stav === "dokonceno")
-  const storno      = stornoRez.filter(r => { const pol = polozky.find(p => p.id === r.item_id); return !r.group_id || pol?.category === "Stany" })
+  const storno      = stornoRez.filter(jeHlavni)
 
   const celkemDni = letosRez.reduce((s, r) => s + pocetDni(r.start_date, r.end_date), 0)
   const prumDelka = letosRez.length > 0 ? Math.round(celkemDni / letosRez.length) : 0

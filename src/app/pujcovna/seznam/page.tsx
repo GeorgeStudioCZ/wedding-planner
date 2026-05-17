@@ -91,11 +91,12 @@ export default function SeznamRezervaci() {
     nacti()
   }, [])
 
-  // Hlavní rezervace: stany (primary item skupiny) + standalone položky bez group_id
+  // Hlavní rezervace: autostany + paddleboardy + držáky kol (ne příslušenství)
+  const HLAVNI_KAT = ["Stany", "Paddleboardy", "Držáky kol"]
   const rezStanu = rezervace.filter(r => {
-    if (!r.group_id) return true                          // standalone (Thule, apod.)
+    if (!r.group_id) return true
     const pol = polozky.find(p => p.id === r.item_id)
-    return pol?.category === "Stany"                      // jen hlavní stan skupiny
+    return HLAVNI_KAT.includes(pol?.category ?? "")
   })
 
   function stanLabel(itemId: number, unitIndex: number) {
