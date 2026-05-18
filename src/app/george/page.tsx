@@ -328,6 +328,12 @@ export default function GeorgePage() {
   const [zakaznikId,  setZakaznikId]  = useState<number | null>(null)
   const [kategorieId, setKategorieId] = useState<number | null>(null)
 
+  // Manuální zadání
+  const [manualMode, setManualMode] = useState(false)
+  const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [manualFrom, setManualFrom] = useState("")
+  const [manualTo,   setManualTo]   = useState("")
+
   // ── Derived ────────────────────────────────────────────────────────────────
   const todayStr     = new Date().toISOString().slice(0, 10)
   const todayZaznamy = zaznamy.filter(z => z.end_at && isoDate(z.start_at) === todayStr)
@@ -443,6 +449,22 @@ export default function GeorgePage() {
       if (running?.id === data.id) setRunning(data)
     }
     setEditingZaznam(null)
+  }
+
+  async function handleAddManual() {
+    if (!nazev.trim() || !manualFrom || !manualTo) return
+    const start_at = localToIso(manualDate, manualFrom)
+    const end_at   = localToIso(manualDate, manualTo)
+    if (new Date(end_at) <= new Date(start_at)) return
+    const db = createClient()
+    const { data, error } = await db.from("george_zaznamy").insert({
+      nazev: nazev.trim(), zakaznik_id: zakaznikId, kategorie_id: kategorieId,
+      start_at, end_at,
+    }).select().single()
+    if (error || !data) return
+    setZaznamy(prev => [data, ...prev.filter(z => z.id !== data.id)].sort((a, b) => b.start_at.localeCompare(a.start_at)))
+    setNazev(""); setManualMode(false); setManualFrom(""); setManualTo("")
+    setManualDate(new Date().toISOString().slice(0, 10))
   }
 
   async function handleDelete(id: number) {
@@ -753,6 +775,44 @@ export default function GeorgePage() {
               </div>
             )}
 
+            {/* Manuální zadání — datum + časy */}
+            {!running && manualMode && (
+              <div style={{ marginBottom: 14 }}>
+                <input type="date" value={manualDate} onChange={e => setManualDate(e.target.value)}
+                  style={{
+                    width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9, marginBottom: 10,
+                    border: "1px solid rgba(255,255,255,.12)", fontSize: 13,
+                    color: "#eaeaf0", outline: "none", background: "rgba(255,255,255,.05)",
+                    colorScheme: "dark",
+                  }}
+                />
+                <div style={{ display: "flex", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10.5, color: "#5a5b66", marginBottom: 5, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>Od</div>
+                    <input type="time" value={manualFrom} onChange={e => setManualFrom(e.target.value)}
+                      style={{
+                        width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9,
+                        border: "1px solid rgba(255,255,255,.12)", fontSize: 14,
+                        color: "#eaeaf0", outline: "none", background: "rgba(255,255,255,.05)",
+                        colorScheme: "dark", fontVariantNumeric: "tabular-nums",
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10.5, color: "#5a5b66", marginBottom: 5, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>Do</div>
+                    <input type="time" value={manualTo} onChange={e => setManualTo(e.target.value)}
+                      style={{
+                        width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9,
+                        border: "1px solid rgba(255,255,255,.12)", fontSize: 14,
+                        color: "#eaeaf0", outline: "none", background: "rgba(255,255,255,.05)",
+                        colorScheme: "dark", fontVariantNumeric: "tabular-nums",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Start / Stop */}
             {running ? (
               <button onClick={handleStop} style={{
@@ -763,22 +823,56 @@ export default function GeorgePage() {
                 <Ico d={IC.stop} size={15} />
                 Zastavit
               </button>
+            ) : manualMode ? (
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleAddManual}
+                  disabled={!nazev.trim() || !manualFrom || !manualTo}
+                  style={{
+                    flex: 1, padding: "11px", borderRadius: 11, border: "none",
+                    cursor: nazev.trim() && manualFrom && manualTo ? "pointer" : "default",
+                    background: nazev.trim() && manualFrom && manualTo ? "linear-gradient(135deg, #10b981, #0ea5e9)" : "rgba(255,255,255,.06)",
+                    color: nazev.trim() && manualFrom && manualTo ? "white" : "#5a5b66",
+                    fontSize: 14.5, fontWeight: 600,
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    transition: "all .15s",
+                    boxShadow: nazev.trim() && manualFrom && manualTo ? "0 4px 14px rgba(16,185,129,.3)" : "none",
+                  }}>
+                  <Ico d="M12 5v14M5 12h14" size={15} /> Přidat
+                </button>
+                <button onClick={() => setManualMode(false)} title="Zrušit" style={{
+                  width: 46, height: 46, borderRadius: 11, border: "1px solid rgba(255,255,255,.1)",
+                  background: "rgba(255,255,255,.04)", color: "#7a7b85",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <Ico d={IC.close} size={15} />
+                </button>
+              </div>
             ) : (
-              <button onClick={handleStart} disabled={!nazev.trim()} style={{
-                width: "100%", padding: "11px", borderRadius: 11, border: "none",
-                cursor: nazev.trim() ? "pointer" : "default",
-                background: nazev.trim()
-                  ? "linear-gradient(135deg, var(--studio-grad-a), var(--studio-grad-b))"
-                  : "rgba(255,255,255,.06)",
-                color: nazev.trim() ? "white" : "#5a5b66",
-                fontSize: 14.5, fontWeight: 600,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                transition: "all .15s",
-                boxShadow: nazev.trim() ? "0 4px 14px rgba(99,102,241,.35)" : "none",
-              }}>
-                <Ico d={IC.play} size={15} />
-                Spustit
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleStart} disabled={!nazev.trim()} style={{
+                  flex: 1, padding: "11px", borderRadius: 11, border: "none",
+                  cursor: nazev.trim() ? "pointer" : "default",
+                  background: nazev.trim()
+                    ? "linear-gradient(135deg, var(--studio-grad-a), var(--studio-grad-b))"
+                    : "rgba(255,255,255,.06)",
+                  color: nazev.trim() ? "white" : "#5a5b66",
+                  fontSize: 14.5, fontWeight: 600,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  transition: "all .15s",
+                  boxShadow: nazev.trim() ? "0 4px 14px rgba(99,102,241,.35)" : "none",
+                }}>
+                  <Ico d={IC.play} size={15} />
+                  Spustit
+                </button>
+                <button onClick={() => { setManualMode(true); setManualDate(new Date().toISOString().slice(0, 10)) }}
+                  title="Přidat manuálně" style={{
+                  width: 46, height: 46, borderRadius: 11, border: "1px solid rgba(255,255,255,.1)",
+                  background: "rgba(255,255,255,.04)", color: "#7a7b85",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <Ico d="M12 5v14M5 12h14" size={17} />
+                </button>
+              </div>
             )}
           </div>
 
