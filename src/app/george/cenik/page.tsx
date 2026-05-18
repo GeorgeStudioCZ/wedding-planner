@@ -20,10 +20,12 @@ type Polozka = {
 
 const DPH = 1.21
 
-const COLORS = [
-  "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
-  "#f59e0b", "#10b981", "#0ea5e9", "#64748b",
-]
+// Pevné barvy podle typu — červená = služba, modrá = materiál
+const BARVA_SLUZBA   = "#ef4444"
+const BARVA_MATERIAL = "#3b82f6"
+function barvaTypu(typ: "sluzba" | "material") {
+  return typ === "sluzba" ? BARVA_SLUZBA : BARVA_MATERIAL
+}
 
 const JEDNOTKY = ["ks", "sada", "m", "kg"]
 
@@ -78,7 +80,7 @@ function Modal({
   const isEdit = !!editItem
   const [typ,      setTyp]      = useState<"sluzba" | "material">(editItem?.typ ?? "sluzba")
   const [name,     setName]     = useState(editItem?.name ?? "")
-  const [barva,    setBarva]    = useState(editItem?.barva ?? COLORS[0])
+  const barva = barvaTypu(typ)   // automaticky podle typu, nepotřebuje state
   const [prodej,   setProdej]   = useState(editItem ? String(editItem.sazba) : "")
   const [jednotka, setJednotka] = useState(editItem?.jednotka ?? "ks")
   const [nakup,    setNakup]    = useState(editItem?.nakupni_cena != null ? String(editItem.nakupni_cena) : "")
@@ -167,20 +169,6 @@ function Modal({
             style={inp}
             autoFocus
           />
-        </div>
-
-        {/* Barva */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={lbl}>Barva v timeru</label>
-          <div style={{ display: "flex", gap: 8 }}>
-            {COLORS.map(c => (
-              <button key={c} onClick={() => setBarva(c)} style={{
-                width: 26, height: 26, borderRadius: 99, background: c, border: "none", cursor: "pointer",
-                boxShadow: barva === c ? `0 0 0 3px white, 0 0 0 5px ${c}` : "none",
-                transition: "box-shadow .12s",
-              }} />
-            ))}
-          </div>
         </div>
 
         {/* ── Služba — sazba ── */}
@@ -312,8 +300,15 @@ function PolozkaRadek({ p, onEdit, onDelete }: {
       padding: "14px 18px", background: "white",
       borderRadius: 12, boxShadow: "var(--shadow-1)", border: "1px solid var(--line)",
     }}>
-      {/* Barevná tečka */}
-      <span style={{ width: 11, height: 11, borderRadius: 99, flexShrink: 0, background: p.barva }} />
+      {/* S / M čtvereček */}
+      <div style={{
+        width: 26, height: 26, borderRadius: 6, flexShrink: 0,
+        background: barvaTypu(typEff as "sluzba" | "material"),
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 11, fontWeight: 800, color: "white", letterSpacing: ".02em",
+      }}>
+        {typEff === "sluzba" ? "S" : "M"}
+      </div>
 
       {/* Obsah */}
       <div style={{ flex: 1, minWidth: 0 }}>

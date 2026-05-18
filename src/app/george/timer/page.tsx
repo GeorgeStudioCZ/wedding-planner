@@ -557,7 +557,14 @@ export default function TimerPopup() {
             const zakName = zak ? (zak.firma?.trim() || `${zak.jmeno} ${zak.prijmeni}`.trim()) : null
             return (
               <div key={z.id} style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,.04)", display: "flex", alignItems: "center", gap: 7 }}>
-                <span style={{ width: 7, height: 7, borderRadius: 99, flexShrink: 0, background: kat?.barva ?? "#3a3b44" }} />
+                <div style={{
+                  width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                  background: z.pocet != null ? "#3b82f6" : "#ef4444",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 9, fontWeight: 800, color: "white",
+                }}>
+                  {z.pocet != null ? "M" : "S"}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 500, color: "#a9aab5", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {z.nazev || "(bez názvu)"}

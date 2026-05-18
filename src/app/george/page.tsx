@@ -122,7 +122,14 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit }: {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
-      <span style={{ width: 10, height: 10, borderRadius: 99, flexShrink: 0, background: kat?.barva ?? "#8a8a96" }} />
+      <div style={{
+        width: 24, height: 24, borderRadius: 5, flexShrink: 0,
+        background: isMat ? "#3b82f6" : (kat ? "#ef4444" : "#9ca3af"),
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 10, fontWeight: 800, color: "white",
+      }}>
+        {isMat ? "M" : "S"}
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 500, fontSize: 14, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {z.nazev || <span style={{ color: "var(--muted)" }}>(bez názvu)</span>}
