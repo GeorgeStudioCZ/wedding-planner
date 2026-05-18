@@ -8,7 +8,7 @@ import { bezDPH, castDPH } from "@/lib/dph"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
-type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number }
+type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null; jednotka: string | null }
 type Zaznam = {
   id: number
   zakaznik_id: number | null
@@ -17,6 +17,7 @@ type Zaznam = {
   start_at: string
   end_at: string | null
   poznamka: string
+  pocet: number | null
 }
 
 // ── SVG ring constants ────────────────────────────────────────────────────────
@@ -77,8 +78,9 @@ function dateLabel(iso: string) {
 
 function calcEarnings(z: Zaznam, kategorie: Kategorie[]) {
   const kat = kategorie.find(k => k.id === z.kategorie_id)
-  if (!kat || !z.end_at) return 0
-  if (kat.sazba_typ === "kus") return kat.sazba
+  if (!kat) return 0
+  if (z.pocet != null) return Math.round(z.pocet * kat.sazba)   // materiál
+  if (!z.end_at) return 0
   const hours = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
   return Math.round(hours * kat.sazba)
 }
@@ -110,7 +112,8 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit }: {
   const kat      = kategorie.find(k => k.id === z.kategorie_id)
   const zak      = zakaznici.find(c => c.id === z.zakaznik_id)
   const earnings = calcEarnings(z, kategorie)
-  const dur      = z.end_at ? formatDuration(z.start_at, z.end_at) : null
+  const isMat    = z.pocet != null
+  const dur      = !isMat && z.end_at ? formatDuration(z.start_at, z.end_at) : null
 
   const iconBtn: React.CSSProperties = {
     color: "var(--muted)", background: "none", border: "none",
@@ -127,20 +130,24 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit }: {
         <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 1, display: "flex", gap: 8, flexWrap: "wrap" }}>
           {kat && <span>{kat.name}</span>}
           {zak && <span>· {zak.firma?.trim() || `${zak.jmeno} ${zak.prijmeni}`.trim()}</span>}
-          <span>· {formatTime(z.start_at)}{z.end_at ? ` – ${formatTime(z.end_at)}` : ""}</span>
+          {!isMat && <span>· {formatTime(z.start_at)}{z.end_at ? ` – ${formatTime(z.end_at)}` : ""}</span>}
         </div>
       </div>
-      {dur && (
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
+      <div style={{ textAlign: "right", flexShrink: 0 }}>
+        {isMat ? (
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#10b981", fontVariantNumeric: "tabular-nums" }}>
+            {z.pocet} {kat?.jednotka ?? "ks"}
+          </div>
+        ) : dur ? (
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{dur}</div>
-          {earnings > 0 && (
-            <div style={{ fontSize: 11, color: "#4338ca", marginTop: 1 }}>
-              {earnings.toLocaleString("cs-CZ")} Kč
-              <span style={{ color: "var(--muted)", marginLeft: 4 }}>· bez DPH {Math.round(bezDPH(earnings)).toLocaleString("cs-CZ")} Kč</span>
-            </div>
-          )}
-        </div>
-      )}
+        ) : null}
+        {earnings > 0 && (
+          <div style={{ fontSize: 11, color: isMat ? "#059669" : "#4338ca", marginTop: 1 }}>
+            {earnings.toLocaleString("cs-CZ")} Kč
+            {!isMat && <span style={{ color: "var(--muted)", marginLeft: 4 }}>· bez DPH {Math.round(bezDPH(earnings)).toLocaleString("cs-CZ")} Kč</span>}
+          </div>
+        )}
+      </div>
       <button onClick={() => onEdit(z)} style={iconBtn} title="Upravit">
         <Ico d={IC.edit} size={14} />
       </button>
@@ -334,6 +341,10 @@ export default function GeorgePage() {
   const [manualFrom, setManualFrom] = useState("")
   const [manualTo,   setManualTo]   = useState("")
 
+  // Režim S / M
+  const [modTyp, setModTyp] = useState<"sluzba" | "material">("sluzba")
+  const [pocet,  setPocet]  = useState("")
+
   // ── Derived ────────────────────────────────────────────────────────────────
   const todayStr     = new Date().toISOString().slice(0, 10)
   const todayZaznamy = zaznamy.filter(z => z.end_at && isoDate(z.start_at) === todayStr)
@@ -347,6 +358,11 @@ export default function GeorgePage() {
     const g = grouped.find(g => g.date === d)
     if (g) g.items.push(z); else grouped.push({ date: d, items: [z] })
   }
+
+  // Kategorie podle typu
+  const sluzbyKat   = kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba")
+  const materialyKat = kategorie.filter(k => k.typ === "material")
+  const aktivniKat   = modTyp === "sluzba" ? sluzbyKat : materialyKat
 
   // Studio-only customers (projekty může být array nebo JSON string)
   const studioZakaznici = zakaznici.filter(z => {
@@ -449,6 +465,25 @@ export default function GeorgePage() {
       if (running?.id === data.id) setRunning(data)
     }
     setEditingZaznam(null)
+  }
+
+  async function handleAddMaterial() {
+    if (!kategorieId) return
+    const pocetNum = parseFloat(pocet.replace(",", "."))
+    if (isNaN(pocetNum) || pocetNum <= 0) return
+    const db = createClient()
+    const now = new Date().toISOString()
+    const kat = kategorie.find(k => k.id === kategorieId)
+    const { data, error } = await db.from("george_zaznamy").insert({
+      nazev: nazev.trim() || (kat?.name ?? "Materiál"),
+      zakaznik_id: zakaznikId,
+      kategorie_id: kategorieId,
+      start_at: now, end_at: now,
+      pocet: pocetNum,
+    }).select().single()
+    if (error || !data) return
+    setZaznamy(prev => [data, ...prev])
+    setNazev(""); setPocet(""); setKategorieId(null)
   }
 
   async function handleAddManual() {
@@ -740,11 +775,31 @@ export default function GeorgePage() {
               </select>
             </div>
 
-            {/* Kategorie — dropdown */}
+            {/* S / M toggle + Kategorie */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11.5, color: "#7a7b85", display: "block", marginBottom: 4 }}>Kategorie</label>
-              {kategorie.length === 0 ? (
-                <p style={{ fontSize: 12, color: "#5a5b66", margin: 0 }}>Přidej kategorie v Ceníku služeb.</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
+                {(["sluzba", "material"] as const).map(t => (
+                  <button key={t} onClick={() => { setModTyp(t); setKategorieId(null); setPocet("") }}
+                    disabled={!!running}
+                    style={{
+                      width: 28, height: 28, borderRadius: 7, border: "none", cursor: running ? "default" : "pointer",
+                      fontWeight: 800, fontSize: 11.5, letterSpacing: ".03em",
+                      background: modTyp === t ? (t === "sluzba" ? "#6366f1" : "#10b981") : "rgba(255,255,255,.07)",
+                      color: modTyp === t ? "white" : "#5a5b66",
+                      boxShadow: modTyp === t ? `0 2px 8px ${t === "sluzba" ? "rgba(99,102,241,.45)" : "rgba(16,185,129,.45)"}` : "none",
+                      transition: "all .15s", flexShrink: 0,
+                    }}>
+                    {t === "sluzba" ? "S" : "M"}
+                  </button>
+                ))}
+                <label style={{ fontSize: 11.5, color: "#7a7b85" }}>
+                  {modTyp === "sluzba" ? "Kategorie služby" : "Kategorie materiálu"}
+                </label>
+              </div>
+              {aktivniKat.length === 0 ? (
+                <p style={{ fontSize: 12, color: "#5a5b66", margin: 0 }}>
+                  {modTyp === "sluzba" ? "Přidej služby v Ceníku." : "Přidej materiál v Ceníku."}
+                </p>
               ) : (
                 <select
                   value={kategorieId ?? ""}
@@ -760,13 +815,42 @@ export default function GeorgePage() {
                     transition: "all .15s",
                   }}
                 >
-                  <option value="">— bez kategorie —</option>
-                  {kategorie.map(k => (
+                  <option value="">— vybrat —</option>
+                  {aktivniKat.map(k => (
                     <option key={k.id} value={k.id}>{k.name}</option>
                   ))}
                 </select>
               )}
             </div>
+
+            {/* Množství — jen pro materiál */}
+            {!running && modTyp === "material" && (
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11.5, color: "#7a7b85", display: "block", marginBottom: 4 }}>
+                  Množství {katAktivni?.jednotka ? `(${katAktivni.jednotka})` : ""}
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    value={pocet} onChange={e => setPocet(e.target.value)}
+                    placeholder="0" inputMode="decimal"
+                    style={{
+                      width: 90, padding: "9px 11px", borderRadius: 9,
+                      border: "1px solid rgba(255,255,255,.12)", fontSize: 14,
+                      color: "#eaeaf0", outline: "none", background: "rgba(255,255,255,.05)",
+                    }}
+                  />
+                  {katAktivni && parseFloat(pocet) > 0 && (
+                    <span style={{ fontSize: 12, color: "#5a5b66" }}>
+                      {parseFloat(pocet)} {katAktivni.jednotka ?? "×"} {katAktivni.sazba.toLocaleString("cs-CZ")} Kč
+                      {" = "}
+                      <strong style={{ color: "#10b981" }}>
+                        {Math.round(parseFloat(pocet) * katAktivni.sazba).toLocaleString("cs-CZ")} Kč
+                      </strong>
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Sazba hint */}
             {katAktivni && katAktivni.sazba > 0 && (
@@ -813,7 +897,7 @@ export default function GeorgePage() {
               </div>
             )}
 
-            {/* Start / Stop */}
+            {/* Start / Stop / Přidat materiál */}
             {running ? (
               <button onClick={handleStop} style={{
                 width: "100%", padding: "11px", borderRadius: 11, border: "none", cursor: "pointer",
@@ -822,6 +906,25 @@ export default function GeorgePage() {
               }}>
                 <Ico d={IC.stop} size={15} />
                 Zastavit
+              </button>
+            ) : modTyp === "material" ? (
+              <button
+                onClick={handleAddMaterial}
+                disabled={!kategorieId || !pocet || parseFloat(pocet) <= 0}
+                style={{
+                  width: "100%", padding: "11px", borderRadius: 11, border: "none",
+                  cursor: kategorieId && parseFloat(pocet) > 0 ? "pointer" : "default",
+                  background: kategorieId && parseFloat(pocet) > 0
+                    ? "linear-gradient(135deg, #10b981, #0ea5e9)"
+                    : "rgba(255,255,255,.06)",
+                  color: kategorieId && parseFloat(pocet) > 0 ? "white" : "#5a5b66",
+                  fontSize: 14.5, fontWeight: 600,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  boxShadow: kategorieId && parseFloat(pocet) > 0 ? "0 4px 14px rgba(16,185,129,.3)" : "none",
+                  transition: "all .15s",
+                }}>
+                <Ico d={["M12 5v14", "M5 12h14"]} size={15} />
+                Přidat materiál
               </button>
             ) : manualMode ? (
               <div style={{ display: "flex", gap: 8 }}>

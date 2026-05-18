@@ -9,8 +9,8 @@ import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 
 type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
-type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number }
-type Zaznam    = { id: number; zakaznik_id: number | null; kategorie_id: number | null; nazev: string; start_at: string; end_at: string | null; poznamka: string }
+type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null; jednotka: string | null }
+type Zaznam    = { id: number; zakaznik_id: number | null; kategorie_id: number | null; nazev: string; start_at: string; end_at: string | null; poznamka: string; pocet: number | null }
 
 const RING_R    = 72
 const RING_CIRC = 2 * Math.PI * RING_R
@@ -87,6 +87,10 @@ export default function TimerPopup() {
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [manualFrom, setManualFrom] = useState("")
   const [manualTo,   setManualTo]   = useState("")
+
+  // Režim S / M
+  const [modTyp, setModTyp] = useState<"sluzba" | "material">("sluzba")
+  const [pocet,  setPocet]  = useState("")
 
   // PWA install prompt
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt: () => void } | null>(null)
@@ -171,6 +175,23 @@ export default function TimerPopup() {
     } else { pausedAtRef.current = Date.now(); setPaused(true) }
   }
 
+  async function handleAddMaterial() {
+    if (!kategorieId) return
+    const pocetNum = parseFloat(pocet.replace(",", "."))
+    if (isNaN(pocetNum) || pocetNum <= 0) return
+    const db = createClient()
+    const now = new Date().toISOString()
+    const kat = kategorie.find(k => k.id === kategorieId)
+    const { data, error } = await db.from("george_zaznamy").insert({
+      nazev: nazev.trim() || (kat?.name ?? "Materiál"),
+      zakaznik_id: zakaznikId, kategorie_id: kategorieId,
+      start_at: now, end_at: now, pocet: pocetNum,
+    }).select().single()
+    if (error || !data) return
+    setZaznamy(prev => [data, ...prev])
+    setNazev(""); setPocet(""); setKategorieId(null)
+  }
+
   async function handleAddManual() {
     if (!nazev.trim() || !manualFrom || !manualTo) return
     const start_at = localToIso(manualDate, manualFrom)
@@ -196,9 +217,13 @@ export default function TimerPopup() {
 
   const studioZakaznici = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
   const katAktivni      = kategorie.find(k => k.id === kategorieId)
+  const sluzbyKat       = kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba")
+  const materialyKat    = kategorie.filter(k => k.typ === "material")
+  const aktivniKat      = modTyp === "sluzba" ? sluzbyKat : materialyKat
   const ringProgress    = running ? Math.min((elapsed % 3_600_000) / 3_600_000, 1) : 0
   const ringOffset      = RING_CIRC * (1 - ringProgress)
-  const lastTen         = zaznamy.filter(z => z.end_at).slice(0, 10)
+  const lastTen         = zaznamy.filter(z => z.end_at && z.pocet == null).slice(0, 10)
+  const lastMat         = zaznamy.filter(z => z.pocet != null).slice(0, 5)
 
   const todayStr      = new Date().toISOString().slice(0, 10)
   const todayZaznamy  = zaznamy.filter(z => z.end_at && isoDate(z.start_at) === todayStr)
@@ -343,19 +368,70 @@ export default function TimerPopup() {
           ))}
         </select>
 
+        {/* S / M toggle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+          {(["sluzba", "material"] as const).map(t => (
+            <button key={t} onClick={() => { setModTyp(t); setKategorieId(null); setPocet("") }}
+              disabled={!!running}
+              style={{
+                width: 26, height: 26, borderRadius: 6, border: "none",
+                cursor: running ? "default" : "pointer",
+                fontWeight: 800, fontSize: 11, letterSpacing: ".03em",
+                background: modTyp === t ? (t === "sluzba" ? "#6366f1" : "#10b981") : "rgba(255,255,255,.07)",
+                color: modTyp === t ? "white" : "#5a5b66",
+                boxShadow: modTyp === t ? `0 2px 6px ${t === "sluzba" ? "rgba(99,102,241,.45)" : "rgba(16,185,129,.45)"}` : "none",
+                transition: "all .15s", flexShrink: 0,
+              }}>
+              {t === "sluzba" ? "S" : "M"}
+            </button>
+          ))}
+          <span style={{ fontSize: 11, color: "#5a5b66" }}>
+            {modTyp === "sluzba" ? "Kategorie služby" : "Kategorie materiálu"}
+          </span>
+        </div>
+
         <select value={kategorieId ?? ""} onChange={e => setKategorieId(e.target.value ? Number(e.target.value) : null)}
           disabled={!!running}
           style={{
-            width: "100%", padding: "8px 11px", borderRadius: 9, marginBottom: 14,
+            width: "100%", padding: "8px 11px", borderRadius: 9, marginBottom: modTyp === "material" ? 10 : 14,
             border: `1px solid ${katAktivni ? katAktivni.barva + "66" : "rgba(255,255,255,.08)"}`,
             fontSize: 13, outline: "none",
             background: katAktivni ? katAktivni.barva + "1a" : "#15161c",
             color: katAktivni ? katAktivni.barva : "#a9aab5",
             fontWeight: katAktivni ? 600 : 400,
           }}>
-          <option value="">— bez kategorie —</option>
-          {kategorie.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+          <option value="">— vybrat —</option>
+          {aktivniKat.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
         </select>
+
+        {/* Množství — jen pro materiál */}
+        {!running && modTyp === "material" && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#5a5b66", marginBottom: 4, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>
+              Množství {katAktivni?.jednotka ? `(${katAktivni.jednotka})` : ""}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input value={pocet} onChange={e => setPocet(e.target.value)}
+                placeholder="0" inputMode="decimal"
+                style={{
+                  width: 80, padding: "8px 10px", borderRadius: 9,
+                  border: "1px solid rgba(255,255,255,.12)", fontSize: 14,
+                  color: "#eaeaf0", outline: "none", background: "rgba(255,255,255,.05)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              />
+              {katAktivni && parseFloat(pocet) > 0 && (
+                <span style={{ fontSize: 11, color: "#5a5b66" }}>
+                  {parseFloat(pocet)} {katAktivni.jednotka ?? "×"}{" "}
+                  {katAktivni.sazba.toLocaleString("cs-CZ")} ={" "}
+                  <strong style={{ color: "#10b981" }}>
+                    {Math.round(parseFloat(pocet) * katAktivni.sazba).toLocaleString("cs-CZ")} Kč
+                  </strong>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Manuální zadání — datum + časy */}
         {!running && manualMode && (
@@ -402,6 +478,22 @@ export default function TimerPopup() {
             display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
           }}>
             <Ico d={IC.stop} size={14} /> Zastavit
+          </button>
+        ) : modTyp === "material" ? (
+          <button onClick={handleAddMaterial}
+            disabled={!kategorieId || !pocet || parseFloat(pocet) <= 0}
+            style={{
+              width: "100%", padding: "11px", borderRadius: 11, border: "none",
+              cursor: kategorieId && parseFloat(pocet) > 0 ? "pointer" : "default",
+              background: kategorieId && parseFloat(pocet) > 0
+                ? "linear-gradient(135deg, #10b981, #0ea5e9)"
+                : "rgba(255,255,255,.06)",
+              color: kategorieId && parseFloat(pocet) > 0 ? "white" : "#5a5b66",
+              fontSize: 14, fontWeight: 600,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+              boxShadow: kategorieId && parseFloat(pocet) > 0 ? "0 4px 14px rgba(16,185,129,.3)" : "none",
+            }}>
+            <Ico d="M12 5v14M5 12h14" size={14} /> Přidat materiál
           </button>
         ) : manualMode ? (
           <div style={{ display: "flex", gap: 8 }}>
