@@ -775,52 +775,53 @@ export default function GeorgePage() {
               </select>
             </div>
 
-            {/* S / M toggle + Kategorie */}
+            {/* Kategorie — label + [S][M] + dropdown na jednom řádku */}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
+              <label style={{ fontSize: 11.5, color: "#7a7b85", display: "block", marginBottom: 7 }}>
+                {modTyp === "sluzba" ? "Kategorie služby" : "Kategorie materiálu"}
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {(["sluzba", "material"] as const).map(t => (
                   <button key={t} onClick={() => { setModTyp(t); setKategorieId(null); setPocet("") }}
                     disabled={!!running}
                     style={{
-                      width: 28, height: 28, borderRadius: 7, border: "none", cursor: running ? "default" : "pointer",
-                      fontWeight: 800, fontSize: 11.5, letterSpacing: ".03em",
-                      background: modTyp === t ? (t === "sluzba" ? "#6366f1" : "#10b981") : "rgba(255,255,255,.07)",
+                      width: 40, height: 40, borderRadius: 99, border: "none", flexShrink: 0,
+                      cursor: running ? "default" : "pointer",
+                      fontWeight: 800, fontSize: 14,
+                      background: modTyp === t ? (t === "sluzba" ? "#6366f1" : "#10b981") : "rgba(255,255,255,.08)",
                       color: modTyp === t ? "white" : "#5a5b66",
-                      boxShadow: modTyp === t ? `0 2px 8px ${t === "sluzba" ? "rgba(99,102,241,.45)" : "rgba(16,185,129,.45)"}` : "none",
-                      transition: "all .15s", flexShrink: 0,
+                      boxShadow: modTyp === t ? `0 2px 8px ${t === "sluzba" ? "rgba(99,102,241,.5)" : "rgba(16,185,129,.5)"}` : "none",
+                      transition: "all .15s",
                     }}>
                     {t === "sluzba" ? "S" : "M"}
                   </button>
                 ))}
-                <label style={{ fontSize: 11.5, color: "#7a7b85" }}>
-                  {modTyp === "sluzba" ? "Kategorie služby" : "Kategorie materiálu"}
-                </label>
+                {aktivniKat.length === 0 ? (
+                  <span style={{ fontSize: 12, color: "#5a5b66" }}>
+                    {modTyp === "sluzba" ? "Přidej služby v Ceníku." : "Přidej materiál v Ceníku."}
+                  </span>
+                ) : (
+                  <select
+                    value={kategorieId ?? ""}
+                    onChange={e => setKategorieId(e.target.value ? Number(e.target.value) : null)}
+                    disabled={!!running}
+                    style={{
+                      flex: 1, padding: "9px 11px", borderRadius: 9,
+                      border: `1px solid ${katAktivni ? katAktivni.barva + "66" : "rgba(255,255,255,.08)"}`,
+                      fontSize: 13, outline: "none",
+                      background: katAktivni ? katAktivni.barva + "1a" : "#15161c",
+                      color: katAktivni ? katAktivni.barva : "#a9aab5",
+                      fontWeight: katAktivni ? 600 : 400,
+                      transition: "all .15s",
+                    }}
+                  >
+                    <option value="">— vybrat —</option>
+                    {aktivniKat.map(k => (
+                      <option key={k.id} value={k.id}>{k.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
-              {aktivniKat.length === 0 ? (
-                <p style={{ fontSize: 12, color: "#5a5b66", margin: 0 }}>
-                  {modTyp === "sluzba" ? "Přidej služby v Ceníku." : "Přidej materiál v Ceníku."}
-                </p>
-              ) : (
-                <select
-                  value={kategorieId ?? ""}
-                  onChange={e => setKategorieId(e.target.value ? Number(e.target.value) : null)}
-                  disabled={!!running}
-                  style={{
-                    width: "100%", padding: "9px 11px", borderRadius: 9,
-                    border: `1px solid ${katAktivni ? katAktivni.barva + "66" : "rgba(255,255,255,.08)"}`,
-                    fontSize: 13, outline: "none",
-                    background: katAktivni ? katAktivni.barva + "1a" : "#15161c",
-                    color: katAktivni ? katAktivni.barva : "#a9aab5",
-                    fontWeight: katAktivni ? 600 : 400,
-                    transition: "all .15s",
-                  }}
-                >
-                  <option value="">— vybrat —</option>
-                  {aktivniKat.map(k => (
-                    <option key={k.id} value={k.id}>{k.name}</option>
-                  ))}
-                </select>
-              )}
             </div>
 
             {/* Množství — jen pro materiál */}
