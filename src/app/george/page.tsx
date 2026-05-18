@@ -159,38 +159,61 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit }: {
 }
 
 // ── EditPopup ─────────────────────────────────────────────────────────────────
-type EditForm = { nazev: string; datum: string; casOd: string; casDo: string; zakaznikId: string; kategorieId: string; poznamka: string }
+type EditForm = {
+  nazev: string; datum: string; casOd: string; casDo: string
+  zakaznikId: string; kategorieId: string; poznamka: string; pocet: string
+}
 
 function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
   zaznam: Zaznam; kategorie: Kategorie[]; zakaznici: Zakaznik[]
   onSave: (id: number, updates: Partial<Zaznam>) => Promise<void>
   onClose: () => void
 }) {
+  const isMat = zaznam.pocet != null
+
   const [form, setForm] = useState<EditForm>({
     nazev:       zaznam.nazev,
     datum:       isoToDate(zaznam.start_at),
-    casOd:       isoToTime(zaznam.start_at),
-    casDo:       zaznam.end_at ? isoToTime(zaznam.end_at) : "",
+    casOd:       !isMat ? isoToTime(zaznam.start_at) : "",
+    casDo:       !isMat && zaznam.end_at ? isoToTime(zaznam.end_at) : "",
     zakaznikId:  zaznam.zakaznik_id  ? String(zaznam.zakaznik_id)  : "",
     kategorieId: zaznam.kategorie_id ? String(zaznam.kategorie_id) : "",
     poznamka:    zaznam.poznamka ?? "",
+    pocet:       zaznam.pocet != null ? String(zaznam.pocet) : "",
   })
   const [saving, setSaving] = useState(false)
 
-  const studioZak = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
-  const casDoInvalid = !!form.casDo && !!form.casOd && form.casDo <= form.casOd
+  const studioZak    = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
+  const casDoInvalid = !isMat && !!form.casDo && !!form.casOd && form.casDo <= form.casOd
+  const pocetNum     = parseFloat(form.pocet.replace(",", "."))
+  const katAkt       = kategorie.find(k => String(k.id) === form.kategorieId)
+  const katFilt      = isMat
+    ? kategorie.filter(k => k.typ === "material")
+    : kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba")
 
   async function handleSave() {
-    if (!form.datum || !form.casOd || casDoInvalid) return
-    setSaving(true)
-    await onSave(zaznam.id, {
-      nazev:        form.nazev.trim(),
-      start_at:     localToIso(form.datum, form.casOd),
-      end_at:       form.casDo ? localToIso(form.datum, form.casDo) : null,
-      zakaznik_id:  form.zakaznikId  ? Number(form.zakaznikId)  : null,
-      kategorie_id: form.kategorieId ? Number(form.kategorieId) : null,
-      poznamka:     form.poznamka,
-    })
+    if (isMat) {
+      if (isNaN(pocetNum) || pocetNum <= 0) return
+      setSaving(true)
+      await onSave(zaznam.id, {
+        nazev:        form.nazev.trim(),
+        zakaznik_id:  form.zakaznikId  ? Number(form.zakaznikId)  : null,
+        kategorie_id: form.kategorieId ? Number(form.kategorieId) : null,
+        poznamka:     form.poznamka,
+        pocet:        pocetNum,
+      })
+    } else {
+      if (!form.datum || !form.casOd || casDoInvalid) return
+      setSaving(true)
+      await onSave(zaznam.id, {
+        nazev:        form.nazev.trim(),
+        start_at:     localToIso(form.datum, form.casOd),
+        end_at:       form.casDo ? localToIso(form.datum, form.casDo) : null,
+        zakaznik_id:  form.zakaznikId  ? Number(form.zakaznikId)  : null,
+        kategorie_id: form.kategorieId ? Number(form.kategorieId) : null,
+        poznamka:     form.poznamka,
+      })
+    }
     setSaving(false)
   }
 
@@ -202,6 +225,10 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
     borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13.5,
     color: "#111827", outline: "none", fontFamily: "var(--font-sans)", background: "white",
   }
+
+  const canSave = isMat
+    ? !isNaN(pocetNum) && pocetNum > 0
+    : !!form.datum && !!form.casOd && !casDoInvalid
 
   return (
     <div style={{
@@ -217,7 +244,17 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 16.5, fontWeight: 700, color: "#111827" }}>Upravit záznam</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <h2 style={{ margin: 0, fontSize: 16.5, fontWeight: 700, color: "#111827" }}>Upravit záznam</h2>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 99,
+              background: isMat ? "#f0fdf4" : "#eef2ff",
+              color: isMat ? "#166534" : "#4338ca",
+              letterSpacing: ".05em", textTransform: "uppercase",
+            }}>
+              {isMat ? "📦 Materiál" : "⚡ Služba"}
+            </span>
+          </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4, lineHeight: 1 }}>
             <Ico d={IC.close} size={18} />
           </button>
@@ -227,34 +264,60 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
 
           {/* Název */}
           <div>
-            <label style={lbl}>Název úkolu</label>
+            <label style={lbl}>{isMat ? "Název / poznámka k výdeji" : "Název úkolu"}</label>
             <input value={form.nazev} onChange={e => upd({ nazev: e.target.value })}
-              placeholder="Název úkolu" style={inp} />
+              placeholder={isMat ? "Volitelný popis…" : "Název úkolu"} style={inp} />
           </div>
 
-          {/* Datum */}
-          <div>
-            <label style={lbl}>Datum</label>
-            <input type="date" value={form.datum} onChange={e => upd({ datum: e.target.value })} style={inp} />
-          </div>
+          {/* ── Služba: datum + čas od/do ── */}
+          {!isMat && (
+            <>
+              <div>
+                <label style={lbl}>Datum</label>
+                <input type="date" value={form.datum} onChange={e => upd({ datum: e.target.value })} style={inp} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={lbl}>Čas od</label>
+                  <input type="time" value={form.casOd} onChange={e => upd({ casOd: e.target.value })} style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>Čas do</label>
+                  <input type="time" value={form.casDo} onChange={e => upd({ casDo: e.target.value })}
+                    style={{ ...inp, borderColor: casDoInvalid ? "#ef4444" : "#e5e7eb" }} />
+                  {casDoInvalid && (
+                    <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "#ef4444" }}>
+                      Čas do musí být pozdější než čas od
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
-          {/* Čas od | Čas do */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {/* ── Materiál: množství ── */}
+          {isMat && (
             <div>
-              <label style={lbl}>Čas od</label>
-              <input type="time" value={form.casOd} onChange={e => upd({ casOd: e.target.value })} style={inp} />
+              <label style={lbl}>
+                Množství {katAkt?.jednotka ? `(${katAkt.jednotka})` : ""}
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <input
+                  value={form.pocet} onChange={e => upd({ pocet: e.target.value })}
+                  placeholder="0" inputMode="decimal"
+                  style={{ ...inp, width: 110 }}
+                />
+                {katAkt && !isNaN(pocetNum) && pocetNum > 0 && (
+                  <span style={{ fontSize: 13, color: "#6b7280" }}>
+                    {pocetNum} {katAkt.jednotka ?? "×"} {katAkt.sazba.toLocaleString("cs-CZ")} ={" "}
+                    <strong style={{ color: "#059669" }}>
+                      {Math.round(pocetNum * katAkt.sazba).toLocaleString("cs-CZ")} Kč
+                    </strong>
+                  </span>
+                )}
+              </div>
             </div>
-            <div>
-              <label style={lbl}>Čas do</label>
-              <input type="time" value={form.casDo} onChange={e => upd({ casDo: e.target.value })}
-                style={{ ...inp, borderColor: casDoInvalid ? "#ef4444" : "#e5e7eb" }} />
-              {casDoInvalid && (
-                <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "#ef4444" }}>
-                  Čas do musí být pozdější než čas od
-                </p>
-              )}
-            </div>
-          </div>
+          )}
 
           {/* Zákazník */}
           <div>
@@ -269,12 +332,12 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
             </select>
           </div>
 
-          {/* Kategorie */}
+          {/* Kategorie — filtrovaná podle typu záznamu */}
           <div>
-            <label style={lbl}>Kategorie</label>
+            <label style={lbl}>{isMat ? "Materiál" : "Kategorie"}</label>
             <select value={form.kategorieId} onChange={e => upd({ kategorieId: e.target.value })} style={inp}>
               <option value="">— bez kategorie —</option>
-              {kategorie.map(k => (
+              {katFilt.map(k => (
                 <option key={k.id} value={k.id}>{k.name}</option>
               ))}
             </select>
@@ -290,12 +353,14 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
 
           {/* Buttons */}
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <button onClick={handleSave} disabled={saving || !form.datum || !form.casOd || casDoInvalid} style={{
+            <button onClick={handleSave} disabled={saving || !canSave} style={{
               flex: 1, padding: "10px", borderRadius: 9, border: "none",
-              cursor: saving ? "default" : "pointer",
-              background: "linear-gradient(135deg, #6366f1, #f97316)",
+              cursor: saving || !canSave ? "default" : "pointer",
+              background: isMat
+                ? "linear-gradient(135deg, #10b981, #0ea5e9)"
+                : "linear-gradient(135deg, #6366f1, #f97316)",
               color: "white", fontSize: 14, fontWeight: 600,
-              opacity: saving || !form.datum || !form.casOd || casDoInvalid ? .5 : 1, transition: "opacity .15s",
+              opacity: saving || !canSave ? .5 : 1, transition: "opacity .15s",
             }}>
               {saving ? "Ukládám…" : "Uložit"}
             </button>
