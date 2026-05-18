@@ -785,7 +785,7 @@ export default function GeorgePage() {
                   <button key={t} onClick={() => { setModTyp(t); setKategorieId(null); setPocet("") }}
                     disabled={!!running}
                     style={{
-                      width: 40, height: 40, borderRadius: 99, border: "none", flexShrink: 0,
+                      width: 40, height: 40, borderRadius: 7, border: "none", flexShrink: 0,
                       cursor: running ? "default" : "pointer",
                       fontWeight: 800, fontSize: 14,
                       background: modTyp === t ? (t === "sluzba" ? "#6366f1" : "#10b981") : "rgba(255,255,255,.08)",
