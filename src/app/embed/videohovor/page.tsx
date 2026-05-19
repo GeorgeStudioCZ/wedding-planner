@@ -126,6 +126,7 @@ export default function VideohovorPage() {
 
   // Formulář
   const [jmeno,        setJmeno]        = useState("")
+  const [email,        setEmail]        = useState("")
   const [datumSvatby,  setDatumSvatby]  = useState("")
   const [typKontaktu,  setTypKontaktu]  = useState<KontaktTyp>("whatsapp")
   const [kontakt,      setKontakt]      = useState("")
@@ -186,6 +187,7 @@ export default function VideohovorPage() {
 
   async function handleOdeslat() {
     if (!jmeno.trim()) { setChyba("Vyplň jméno"); return }
+    if (!email.trim() || !email.includes("@")) { setChyba("Zadej platný email"); return }
     if (typKontaktu === "osobne") {
       if (!adresa.trim()) { setChyba("Vyplň adresu místa schůzky"); return }
     } else {
@@ -193,22 +195,45 @@ export default function VideohovorPage() {
     }
     setChyba("")
     setOdeslani(true)
+
     // Pro osobní schůzku uložíme adresu (a případně název podniku) jako kontakt
     const kontaktUlozit = typKontaktu === "osobne"
       ? [nazevPodniku.trim(), adresa.trim()].filter(Boolean).join(" · ")
       : kontakt.trim()
+
+    const cas = `${pad2(vybranyCas!)}:00`
+
     const { error } = await supabase.from("schuzky").insert({
       jmeno:         jmeno.trim(),
+      email:         email.trim(),
       datum_svadby:  datumSvatby || null,
       kontakt:       kontaktUlozit,
       typ_kontaktu:  typKontaktu,
       otazky:        otazky.trim() || null,
       datum:         vybraneDatum,
-      cas:           `${pad2(vybranyCas!)}:00`,
+      cas,
       stav:          "nova",
     })
+
+    if (error) { setOdeslani(false); setChyba("Nepodařilo se uložit. Zkus to znovu."); return }
+
+    // Emaily — fire and forget (nezastavujeme kvůli chybě emailu)
+    fetch("/api/mail/schuzka", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jmeno:         jmeno.trim(),
+        email:         email.trim(),
+        datum:         vybraneDatum,
+        cas,
+        typ_kontaktu:  typKontaktu,
+        kontakt:       kontaktUlozit,
+        datum_svadby:  datumSvatby || null,
+        otazky:        otazky.trim() || null,
+      }),
+    }).catch(e => console.error("Mail error:", e))
+
     setOdeslani(false)
-    if (error) { setChyba("Nepodařilo se uložit. Zkus to znovu."); return }
     setKrok("odeslano")
   }
 
@@ -358,6 +383,22 @@ export default function VideohovorPage() {
                 style={inp}
                 autoFocus
               />
+            </div>
+
+            {/* Email */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={lbl}>Email *</label>
+              <input
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="vas@email.cz"
+                style={inp}
+                type="email"
+                inputMode="email"
+              />
+              <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>
+                Na tento email dostanete potvrzení rezervace.
+              </div>
             </div>
 
             {/* Datum svatby */}
