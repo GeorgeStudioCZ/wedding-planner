@@ -949,39 +949,58 @@ export default function Home() {
                 const stavBg   = s.stav === "potvrzena" ? "#dcfce7" : "#fef9c3"
                 const stavClr  = s.stav === "potvrzena" ? "#166534" : "#854d0e"
                 return (
-                  <Link key={s.id} href="/svatby/schuzky" style={{ display: "flex", alignItems: "stretch", textDecoration: "none", color: "inherit", borderTop: i > 0 ? "1px solid var(--line)" : "none", minHeight: 60, overflow: "hidden" }}>
-                    {/* Datum blok — identický s ZakazkaRadek */}
-                    <div style={{ background: "#be123c", width: 60, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>{den}</div>
-                      <div style={{ fontSize: 8, color: "rgba(255,255,255,.82)", fontFamily: "var(--font-mono)", marginTop: 2, letterSpacing: ".05em" }}>{mesRok}</div>
-                    </div>
-                    {/* Jméno */}
-                    <div style={{ flex: 1, minWidth: 0, padding: "10px 14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {s.jmeno}
+                  <Link key={s.id} href="/svatby/schuzky" className="block" style={{ textDecoration: "none", color: "inherit", borderTop: i > 0 ? "1px solid var(--line)" : "none" }}>
+
+                    {/* ── iPad layout ── */}
+                    <div className="hidden ipad:flex monitor:hidden" style={{ alignItems: "stretch", minHeight: 60, overflow: "hidden" }}>
+                      <div style={{ background: "#be123c", width: 60, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>{den}</div>
+                        <div style={{ fontSize: 8, color: "rgba(255,255,255,.82)", fontFamily: "var(--font-mono)", marginTop: 2, letterSpacing: ".05em" }}>{mesRok}</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, padding: "10px 14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.jmeno}</div>
+                      </div>
+                      <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+                      <div style={{ width: 60, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: "var(--ink-2)" }}>{s.cas.slice(0, 5)}</span>
+                      </div>
+                      <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+                      <div style={{ width: 96, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ background: kb.bg, color: kb.color, borderRadius: 4, padding: "4px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{kb.label}</span>
+                      </div>
+                      <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+                      <div style={{ width: 90, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ background: stavBg, color: stavClr, borderRadius: 4, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
+                          {s.stav === "potvrzena" ? "Potvrzena" : "Nová"}
+                        </span>
                       </div>
                     </div>
-                    {/* Čas */}
-                    <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-                    <div style={{ width: 60, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: "var(--ink-2)" }}>
-                        {s.cas.slice(0, 5)}
-                      </span>
+
+                    {/* ── Monitor layout ── */}
+                    <div className="hidden monitor:flex" style={{ alignItems: "stretch", minHeight: 68, overflow: "hidden" }}>
+                      <div style={{ background: "#be123c", width: 66, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ fontSize: 24, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>{den}</div>
+                        <div style={{ fontSize: 9.5, color: "rgba(255,255,255,.82)", fontFamily: "var(--font-mono)", marginTop: 3, letterSpacing: ".05em" }}>{mesRok}</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, padding: "11px 16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.jmeno}</div>
+                      </div>
+                      <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+                      <div style={{ width: 70, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--ink-2)" }}>{s.cas.slice(0, 5)}</span>
+                      </div>
+                      <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+                      <div style={{ width: 120, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ background: kb.bg, color: kb.color, borderRadius: 4, padding: "5px 10px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", fontFamily: "var(--font-mono)", letterSpacing: ".03em" }}>{kb.label}</span>
+                      </div>
+                      <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+                      <div style={{ width: 110, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ background: stavBg, color: stavClr, borderRadius: 6, padding: "5px 10px", fontSize: 12, fontWeight: 700 }}>
+                          {s.stav === "potvrzena" ? "Potvrzena" : "Nová"}
+                        </span>
+                      </div>
                     </div>
-                    {/* Způsob */}
-                    <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-                    <div style={{ width: 96, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ background: kb.bg, color: kb.color, borderRadius: 4, padding: "4px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
-                        {kb.label}
-                      </span>
-                    </div>
-                    {/* Stav */}
-                    <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
-                    <div style={{ width: 90, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ background: stavBg, color: stavClr, borderRadius: 4, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
-                        {s.stav === "potvrzena" ? "Potvrzena" : "Nová"}
-                      </span>
-                    </div>
+
                   </Link>
                 )
               })}
