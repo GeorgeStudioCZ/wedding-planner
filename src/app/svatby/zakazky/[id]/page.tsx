@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase-browser"
 import MapaTrasy from "@/components/MapaTrasy"
 import AppShell from "@/components/AppShell"
 
@@ -271,9 +272,9 @@ export default function DetailZakazky() {
         .single()
       setZakazka(data)
       setLoading(false)
-      // Načti matchovanou schůzku podle data svatby
+      // Načti matchovanou schůzku podle data svatby (createClient = autentizovaný, obchází RLS)
       if (data?.datum_svatby) {
-        const { data: sd } = await supabase
+        const { data: sd } = await createClient()
           .from("schuzky")
           .select("id, jmeno, email, datum, cas, typ_kontaktu, kontakt, otazky, stav")
           .eq("datum_svadby", data.datum_svatby.slice(0, 10))
