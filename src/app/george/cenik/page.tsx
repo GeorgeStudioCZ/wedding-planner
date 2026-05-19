@@ -15,6 +15,9 @@ type Polozka = {
   sazba_typ: string        // "hodina" | "kus" — zachováno kvůli timeru
   jednotka: string | null
   nakupni_cena: number | null
+  dodavatel: string | null
+  kod_produktu: string | null
+  odkaz: string | null
   sort_order: number
 }
 
@@ -81,11 +84,14 @@ function Modal({
   const [typ,      setTyp]      = useState<"sluzba" | "material">(editItem?.typ ?? "sluzba")
   const [name,     setName]     = useState(editItem?.name ?? "")
   const barva = barvaTypu(typ)   // automaticky podle typu, nepotřebuje state
-  const [prodej,   setProdej]   = useState(editItem ? String(editItem.sazba) : "")
-  const [jednotka, setJednotka] = useState(editItem?.jednotka ?? "ks")
-  const [nakup,    setNakup]    = useState(editItem?.nakupni_cena != null ? String(editItem.nakupni_cena) : "")
-  const [saving,   setSaving]   = useState(false)
-  const [err,      setErr]      = useState("")
+  const [prodej,      setProdej]      = useState(editItem ? String(editItem.sazba) : "")
+  const [jednotka,   setJednotka]    = useState(editItem?.jednotka ?? "ks")
+  const [nakup,      setNakup]       = useState(editItem?.nakupni_cena != null ? String(editItem.nakupni_cena) : "")
+  const [dodavatel,  setDodavatel]   = useState(editItem?.dodavatel ?? "")
+  const [kodProd,    setKodProd]     = useState(editItem?.kod_produktu ?? "")
+  const [odkaz,      setOdkaz]       = useState(editItem?.odkaz ?? "")
+  const [saving,     setSaving]      = useState(false)
+  const [err,        setErr]         = useState("")
 
   const prodejNum = parseNum(prodej) ?? 0
   const nakupNum  = parseNum(nakup)  ?? 0
@@ -105,6 +111,9 @@ function Modal({
       sazba_typ:     typ === "sluzba" ? "hodina" : "kus",
       jednotka:      typ === "material" ? jednotka : null,
       nakupni_cena:  typ === "material" && parseNum(nakup) !== null ? parseNum(nakup) : null,
+      dodavatel:     typ === "material" && dodavatel.trim() ? dodavatel.trim() : null,
+      kod_produktu:  typ === "material" && kodProd.trim()   ? kodProd.trim()   : null,
+      odkaz:         typ === "material" && odkaz.trim()      ? odkaz.trim()     : null,
     }
     let data, error
     if (isEdit) {
@@ -220,7 +229,7 @@ function Modal({
             </div>
 
             {/* Nákupní cena */}
-            <div style={{ marginBottom: 6 }}>
+            <div style={{ marginBottom: 16 }}>
               <label style={lbl}>
                 Nákupní cena bez DPH / {jednotka}
                 <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>(volitelné)</span>
@@ -244,6 +253,50 @@ function Modal({
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* Dodavatel + Kód produktu */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+              <div style={{ flex: 1 }}>
+                <label style={lbl}>
+                  Dodavatel
+                  <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>(vol.)</span>
+                </label>
+                <input
+                  value={dodavatel}
+                  onChange={e => setDodavatel(e.target.value)}
+                  placeholder="např. Alza, Mall…"
+                  style={inp}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={lbl}>
+                  Kód produktu
+                  <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>(vol.)</span>
+                </label>
+                <input
+                  value={kodProd}
+                  onChange={e => setKodProd(e.target.value)}
+                  placeholder="SKU, EAN…"
+                  style={inp}
+                />
+              </div>
+            </div>
+
+            {/* Odkaz */}
+            <div style={{ marginBottom: 6 }}>
+              <label style={lbl}>
+                Odkaz
+                <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>(vol.)</span>
+              </label>
+              <input
+                value={odkaz}
+                onChange={e => setOdkaz(e.target.value)}
+                placeholder="https://…"
+                style={inp}
+                type="url"
+                inputMode="url"
+              />
             </div>
           </>
         )}
@@ -348,6 +401,34 @@ function PolozkaRadek({ p, onEdit, onDelete }: {
             </>
           )}
         </div>
+
+        {/* Dodavatel / Kód / Odkaz */}
+        {typEff === "material" && (p.dodavatel || p.kod_produktu || p.odkaz) && (
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 7 }}>
+            {p.dodavatel && (
+              <span style={{ fontSize: 11.5, color: "#6b7280" }}>
+                <span style={{ color: "#9ca3af", marginRight: 3 }}>Dodavatel:</span>
+                <strong style={{ color: "var(--ink-2)" }}>{p.dodavatel}</strong>
+              </span>
+            )}
+            {p.kod_produktu && (
+              <span style={{ fontSize: 11.5, color: "#6b7280" }}>
+                <span style={{ color: "#9ca3af", marginRight: 3 }}>Kód:</span>
+                <strong style={{ color: "var(--ink-2)", fontFamily: "monospace" }}>{p.kod_produktu}</strong>
+              </span>
+            )}
+            {p.odkaz && (
+              <a
+                href={p.odkaz}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 11.5, color: "#3b82f6", textDecoration: "none", display: "flex", alignItems: "center", gap: 3 }}
+              >
+                🔗 Odkaz
+              </a>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Akce */}
