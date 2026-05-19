@@ -69,7 +69,7 @@ function gcalUrl(s: Schuzka) {
   let details = ""
   if (s.typ_kontaktu === "whatsapp") details += `WhatsApp: ${s.kontakt}`
   else if (s.typ_kontaktu === "facetime") details += `FaceTime: ${s.kontakt}`
-  else details += `Telefon: ${s.kontakt}`
+  else details += `Osobně: ${s.kontakt}`
   if (s.datum_svadby) details += `\nDatum svatby: ${s.datum_svadby}`
   if (s.otazky) details += `\n\nOtázky:\n${s.otazky}`
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${encodeURIComponent(details)}`
@@ -135,7 +135,7 @@ function SchuzkaKarta({
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12.5, color: "#6b7280" }}>
             {/* Kontakt */}
             <span>
-              {s.typ_kontaktu === "whatsapp" ? "📱" : s.typ_kontaktu === "facetime" ? "📹" : "📞"}
+              {s.typ_kontaktu === "whatsapp" ? "📱" : s.typ_kontaktu === "facetime" ? "📹" : "🤝"}
               {" "}{s.kontakt}
             </span>
             {/* Datum svatby */}

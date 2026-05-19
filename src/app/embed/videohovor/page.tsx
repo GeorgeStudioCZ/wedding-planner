@@ -12,7 +12,7 @@ const MESICE = [
 ]
 const DNY_ZKRATKY = ["Po","Út","St","Čt","Pá","So","Ne"]
 
-type KontaktTyp = "whatsapp" | "facetime" | "telefon"
+type KontaktTyp = "whatsapp" | "facetime" | "osobne"
 type Krok = "vyber" | "formular" | "odeslano"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -125,11 +125,13 @@ export default function VideohovorPage() {
   const [obsazene, setObsazene] = useState<Record<string, number>>({})
 
   // Formulář
-  const [jmeno,       setJmeno]       = useState("")
-  const [datumSvatby, setDatumSvatby] = useState("")
-  const [typKontaktu, setTypKontaktu] = useState<KontaktTyp>("whatsapp")
-  const [kontakt,     setKontakt]     = useState("")
-  const [otazky,      setOtazky]      = useState("")
+  const [jmeno,        setJmeno]        = useState("")
+  const [datumSvatby,  setDatumSvatby]  = useState("")
+  const [typKontaktu,  setTypKontaktu]  = useState<KontaktTyp>("whatsapp")
+  const [kontakt,      setKontakt]      = useState("")
+  const [nazevPodniku, setNazevPodniku] = useState("")
+  const [adresa,       setAdresa]       = useState("")
+  const [otazky,       setOtazky]       = useState("")
 
   const [krok,     setKrok]     = useState<Krok>("vyber")
   const [odeslani, setOdeslani] = useState(false)
@@ -183,14 +185,22 @@ export default function VideohovorPage() {
   }
 
   async function handleOdeslat() {
-    if (!jmeno.trim())   { setChyba("Vyplň jméno"); return }
-    if (!kontakt.trim()) { setChyba("Vyplň kontakt"); return }
+    if (!jmeno.trim()) { setChyba("Vyplň jméno"); return }
+    if (typKontaktu === "osobne") {
+      if (!adresa.trim()) { setChyba("Vyplň adresu místa schůzky"); return }
+    } else {
+      if (!kontakt.trim()) { setChyba("Vyplň kontakt"); return }
+    }
     setChyba("")
     setOdeslani(true)
+    // Pro osobní schůzku uložíme adresu (a případně název podniku) jako kontakt
+    const kontaktUlozit = typKontaktu === "osobne"
+      ? [nazevPodniku.trim(), adresa.trim()].filter(Boolean).join(" · ")
+      : kontakt.trim()
     const { error } = await supabase.from("schuzky").insert({
       jmeno:         jmeno.trim(),
       datum_svadby:  datumSvatby || null,
-      kontakt:       kontakt.trim(),
+      kontakt:       kontaktUlozit,
       typ_kontaktu:  typKontaktu,
       otazky:        otazky.trim() || null,
       datum:         vybraneDatum,
@@ -211,7 +221,10 @@ export default function VideohovorPage() {
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Výborně, schůzka zarezervována!</h2>
           <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 20, lineHeight: 1.6 }}>
             Rezervace na <strong>{vybraneDatum}</strong> v <strong>{pad2(vybranyCas!)}:00</strong> byla přijata.
-            Brzy se vám ozvu přes {typKontaktu === "whatsapp" ? "WhatsApp" : typKontaktu === "facetime" ? "FaceTime" : "telefon"} na <strong>{kontakt}</strong>.
+            {typKontaktu === "osobne"
+              ? <> Těším se na osobní setkání na adrese <strong>{adresa}</strong>.</>
+              : <> Brzy se vám ozvu přes {typKontaktu === "whatsapp" ? "WhatsApp" : "FaceTime"} na <strong>{kontakt}</strong>.</>
+            }
           </p>
           <div style={{ fontSize: 12, color: "#9ca3af" }}>Těším se na setkání ✨</div>
         </div>
@@ -363,9 +376,9 @@ export default function VideohovorPage() {
 
             {/* Kontakt */}
             <div style={{ marginBottom: 20 }}>
-              <label style={lbl}>Kontakt *</label>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                {(["whatsapp", "facetime", "telefon"] as KontaktTyp[]).map(t => (
+              <label style={lbl}>Způsob kontaktu *</label>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                {(["whatsapp", "facetime", "osobne"] as KontaktTyp[]).map(t => (
                   <button
                     key={t}
                     onClick={() => setTypKontaktu(t)}
@@ -378,18 +391,65 @@ export default function VideohovorPage() {
                       fontWeight: typKontaktu === t ? 700 : 400,
                     }}
                   >
-                    {t === "whatsapp" ? "📱 WhatsApp" : t === "facetime" ? "📹 FaceTime" : "📞 Telefon"}
+                    {t === "whatsapp" ? "📱 WhatsApp" : t === "facetime" ? "📹 FaceTime" : "🤝 Osobně"}
                   </button>
                 ))}
               </div>
-              <input
-                value={kontakt}
-                onChange={e => setKontakt(e.target.value)}
-                placeholder={typKontaktu === "facetime" ? "Apple ID / telefon" : "+420 000 000 000"}
-                style={inp}
-                type={typKontaktu === "facetime" ? "text" : "tel"}
-                inputMode="tel"
-              />
+
+              {/* WhatsApp / FaceTime — kontaktní číslo */}
+              {typKontaktu !== "osobne" && (
+                <input
+                  value={kontakt}
+                  onChange={e => setKontakt(e.target.value)}
+                  placeholder={typKontaktu === "facetime" ? "Apple ID / telefon" : "+420 000 000 000"}
+                  style={inp}
+                  type={typKontaktu === "facetime" ? "text" : "tel"}
+                  inputMode="tel"
+                />
+              )}
+
+              {/* Osobně — varování + adresa */}
+              {typKontaktu === "osobne" && (
+                <div>
+                  {/* Červené varování */}
+                  <div style={{
+                    display: "flex", gap: 10, alignItems: "flex-start",
+                    padding: "12px 14px", borderRadius: 10, marginBottom: 12,
+                    background: "#fef2f2", border: "1.5px solid #fecaca",
+                  }}>
+                    <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>⚠️</span>
+                    <span style={{ fontSize: 13, color: "#991b1b", lineHeight: 1.5 }}>
+                      <strong>Upozornění:</strong> Osobní schůzka je možná pouze v{" "}
+                      <strong>Hradci Králové</strong>. Pokud jste z jiného města, zvolte prosím videohovor přes WhatsApp nebo FaceTime.
+                    </span>
+                  </div>
+
+                  {/* Název podniku */}
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ ...lbl, marginBottom: 5 }}>
+                      Název podniku / kavárny
+                      <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>(volitelné)</span>
+                    </label>
+                    <input
+                      value={nazevPodniku}
+                      onChange={e => setNazevPodniku(e.target.value)}
+                      placeholder="např. Kavárna U Martina, Coworking Hub…"
+                      style={inp}
+                    />
+                  </div>
+
+                  {/* Adresa */}
+                  <div>
+                    <label style={{ ...lbl, marginBottom: 5 }}>Adresa *</label>
+                    <input
+                      value={adresa}
+                      onChange={e => setAdresa(e.target.value)}
+                      placeholder="Ulice a číslo, Hradec Králové"
+                      style={inp}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Otázky */}
