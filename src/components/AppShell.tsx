@@ -30,6 +30,7 @@ const I = {
   bell:     ["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9","M13.73 21a2 2 0 01-3.46 0"],
   menu:     ["M3 12h18","M3 6h18","M3 18h18"],
   x:        ["M18 6L6 18","M6 6l12 12"],
+  video:    ["M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"],
 }
 
 // ── Nav items ───────────────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ const NAV_WED = [
   { key: "home",     label: "Přehled",       href: "/svatby",                  ico: I.home },
   { key: "seznam",   label: "Seznam svateb", href: "/svatby/seznam",           ico: I.list },
   { key: "kalendar", label: "Kalendář",      href: "/svatby/kalendar",         ico: I.calendar },
+  { key: "schuzky",  label: "Schůzky",       href: "/svatby/schuzky",          ico: I.video },
   { key: "klienti",  label: "Klienti",       href: "/zakaznici?from=wed",      ico: I.users },
 ]
 
