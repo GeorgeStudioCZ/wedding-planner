@@ -31,7 +31,7 @@ const JEDNOTKY = ["ks", "sada", "m", "kg"]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fKc(n: number) {
-  return Math.round(n).toLocaleString("cs-CZ") + " Kč"
+  return n.toLocaleString("cs-CZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " Kč"
 }
 
 function parseNum(s: string) {
