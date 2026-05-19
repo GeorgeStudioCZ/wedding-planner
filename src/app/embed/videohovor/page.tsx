@@ -297,11 +297,8 @@ export default function VideohovorPage() {
 
         {/* Hlavička */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#be123c", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 6 }}>
-            Rezervace videohovoru
-          </div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111827", margin: "0 0 8px" }}>
-            Nezávazná konzultace
+            Rezervace předsvatební schůzky
           </h1>
           <p style={{ fontSize: 14, color: "#6b7280", margin: 0, lineHeight: 1.6 }}>
             Vyberte termín a zodpovím všechny vaše otázky ohledně videozáznamu vaší svatby.
@@ -310,30 +307,27 @@ export default function VideohovorPage() {
 
         {krok === "vyber" && (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 16, alignItems: "start" }}>
+            {/* Kalendář — plná šířka */}
+            <Kalendar
+              rok={rok} mesic={mesic}
+              vybraneDatum={vybraneDatum}
+              obsazene={obsazene}
+              dostupnost={dostupnost}
+              onChange={d => { setVybraneDatum(d); setVybranyCas(null) }}
+              onPrev={prevMesic}
+              onNext={nextMesic}
+            />
 
-              {/* Kalendář */}
-              <Kalendar
-                rok={rok} mesic={mesic}
-                vybraneDatum={vybraneDatum}
-                obsazene={obsazene}
-                dostupnost={dostupnost}
-                onChange={d => { setVybraneDatum(d); setVybranyCas(null) }}
-                onPrev={prevMesic}
-                onNext={nextMesic}
-              />
-
-              {/* Časy */}
-              <div style={{ background: "white", borderRadius: 16, padding: "16px 14px", boxShadow: "0 2px 16px rgba(0,0,0,.08)", border: "1px solid #f0f0f0", minWidth: 110 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#9ca3af", marginBottom: 10, textAlign: "center" }}>
-                  {vybraneDatum ? datumCitelne!.split(" ").slice(0,2).join(" ") : "Čas"}
+            {/* Časy — pod kalendářem, vodorovně */}
+            {vybraneDatum && (
+              <div style={{ marginTop: 14, background: "white", borderRadius: 16, padding: "16px 18px", boxShadow: "0 2px 16px rgba(0,0,0,.08)", border: "1px solid #f0f0f0" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#9ca3af", marginBottom: 12 }}>
+                  Dostupné časy — {datumCitelne}
                 </div>
-                {vybraneDatum && dostupneHodiny.length === 0 ? (
-                  <div style={{ textAlign: "center", color: "#d1d5db", fontSize: 12, padding: "20px 0" }}>
-                    Tento den<br />není dostupný
-                  </div>
-                ) : vybraneDatum ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {dostupneHodiny.length === 0 ? (
+                  <div style={{ color: "#d1d5db", fontSize: 13 }}>Tento den není dostupný</div>
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {dostupneHodiny.map(h => {
                       const volny = !obsazeneCasy.has(h)
                       const aktivni = vybranyCas === h
@@ -343,11 +337,12 @@ export default function VideohovorPage() {
                           onClick={() => volny && setVybranyCas(h)}
                           disabled={!volny}
                           style={{
-                            padding: "9px 14px", border: "1.5px solid", borderRadius: 10, cursor: volny ? "pointer" : "default",
+                            padding: "9px 18px", border: "1.5px solid", borderRadius: 10, cursor: volny ? "pointer" : "default",
                             borderColor: aktivni ? "#be123c" : volny ? "#e5e7eb" : "#f3f4f6",
                             background: aktivni ? "#be123c" : volny ? "white" : "#f9f9f9",
                             color: aktivni ? "white" : volny ? "#374151" : "#d1d5db",
-                            fontWeight: aktivni ? 700 : 400, fontSize: 14, textDecoration: !volny ? "line-through" : "none",
+                            fontWeight: aktivni ? 700 : 400, fontSize: 14,
+                            textDecoration: !volny ? "line-through" : "none",
                           }}
                         >
                           {pad2(h)}:00
@@ -355,13 +350,9 @@ export default function VideohovorPage() {
                       )
                     })}
                   </div>
-                ) : (
-                  <div style={{ textAlign: "center", color: "#d1d5db", fontSize: 12, padding: "20px 0" }}>
-                    Nejdřív<br />vyber den
-                  </div>
                 )}
               </div>
-            </div>
+            )}
 
             {/* Pokračovat */}
             {vybraneDatum && vybranyCas !== null && (
