@@ -92,6 +92,18 @@ function PotvrzeniSmazani({ jmena, onPotvrdit, onZrusit }: {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type SchuzkaDetail = {
+  id: number
+  jmeno: string
+  email: string | null
+  datum: string
+  cas: string
+  typ_kontaktu: string
+  kontakt: string
+  otazky: string | null
+  stav: "nova" | "potvrzena" | "zrusena"
+}
+
 type Zakaznik = {
   id: number
   jmeno: string
@@ -195,6 +207,7 @@ export default function DetailZakazky() {
   const router = useRouter()
   const params = useParams()
   const [zakazka, setZakazka] = useState<Zakazka | null>(null)
+  const [schuzka, setSchuzka] = useState<SchuzkaDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [mazani, setMazani] = useState(false)
   const [historie, setHistorie] = useState<{ id: string; created_at: string; stav: string }[]>([])
@@ -258,6 +271,18 @@ export default function DetailZakazky() {
         .single()
       setZakazka(data)
       setLoading(false)
+      // Načti matchovanou schůzku podle data svatby
+      if (data?.datum_svatby) {
+        const { data: sd } = await supabase
+          .from("schuzky")
+          .select("id, jmeno, email, datum, cas, typ_kontaktu, kontakt, otazky, stav")
+          .eq("datum_svadby", data.datum_svatby.slice(0, 10))
+          .neq("stav", "zrusena")
+          .order("datum", { ascending: true })
+          .limit(1)
+          .maybeSingle()
+        setSchuzka(sd ?? null)
+      }
     }
     nacti()
     nactiHistorii()
@@ -859,61 +884,98 @@ export default function DetailZakazky() {
               </div>
             </SectionCard>
 
-            {/* Videohovor */}
-            <SectionCard title="Videohovor" accent="#38bdf8">
-              {zakazka.videohovor_datum ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 8, color: "#156a3a", fontWeight: 600, fontSize: 13 }}>
+            {/* Předsvatební schůzka */}
+            <SectionCard title="Předsvatební schůzka" accent="#be123c">
+              {schuzka ? (
+                <div>
+                  {/* Datum + čas + stav */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>
+                        {new Date(schuzka.datum).toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                      </span>
+                      <span style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+                        {schuzka.cas.slice(0, 5)}
+                      </span>
+                    </div>
                     <span style={{
-                      width: 20, height: 20, borderRadius: "50%", background: "#e6f7ee",
-                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
-                    }}>✓</span>
-                    Proběhl {new Date(zakazka.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}
-                  </span>
-                  <input
-                    type="date"
-                    value={zakazka.videohovor_datum}
-                    onChange={e => ulozVideohovor(e.target.value)}
-                    style={{
-                      fontSize: 13, border: "1px solid var(--line)", borderRadius: "var(--radius-md)",
-                      padding: "5px 10px", color: "var(--ink)", background: "var(--bg)", outline: "none",
-                    }}
-                  />
-                  <button
-                    onClick={() => ulozVideohovor(null)}
-                    style={{
-                      fontSize: 11.5, color: "var(--muted)", background: "none", border: "none",
-                      cursor: "pointer", padding: 0,
-                    }}
-                    onMouseOver={e => (e.currentTarget.style.color = "#ef4444")}
-                    onMouseOut={e => (e.currentTarget.style.color = "var(--muted)")}
-                  >
-                    Zrušit
-                  </button>
+                      fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99, textTransform: "uppercase", letterSpacing: ".04em",
+                      background: schuzka.stav === "potvrzena" ? "#dcfce7" : "#fef9c3",
+                      color:      schuzka.stav === "potvrzena" ? "#166534" : "#854d0e",
+                    }}>
+                      {schuzka.stav === "potvrzena" ? "Potvrzena" : "Nová"}
+                    </span>
+                  </div>
+
+                  {/* Způsob kontaktu */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <span style={{
+                      fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
+                      background: schuzka.typ_kontaktu === "whatsapp" ? "#dcfce7" : schuzka.typ_kontaktu === "facetime" ? "#dbeafe" : "#fef3c7",
+                      color:      schuzka.typ_kontaktu === "whatsapp" ? "#166534" : schuzka.typ_kontaktu === "facetime" ? "#1e40af" : "#92400e",
+                    }}>
+                      {schuzka.typ_kontaktu === "whatsapp" ? "📱 WhatsApp" : schuzka.typ_kontaktu === "facetime" ? "📹 FaceTime" : "🤝 Osobně"}
+                    </span>
+                    <span style={{ fontSize: 13, color: "var(--ink-2)" }}>{schuzka.kontakt}</span>
+                  </div>
+
+                  {/* Otázky */}
+                  {schuzka.otazky && (
+                    <div style={{ background: "#fafaf9", borderRadius: 8, padding: "10px 14px", marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#9ca3af", marginBottom: 6 }}>
+                        Otázky klienta
+                      </div>
+                      <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                        {schuzka.otazky}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Označení proběhlé — subtilní */}
+                  <div style={{ paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                    {zakazka.videohovor_datum ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#156a3a", fontWeight: 600 }}>
+                          <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#e6f7ee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>✓</span>
+                          Proběhla {new Date(zakazka.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}
+                        </span>
+                        <input type="date" value={zakazka.videohovor_datum} onChange={e => ulozVideohovor(e.target.value)}
+                          style={{ fontSize: 12, border: "1px solid var(--line)", borderRadius: "var(--radius-md)", padding: "4px 8px", color: "var(--ink)", background: "var(--bg)", outline: "none" }} />
+                        <button onClick={() => ulozVideohovor(null)}
+                          style={{ fontSize: 11, color: "var(--muted)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                          onMouseOver={e => (e.currentTarget.style.color = "#ef4444")}
+                          onMouseOut={e => (e.currentTarget.style.color = "var(--muted)")}>
+                          Zrušit
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12, color: "var(--muted)" }}>Ještě neproběhla</span>
+                        <button onClick={() => ulozVideohovor(new Date().toISOString().slice(0, 10))}
+                          style={{ background: "#e0f2fe", color: "#0369a1", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: "var(--radius-md)", border: "none", cursor: "pointer" }}
+                          onMouseOver={e => (e.currentTarget.style.background = "#bae6fd")}
+                          onMouseOut={e => (e.currentTarget.style.background = "#e0f2fe")}>
+                          Označit jako proběhlou dnes
+                        </button>
+                        <input type="date" onChange={e => { if (e.target.value) ulozVideohovor(e.target.value) }}
+                          style={{ fontSize: 12, border: "1px solid var(--line)", borderRadius: "var(--radius-md)", padding: "4px 8px", color: "var(--ink-2)", background: "var(--bg)", outline: "none" }} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 13, color: "var(--muted)" }}>Zatím neproběhl</span>
-                  <button
-                    onClick={() => ulozVideohovor(new Date().toISOString().slice(0, 10))}
-                    style={{
-                      background: "#e0f2fe", color: "#0369a1", fontSize: 12.5, fontWeight: 600,
-                      padding: "6px 14px", borderRadius: "var(--radius-md)", border: "none", cursor: "pointer",
-                    }}
-                    onMouseOver={e => (e.currentTarget.style.background = "#bae6fd")}
-                    onMouseOut={e => (e.currentTarget.style.background = "#e0f2fe")}
-                  >
-                    Označit jako proběhlý dnes
-                  </button>
-                  <input
-                    type="date"
-                    onChange={e => { if (e.target.value) ulozVideohovor(e.target.value) }}
-                    style={{
-                      fontSize: 13, border: "1px solid var(--line)", borderRadius: "var(--radius-md)",
-                      padding: "5px 10px", color: "var(--ink-2)", background: "var(--bg)", outline: "none",
-                    }}
-                    placeholder="Jiné datum"
-                  />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                  <span style={{ fontSize: 13, color: "var(--muted)" }}>Zatím žádná rezervace schůzky</span>
+                  {zakazka.videohovor_datum ? (
+                    <span style={{ fontSize: 12.5, color: "#156a3a", fontWeight: 600 }}>
+                      ✓ Proběhla {new Date(zakazka.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })}
+                    </span>
+                  ) : (
+                    <button onClick={() => ulozVideohovor(new Date().toISOString().slice(0, 10))}
+                      style={{ background: "#e0f2fe", color: "#0369a1", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: "var(--radius-md)", border: "none", cursor: "pointer" }}>
+                      Označit jako proběhlou dnes
+                    </button>
+                  )}
                 </div>
               )}
             </SectionCard>

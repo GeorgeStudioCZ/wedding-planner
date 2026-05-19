@@ -231,6 +231,9 @@ export default function Home() {
   const [statsRozsireno, setStatsRozsireno] = useState(false)
   const [upcomingLimit, setUpcomingLimit] = useState(14)
   const [schuzkyBudouci, setSchuzkyBudouci] = useState<SchuzkaPreview[]>([])
+  // Sety datum_svadby pro ikonu kamery: budouci = schůzka ještě neproběhla, minule = proběhla
+  const [schuzkyBudouciDny, setSchuzkyBudouciDny] = useState<Set<string>>(new Set())
+  const [schuzkyMinuleDny,  setSchuzkyMinuleDny]  = useState<Set<string>>(new Set())
 
   async function nactiZakazky() {
     const { data, error } = await supabase
@@ -288,7 +291,8 @@ export default function Home() {
       .catch(() => {})
     // Nadcházející schůzky (jen budoucí, nezrušené)
     const dnesIso = new Date().toISOString().slice(0, 10)
-    createClient()
+    const db2 = createClient()
+    db2
       .from("schuzky")
       .select("id, jmeno, datum, cas, typ_kontaktu, stav")
       .gte("datum", dnesIso)
@@ -297,6 +301,23 @@ export default function Home() {
       .order("cas",   { ascending: true })
       .limit(5)
       .then(({ data }) => setSchuzkyBudouci((data ?? []) as SchuzkaPreview[]))
+    // Všechny schůzky pro ikonu kamery (datum_svadby → budoucí / minulé)
+    db2
+      .from("schuzky")
+      .select("datum, datum_svadby")
+      .neq("stav", "zrusena")
+      .not("datum_svadby", "is", null)
+      .then(({ data }) => {
+        const budouci = new Set<string>()
+        const minule  = new Set<string>()
+        for (const s of (data ?? [])) {
+          if (!s.datum_svadby) continue
+          if (s.datum >= dnesIso) budouci.add(s.datum_svadby)
+          else minule.add(s.datum_svadby)
+        }
+        setSchuzkyBudouciDny(budouci)
+        setSchuzkyMinuleDny(minule)
+      })
   }, [])
 
   async function toggleOdevzdani(e: React.MouseEvent, id: string, aktualniStav: boolean) {
@@ -674,12 +695,21 @@ export default function Home() {
             )}
           </div>
 
-          {/* 3 · Kamera — 48 px, VŽDY přítomný slot */}
+          {/* 3 · Kamera — 48 px */}
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
           <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {z.videohovor_datum && (
-              <span title="Videohovor absolvován" style={{ fontSize: 19, lineHeight: 1 }}>🎥</span>
-            )}
+            {(() => {
+              const ds = z.datum_svatby || ""
+              const maProbehlou = schuzkyMinuleDny.has(ds) || !!z.videohovor_datum
+              const maBudouci   = schuzkyBudouciDny.has(ds) && !maProbehlou
+              if (!maProbehlou && !maBudouci) return null
+              return (
+                <span
+                  title={maProbehlou ? "Předsvatební schůzka proběhla" : "Předsvatební schůzka naplánována"}
+                  style={{ fontSize: 19, lineHeight: 1, opacity: maBudouci ? 0.28 : 1, filter: maBudouci ? "grayscale(1)" : "none" }}
+                >🎥</span>
+              )
+            })()}
           </div>
 
           {/* 4 · Typ — 120 px */}
