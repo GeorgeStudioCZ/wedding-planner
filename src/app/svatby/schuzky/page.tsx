@@ -93,11 +93,12 @@ function StavBadge({ stav }: { stav: string }) {
 
 // ── Karta schůzky ─────────────────────────────────────────────────────────────
 function SchuzkaKarta({
-  s, zakazka, onStav,
+  s, zakazka, onStav, onDelete,
 }: {
   s: Schuzka
   zakazka: Zakazka | null
   onStav: (id: number, stav: Schuzka["stav"]) => void
+  onDelete: (id: number) => void
 }) {
   const hod = parseHod(s.cas)
   const [expanded, setExpanded] = useState(false)
@@ -218,9 +219,28 @@ function SchuzkaKarta({
               ↩ Vrátit
             </button>
           )}
+          {/* Smazat */}
+          <button
+            onClick={() => onDelete(s.id)}
+            title="Smazat schůzku"
+            style={{ marginTop: 4, padding: "6px 8px", borderRadius: 8, border: "1.5px solid #fecdd3", cursor: "pointer", background: "white", color: "#be123c", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <TrashIco />
+          </button>
         </div>
       </div>
     </div>
+  )
+}
+
+function TrashIco() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
   )
 }
 
@@ -251,6 +271,13 @@ export default function SchuzkyPage() {
       setLoading(false)
     })
   }, [])
+
+  async function handleDelete(id: number) {
+    if (!window.confirm("Opravdu chceš tuto schůzku smazat? Tato akce je nevratná.")) return
+    const db = createClient()
+    await db.from("schuzky").delete().eq("id", id)
+    setSchuzky(prev => prev.filter(s => s.id !== id))
+  }
 
   async function handleStav(id: number, stav: Schuzka["stav"]) {
     const db = createClient()
@@ -377,6 +404,7 @@ export default function SchuzkyPage() {
                       s={s}
                       zakazka={najdiSvatbu(s, zakazky)}
                       onStav={handleStav}
+                      onDelete={handleDelete}
                     />
                   ))}
                 </div>
@@ -394,6 +422,7 @@ export default function SchuzkyPage() {
                       s={s}
                       zakazka={najdiSvatbu(s, zakazky)}
                       onStav={handleStav}
+                      onDelete={handleDelete}
                     />
                   ))}
                 </div>
