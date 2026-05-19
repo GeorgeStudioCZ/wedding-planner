@@ -920,9 +920,75 @@ export default function Home() {
         {/* ── Řádek 3: Čeká na sestřihání (vlevo) + Nadcházející (vpravo) ─ */}
         <div className="grid grid-cols-1 ipad:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>
 
-          {/* Levý sloupec: Čeká na sestřihání + Schůzky */}
+          {/* Levý sloupec: Schůzky nahoře, pak Čeká na sestřihání */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
+          {/* ── Nadcházející schůzky ── */}
+          {schuzkyBudouci.length > 0 && (
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)", overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid var(--line)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: 99, background: "#be123c", flexShrink: 0 }} />
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Nadcházející schůzky</h3>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)", background: "rgba(20,20,30,.06)", padding: "2px 8px", borderRadius: 99 }}>
+                    {schuzkyBudouci.length}
+                  </span>
+                </div>
+                <Link href="/svatby/schuzky" style={{ fontSize: 12, color: "var(--muted)", textDecoration: "none" }}>Všechny →</Link>
+              </div>
+              {schuzkyBudouci.map((s, i) => {
+                const d    = new Date(s.datum)
+                const den  = String(d.getDate()).padStart(2, "0")
+                const mesRok = `${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`
+                const KONTAKT_BADGE: Record<string, { label: string; bg: string; color: string }> = {
+                  whatsapp: { label: "WhatsApp", bg: "#dcfce7", color: "#166534" },
+                  facetime: { label: "FaceTime", bg: "#dbeafe", color: "#1e40af" },
+                  osobne:   { label: "Osobně",   bg: "#fef3c7", color: "#92400e" },
+                }
+                const kb = KONTAKT_BADGE[s.typ_kontaktu] ?? { label: s.typ_kontaktu, bg: "#f3f4f6", color: "#374151" }
+                const stavBg   = s.stav === "potvrzena" ? "#dcfce7" : "#fef9c3"
+                const stavClr  = s.stav === "potvrzena" ? "#166534" : "#854d0e"
+                return (
+                  <Link key={s.id} href="/svatby/schuzky" style={{ display: "flex", alignItems: "stretch", textDecoration: "none", color: "inherit", borderTop: i > 0 ? "1px solid var(--line)" : "none", minHeight: 52, overflow: "hidden" }}>
+                    {/* Datum blok — stejný styl jako ZakazkaRadek */}
+                    <div style={{ background: "#be123c", width: 52, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "white", fontFamily: "var(--font-serif)", lineHeight: 1 }}>{den}</div>
+                      <div style={{ fontSize: 8, color: "rgba(255,255,255,.8)", fontFamily: "var(--font-mono)", marginTop: 2, letterSpacing: ".04em" }}>{mesRok}</div>
+                    </div>
+                    {/* Jméno */}
+                    <div style={{ flex: 1, minWidth: 0, padding: "0 12px", display: "flex", alignItems: "center" }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {s.jmeno}
+                      </div>
+                    </div>
+                    {/* Čas */}
+                    <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+                    <div style={{ width: 56, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, color: "var(--ink-2)" }}>
+                        {s.cas.slice(0, 5)}
+                      </span>
+                    </div>
+                    {/* Způsob */}
+                    <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+                    <div style={{ width: 88, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ background: kb.bg, color: kb.color, borderRadius: 4, padding: "3px 7px", fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap" }}>
+                        {kb.label}
+                      </span>
+                    </div>
+                    {/* Stav */}
+                    <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
+                    <div style={{ width: 82, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ background: stavBg, color: stavClr, borderRadius: 4, padding: "3px 7px", fontSize: 10.5, fontWeight: 700 }}>
+                        {s.stav === "potvrzena" ? "Potvrzena" : "Nová"}
+                      </span>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+
+          {/* ── Čeká na sestřihání ── */}
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "16px 20px", borderBottom: "1px solid var(--line)" }}>
               <span style={{ width: 9, height: 9, borderRadius: 99, background: "#fb923c", flexShrink: 0 }} />
@@ -941,55 +1007,6 @@ export default function Home() {
                 .map(z => <ZakazkaRadek key={z.id} z={z} />)
             )}
           </div>
-
-          {/* Schůzky */}
-          {schuzkyBudouci.length > 0 && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid var(--line)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 99, background: "#be123c", flexShrink: 0 }} />
-                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Nadcházející schůzky</h3>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)", background: "rgba(20,20,30,.06)", padding: "2px 8px", borderRadius: 99 }}>
-                    {schuzkyBudouci.length}
-                  </span>
-                </div>
-                <Link href="/svatby/schuzky" style={{ fontSize: 12, color: "var(--muted)", textDecoration: "none" }}>
-                  Všechny →
-                </Link>
-              </div>
-              {schuzkyBudouci.map((s, i) => {
-                const d = new Date(s.datum)
-                const ikonaKontakt = s.typ_kontaktu === "whatsapp" ? "📱" : s.typ_kontaktu === "facetime" ? "📹" : "🤝"
-                const stavBarva = s.stav === "potvrzena" ? "#dcfce7" : "#fef9c3"
-                const stavText  = s.stav === "potvrzena" ? "#166534" : "#854d0e"
-                return (
-                  <Link key={s.id} href="/svatby/schuzky" style={{
-                    display: "flex", alignItems: "center", gap: 12,
-                    padding: "11px 18px", textDecoration: "none", color: "inherit",
-                    borderTop: i > 0 ? "1px solid var(--line)" : "none",
-                  }}>
-                    <div style={{ flexShrink: 0, width: 42, textAlign: "center", background: "#fafaf9", borderRadius: 8, padding: "5px 4px", border: "1px solid #f0ede8" }}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: "#be123c", lineHeight: 1 }}>{d.getDate()}</div>
-                      <div style={{ fontSize: 9.5, color: "#9ca3af", fontWeight: 600 }}>
-                        {d.toLocaleDateString("cs-CZ", { month: "short" }).replace(".","").toUpperCase()}
-                      </div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginTop: 2 }}>
-                        {s.cas.slice(0, 5)}
-                      </div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--ink)", marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {ikonaKontakt} {s.jmeno}
-                      </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: stavBarva, color: stavText }}>
-                        {s.stav === "potvrzena" ? "Potvrzena" : "Nová"}
-                      </span>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
 
           </div>{/* konec levého sloupce */}
 
