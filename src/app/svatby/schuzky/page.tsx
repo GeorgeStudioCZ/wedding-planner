@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
 
@@ -241,9 +240,10 @@ export default function SchuzkyPage() {
   const [filtr,    setFiltr]    = useState<StavFilter>("vse")
 
   useEffect(() => {
+    const db = createClient()
     Promise.all([
-      supabase.from("schuzky").select("*").order("datum", { ascending: true }).order("cas", { ascending: true }),
-      supabase.from("zakazky").select("id, jmeno_nevesty, jmeno_zenicha, datum_svatby, typ_sluzby, stav"),
+      db.from("schuzky").select("*").order("datum", { ascending: true }).order("cas", { ascending: true }),
+      db.from("zakazky").select("id, jmeno_nevesty, jmeno_zenicha, datum_svatby, typ_sluzby, stav"),
     ]).then(([{ data: s }, { data: z }]) => {
       setSchuzky((s ?? []) as Schuzka[])
       setZakazky((z ?? []) as Zakazka[])
