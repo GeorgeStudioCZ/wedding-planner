@@ -213,6 +213,15 @@ function MiniKalendar({ zakazky }: { zakazky: Zakazka[] }) {
   )
 }
 
+type SchuzkaPreview = {
+  id: number
+  jmeno: string
+  datum: string
+  cas: string
+  typ_kontaktu: string
+  stav: string
+}
+
 export default function Home() {
   const [zakazky, setZakazky] = useState<Zakazka[]>([])
   const [loading, setLoading] = useState(true)
@@ -221,6 +230,7 @@ export default function Home() {
   const [filter, setFilter] = useState<"Vše" | "Zaplaceno" | "Čeká">("Vše")
   const [statsRozsireno, setStatsRozsireno] = useState(false)
   const [upcomingLimit, setUpcomingLimit] = useState(14)
+  const [schuzkyBudouci, setSchuzkyBudouci] = useState<SchuzkaPreview[]>([])
 
   async function nactiZakazky() {
     const { data, error } = await supabase
@@ -276,6 +286,17 @@ export default function Home() {
       .then(r => r.json())
       .then(d => { if (d.cena) setCenaBenzinu(d.cena) })
       .catch(() => {})
+    // Nadcházející schůzky (jen budoucí, nezrušené)
+    const dnesIso = new Date().toISOString().slice(0, 10)
+    createClient()
+      .from("schuzky")
+      .select("id, jmeno, datum, cas, typ_kontaktu, stav")
+      .gte("datum", dnesIso)
+      .neq("stav", "zrusena")
+      .order("datum", { ascending: true })
+      .order("cas",   { ascending: true })
+      .limit(5)
+      .then(({ data }) => setSchuzkyBudouci((data ?? []) as SchuzkaPreview[]))
   }, [])
 
   async function toggleOdevzdani(e: React.MouseEvent, id: string, aktualniStav: boolean) {
@@ -895,6 +916,58 @@ export default function Home() {
           </div>
 
         </div>
+
+        {/* ── Nadcházející schůzky ─────────────────────────────────────── */}
+        {schuzkyBudouci.length > 0 && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-1)", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid var(--line)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 99, background: "#be123c", flexShrink: 0 }} />
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Nadcházející schůzky</h3>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)", background: "rgba(20,20,30,.06)", padding: "2px 8px", borderRadius: 99 }}>
+                  {schuzkyBudouci.length}
+                </span>
+              </div>
+              <Link href="/svatby/schuzky" style={{ fontSize: 12, color: "var(--muted)", textDecoration: "none" }}>
+                Všechny schůzky →
+              </Link>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 0 }}>
+              {schuzkyBudouci.map((s, i) => {
+                const d = new Date(s.datum)
+                const ikonaKontakt = s.typ_kontaktu === "whatsapp" ? "📱" : s.typ_kontaktu === "facetime" ? "📹" : "🤝"
+                const stavBarva = s.stav === "potvrzena" ? "#dcfce7" : "#fef9c3"
+                const stavText = s.stav === "potvrzena" ? "#166534" : "#854d0e"
+                return (
+                  <Link key={s.id} href="/svatby/schuzky" style={{
+                    flex: "1 1 200px", display: "flex", alignItems: "center", gap: 12,
+                    padding: "12px 18px", textDecoration: "none", color: "inherit",
+                    borderTop: i > 0 ? "1px solid var(--line)" : "none",
+                    borderRight: "1px solid var(--line)",
+                  }}>
+                    <div style={{ flexShrink: 0, width: 44, textAlign: "center", background: "#fafaf9", borderRadius: 8, padding: "6px 4px", border: "1px solid #f0ede8" }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: "#be123c", lineHeight: 1 }}>{d.getDate()}</div>
+                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600 }}>
+                        {d.toLocaleDateString("cs-CZ", { month: "short" }).replace(".","").toUpperCase()}
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginTop: 3 }}>
+                        {s.cas.slice(0,5)}
+                      </div>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--ink)", marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {ikonaKontakt} {s.jmeno}
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: stavBarva, color: stavText }}>
+                        {s.stav === "potvrzena" ? "Potvrzena" : "Nová"}
+                      </span>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── Řádek 3: Čeká na sestřihání (vlevo) + Nadcházející (vpravo) ─ */}
         <div className="grid grid-cols-1 ipad:grid-cols-2 gap-4" style={{ marginBottom: 16 }}>

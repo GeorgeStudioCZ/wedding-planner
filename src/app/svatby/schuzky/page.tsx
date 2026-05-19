@@ -9,6 +9,7 @@ import AppShell from "@/components/AppShell"
 type Schuzka = {
   id: number
   jmeno: string
+  email: string | null
   datum_svadby: string | null
   kontakt: string
   typ_kontaktu: string
@@ -255,6 +256,28 @@ export default function SchuzkyPage() {
     const db = createClient()
     await db.from("schuzky").update({ stav }).eq("id", id)
     setSchuzky(prev => prev.map(s => s.id === id ? { ...s, stav } : s))
+
+    // Při potvrzení pošli email zákazníkovi
+    if (stav === "potvrzena") {
+      const s = schuzky.find(x => x.id === id)
+      if (s?.email) {
+        fetch("/api/mail/schuzka", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            typ:          "potvrzeni",
+            jmeno:        s.jmeno,
+            email:        s.email,
+            datum:        s.datum,
+            cas:          s.cas,
+            typ_kontaktu: s.typ_kontaktu,
+            kontakt:      s.kontakt,
+            datum_svadby: s.datum_svadby,
+            otazky:       s.otazky,
+          }),
+        }).catch(e => console.error("Potvrzeni mail:", e))
+      }
+    }
   }
 
   const filtered = schuzky.filter(s => filtr === "vse" || s.stav === filtr)

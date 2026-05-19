@@ -31,15 +31,17 @@ const I = {
   menu:     ["M3 12h18","M3 6h18","M3 18h18"],
   x:        ["M18 6L6 18","M6 6l12 12"],
   video:    ["M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"],
+  settings: ["M12 15a3 3 0 100-6 3 3 0 000 6z","M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"],
 }
 
 // ── Nav items ───────────────────────────────────────────────────────────────
 const NAV_WED = [
-  { key: "home",     label: "Přehled",       href: "/svatby",                  ico: I.home },
-  { key: "seznam",   label: "Seznam svateb", href: "/svatby/seznam",           ico: I.list },
-  { key: "kalendar", label: "Kalendář",      href: "/svatby/kalendar",         ico: I.calendar },
-  { key: "schuzky",  label: "Schůzky",       href: "/svatby/schuzky",          ico: I.video },
-  { key: "klienti",  label: "Klienti",       href: "/zakaznici?from=wed",      ico: I.users },
+  { key: "home",      label: "Přehled",       href: "/svatby",                  ico: I.home },
+  { key: "seznam",    label: "Seznam svateb", href: "/svatby/seznam",           ico: I.list },
+  { key: "kalendar",  label: "Kalendář",      href: "/svatby/kalendar",         ico: I.calendar },
+  { key: "schuzky",   label: "Schůzky",       href: "/svatby/schuzky",          ico: I.video },
+  { key: "klienti",   label: "Klienti",       href: "/zakaznici?from=wed",      ico: I.users },
+  { key: "nastaveni", label: "Nastavení",     href: "/svatby/nastaveni",        ico: I.settings },
 ]
 
 const NAV_VAN = [

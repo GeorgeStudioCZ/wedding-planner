@@ -3,8 +3,14 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 
-// ── Konfigurace dostupných hodin ─────────────────────────────────────────────
-const DOSTUPNE_HODINY = [9, 10, 11, 14, 15, 16, 17]
+// ── Typ nastavení dostupnosti ─────────────────────────────────────────────────
+// klíč = ISO weekday (1=Po..7=Ne), hodnota = pole dostupných hodin
+type Dostupnost = Record<string, number[]>
+
+function isoWeekday(dateStr: string): number {
+  const dow = new Date(dateStr).getDay() // 0=Ne,1=Po..6=So
+  return dow === 0 ? 7 : dow
+}
 
 const MESICE = [
   "Leden","Únor","Březen","Duben","Květen","Červen",
@@ -30,13 +36,14 @@ function jeMinulost(rok: number, mesic: number, den: number) {
 
 // ── Komponenta Kalendář ───────────────────────────────────────────────────────
 function Kalendar({
-  rok, mesic, vybraneDatum, obsazene,
+  rok, mesic, vybraneDatum, obsazene, dostupnost,
   onChange, onPrev, onNext,
 }: {
   rok: number
   mesic: number
   vybraneDatum: string | null
   obsazene: Record<string, number>   // datum -> počet obsazených hodin
+  dostupnost: Dostupnost
   onChange: (datum: string) => void
   onPrev: () => void
   onNext: () => void
@@ -86,7 +93,8 @@ function Kalendar({
           if (!den) return <div key={i} />
           const datum = datumStr(rok, mesic, den)
           const minuly = jeMinulost(rok, mesic, den)
-          const plnyDen = obsazene[datum] !== undefined && obsazene[datum] >= DOSTUPNE_HODINY.length
+          const denHodiny = (dostupnost[String(isoWeekday(datum))] ?? []).length
+          const plnyDen = denHodiny === 0 || (obsazene[datum] !== undefined && obsazene[datum] >= denHodiny)
           const disabled = minuly || plnyDen
           const vybran = vybraneDatum === datum
           const castecne = obsazene[datum] !== undefined && obsazene[datum] > 0 && !plnyDen
@@ -121,6 +129,9 @@ export default function VideohovorPage() {
   const [vybraneDatum, setVybraneDatum] = useState<string | null>(null)
   const [vybranyCas,   setVybranyCas]   = useState<number | null>(null)
 
+  // Nastavení dostupnosti (načteno z DB)
+  const [dostupnost, setDostupnost] = useState<Dostupnost>({})
+
   // Obsazenost — načteme pro aktuální + příští měsíc
   const [obsazene, setObsazene] = useState<Record<string, number>>({})
 
@@ -137,6 +148,18 @@ export default function VideohovorPage() {
   const [krok,     setKrok]     = useState<Krok>("vyber")
   const [odeslani, setOdeslani] = useState(false)
   const [chyba,    setChyba]    = useState("")
+
+  // Načtení nastavení dostupnosti (jednou při mountu)
+  useEffect(() => {
+    supabase
+      .from("schuzky_nastaveni")
+      .select("dostupnost")
+      .eq("id", 1)
+      .single()
+      .then(({ data }) => {
+        if (data?.dostupnost) setDostupnost(data.dostupnost as Dostupnost)
+      })
+  }, [])
 
   // Načtení obsazenosti
   useEffect(() => {
@@ -177,6 +200,11 @@ export default function VideohovorPage() {
         if (vybranyCas !== null && h.has(vybranyCas)) setVybranyCas(null)
       })
   }, [vybraneDatum])
+
+  // Dostupné hodiny pro vybraný den (z nastavení)
+  const dostupneHodiny: number[] = vybraneDatum
+    ? (dostupnost[String(isoWeekday(vybraneDatum))] ?? []).slice().sort((a, b) => a - b)
+    : []
 
   function prevMesic() {
     if (mesic === 0) { setRok(r => r - 1); setMesic(11) } else setMesic(m => m - 1)
@@ -222,6 +250,7 @@ export default function VideohovorPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        typ:           "zadost",
         jmeno:         jmeno.trim(),
         email:         email.trim(),
         datum:         vybraneDatum,
@@ -288,6 +317,7 @@ export default function VideohovorPage() {
                 rok={rok} mesic={mesic}
                 vybraneDatum={vybraneDatum}
                 obsazene={obsazene}
+                dostupnost={dostupnost}
                 onChange={d => { setVybraneDatum(d); setVybranyCas(null) }}
                 onPrev={prevMesic}
                 onNext={nextMesic}
@@ -298,9 +328,13 @@ export default function VideohovorPage() {
                 <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", color: "#9ca3af", marginBottom: 10, textAlign: "center" }}>
                   {vybraneDatum ? datumCitelne!.split(" ").slice(0,2).join(" ") : "Čas"}
                 </div>
-                {vybraneDatum ? (
+                {vybraneDatum && dostupneHodiny.length === 0 ? (
+                  <div style={{ textAlign: "center", color: "#d1d5db", fontSize: 12, padding: "20px 0" }}>
+                    Tento den<br />není dostupný
+                  </div>
+                ) : vybraneDatum ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {DOSTUPNE_HODINY.map(h => {
+                    {dostupneHodiny.map(h => {
                       const volny = !obsazeneCasy.has(h)
                       const aktivni = vybranyCas === h
                       return (
