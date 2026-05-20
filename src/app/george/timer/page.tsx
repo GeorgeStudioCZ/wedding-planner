@@ -368,31 +368,35 @@ export default function TimerPopup() {
           ))}
         </select>
 
-        {/* Kategorie — label + [S][M] + dropdown na jednom řádku */}
+        {/* Kategorie */}
         <div style={{ marginBottom: modTyp === "material" ? 10 : 14 }}>
-          <div style={{ fontSize: 10, color: "#5a5b66", marginBottom: 6, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>
-            {modTyp === "sluzba" ? "Kategorie služby" : "Kategorie materiálu"}
+          <div style={{ fontSize: 10, color: "#5a5b66", marginBottom: 8, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>
+            Kategorie služby
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          {/* Přepínač Služba / Materiál */}
+          <div style={{ display: "flex", gap: 7, marginBottom: 8 }}>
             {(["sluzba", "material"] as const).map(t => (
               <button key={t} onClick={() => { setModTyp(t); setKategorieId(null); setPocet("") }}
                 disabled={!!running}
                 style={{
-                  width: 38, height: 38, borderRadius: 7, border: "none", flexShrink: 0,
-                  cursor: running ? "default" : "pointer",
-                  fontWeight: 800, fontSize: 13,
-                  background: modTyp === t ? (t === "sluzba" ? "#6366f1" : "#10b981") : "rgba(255,255,255,.08)",
-                  color: modTyp === t ? "white" : "#5a5b66",
-                  boxShadow: modTyp === t ? `0 2px 8px ${t === "sluzba" ? "rgba(99,102,241,.5)" : "rgba(16,185,129,.5)"}` : "none",
+                  flex: 1, padding: "9px 10px", borderRadius: 9, cursor: running ? "default" : "pointer",
+                  border: "1.5px solid",
+                  borderColor: modTyp === t ? (t === "sluzba" ? "#6366f1" : "#10b981") : "rgba(255,255,255,.1)",
+                  background: modTyp === t ? (t === "sluzba" ? "rgba(99,102,241,.18)" : "rgba(16,185,129,.18)") : "rgba(255,255,255,.04)",
+                  color: modTyp === t ? (t === "sluzba" ? "#a5b4fc" : "#6ee7b7") : "#5a5b66",
+                  fontWeight: modTyp === t ? 700 : 400, fontSize: 13,
                   transition: "all .15s",
                 }}>
-                {t === "sluzba" ? "S" : "M"}
+                {t === "sluzba" ? "⚡ Služba" : "📦 Materiál"}
               </button>
             ))}
+          </div>
+          {/* Dropdown — vlastní řádek, pevná šířka */}
+          <div style={{ width: "100%", overflow: "hidden" }}>
             <select value={kategorieId ?? ""} onChange={e => setKategorieId(e.target.value ? Number(e.target.value) : null)}
               disabled={!!running}
               style={{
-                flex: 1, padding: "8px 11px", borderRadius: 9,
+                width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9,
                 border: `1px solid ${katAktivni ? katAktivni.barva + "66" : "rgba(255,255,255,.08)"}`,
                 fontSize: 13, outline: "none",
                 background: katAktivni ? katAktivni.barva + "1a" : "#15161c",
