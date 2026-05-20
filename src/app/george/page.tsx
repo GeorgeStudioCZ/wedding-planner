@@ -847,38 +847,42 @@ export default function GeorgePage() {
               </select>
             </div>
 
-            {/* Kategorie — label + [S][M] + dropdown na jednom řádku */}
+            {/* Kategorie */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 11.5, color: "#7a7b85", display: "block", marginBottom: 7 }}>
-                {modTyp === "sluzba" ? "Kategorie služby" : "Kategorie materiálu"}
+                Kategorie služby
               </label>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* Přepínač Služba / Materiál */}
+              <div style={{ display: "flex", gap: 7, marginBottom: 8 }}>
                 {(["sluzba", "material"] as const).map(t => (
                   <button key={t} onClick={() => { setModTyp(t); setKategorieId(null); setPocet("") }}
                     disabled={!!running}
                     style={{
-                      width: 40, height: 40, borderRadius: 7, border: "none", flexShrink: 0,
-                      cursor: running ? "default" : "pointer",
-                      fontWeight: 800, fontSize: 14,
-                      background: modTyp === t ? (t === "sluzba" ? "#6366f1" : "#10b981") : "rgba(255,255,255,.08)",
-                      color: modTyp === t ? "white" : "#5a5b66",
-                      boxShadow: modTyp === t ? `0 2px 8px ${t === "sluzba" ? "rgba(99,102,241,.5)" : "rgba(16,185,129,.5)"}` : "none",
+                      flex: 1, padding: "9px 10px", borderRadius: 9, cursor: running ? "default" : "pointer",
+                      border: "1.5px solid",
+                      borderColor: modTyp === t ? (t === "sluzba" ? "#6366f1" : "#10b981") : "rgba(255,255,255,.1)",
+                      background: modTyp === t ? (t === "sluzba" ? "rgba(99,102,241,.18)" : "rgba(16,185,129,.18)") : "rgba(255,255,255,.04)",
+                      color: modTyp === t ? (t === "sluzba" ? "#a5b4fc" : "#6ee7b7") : "#5a5b66",
+                      fontWeight: modTyp === t ? 700 : 400, fontSize: 13,
                       transition: "all .15s",
                     }}>
-                    {t === "sluzba" ? "S" : "M"}
+                    {t === "sluzba" ? "⚡ Služba" : "📦 Materiál"}
                   </button>
                 ))}
-                {aktivniKat.length === 0 ? (
-                  <span style={{ fontSize: 12, color: "#5a5b66" }}>
-                    {modTyp === "sluzba" ? "Přidej služby v Ceníku." : "Přidej materiál v Ceníku."}
-                  </span>
-                ) : (
+              </div>
+              {/* Dropdown — vlastní řádek, pevná šířka */}
+              {aktivniKat.length === 0 ? (
+                <span style={{ fontSize: 12, color: "#5a5b66" }}>
+                  {modTyp === "sluzba" ? "Přidej služby v Ceníku." : "Přidej materiál v Ceníku."}
+                </span>
+              ) : (
+                <div style={{ width: "100%", overflow: "hidden" }}>
                   <select
                     value={kategorieId ?? ""}
                     onChange={e => setKategorieId(e.target.value ? Number(e.target.value) : null)}
                     disabled={!!running}
                     style={{
-                      flex: 1, padding: "9px 11px", borderRadius: 9,
+                      width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9,
                       border: `1px solid ${katAktivni ? katAktivni.barva + "66" : "rgba(255,255,255,.08)"}`,
                       fontSize: 13, outline: "none",
                       background: katAktivni ? katAktivni.barva + "1a" : "#15161c",
@@ -892,8 +896,8 @@ export default function GeorgePage() {
                       <option key={k.id} value={k.id}>{k.name}</option>
                     ))}
                   </select>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Množství — jen pro materiál */}
