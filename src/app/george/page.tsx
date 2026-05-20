@@ -978,12 +978,6 @@ export default function GeorgePage() {
               </div>
             )}
 
-            {/* Sazba hint */}
-            {katAktivni && katAktivni.sazba > 0 && (
-              <div style={{ textAlign: "right", marginBottom: 12, fontSize: 11.5, color: "#5a5b66" }}>
-                {katAktivni.sazba.toLocaleString("cs-CZ")} Kč / {katAktivni.sazba_typ === "kus" ? "kus" : "hod"}
-              </div>
-            )}
 
             {/* Manuální zadání — datum + časy */}
             {!running && manualMode && (
