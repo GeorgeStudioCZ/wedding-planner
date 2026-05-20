@@ -468,6 +468,12 @@ export default function TimerPopup() {
                 <strong style={{ color: "#10b981" }}>
                   {(parseFloat(pocet) * parseFloat(prodejCena.replace(",","."))).toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč
                 </strong>
+                <span>
+                  {" "}· s DPH{" "}
+                  <strong style={{ color: "#10b981" }}>
+                    {(parseFloat(pocet) * parseFloat(prodejCena.replace(",",".")) * 1.21).toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč
+                  </strong>
+                </span>
                 {parseFloat(nakupCena) > 0 && (
                   <span style={{ color: "#5a5b66" }}>
                     {" "}· marže{" "}
