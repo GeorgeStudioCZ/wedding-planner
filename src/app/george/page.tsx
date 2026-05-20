@@ -8,7 +8,7 @@ import { bezDPH, castDPH } from "@/lib/dph"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
-type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null; jednotka: string | null }
+type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null; jednotka: string | null; nakupni_cena: number | null }
 type Zaznam = {
   id: number
   zakaznik_id: number | null
@@ -18,6 +18,8 @@ type Zaznam = {
   end_at: string | null
   poznamka: string
   pocet: number | null
+  cena_prodej_kus: number | null
+  cena_nakup_kus: number | null
 }
 
 // ── SVG ring constants ────────────────────────────────────────────────────────
@@ -414,8 +416,10 @@ export default function GeorgePage() {
   const [manualTo,   setManualTo]   = useState("")
 
   // Režim S / M
-  const [modTyp, setModTyp] = useState<"sluzba" | "material">("sluzba")
-  const [pocet,  setPocet]  = useState("")
+  const [modTyp,     setModTyp]     = useState<"sluzba" | "material">("sluzba")
+  const [pocet,      setPocet]      = useState("")
+  const [prodejCena, setProdejCena] = useState("")
+  const [nakupCena,  setNakupCena]  = useState("")
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const todayStr     = new Date().toISOString().slice(0, 10)
@@ -446,6 +450,16 @@ export default function GeorgePage() {
   // SVG ring — 1 revolution = 1 hour
   const ringProgress = running ? Math.min((elapsed % 3_600_000) / 3_600_000, 1) : 0
   const ringOffset   = RING_CIRC * (1 - ringProgress)
+
+  // Předvyplnění cen z ceníku při změně kategorie
+  useEffect(() => {
+    if (!kategorieId) { setProdejCena(""); setNakupCena(""); return }
+    const kat = kategorie.find(k => k.id === kategorieId)
+    if (kat) {
+      setProdejCena(kat.sazba > 0 ? String(kat.sazba) : "")
+      setNakupCena(kat.nakupni_cena != null ? String(kat.nakupni_cena) : "")
+    }
+  }, [kategorieId])
 
   const katAktivni = kategorie.find(k => k.id === kategorieId)
   const lastTen    = zaznamy.filter(z => z.end_at).slice(0, 10)
@@ -546,16 +560,20 @@ export default function GeorgePage() {
     const db = createClient()
     const now = new Date().toISOString()
     const kat = kategorie.find(k => k.id === kategorieId)
+    const prodejNum = parseFloat(prodejCena.replace(",", "."))
+    const nakupNum  = parseFloat(nakupCena.replace(",", "."))
     const { data, error } = await db.from("george_zaznamy").insert({
       nazev: nazev.trim() || (kat?.name ?? "Materiál"),
       zakaznik_id: zakaznikId,
       kategorie_id: kategorieId,
       start_at: now, end_at: now,
       pocet: pocetNum,
+      cena_prodej_kus: !isNaN(prodejNum) && prodejNum > 0 ? prodejNum : null,
+      cena_nakup_kus:  !isNaN(nakupNum)  && nakupNum  > 0 ? nakupNum  : null,
     }).select().single()
     if (error || !data) return
     setZaznamy(prev => [data, ...prev])
-    setNazev(""); setPocet(""); setKategorieId(null)
+    setNazev(""); setPocet(""); setProdejCena(""); setNakupCena(""); setKategorieId(null)
   }
 
   async function handleAddManual() {
@@ -900,32 +918,57 @@ export default function GeorgePage() {
               )}
             </div>
 
-            {/* Množství — jen pro materiál */}
+            {/* Množství + ceny — jen pro materiál */}
             {!running && modTyp === "material" && (
               <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 11.5, color: "#7a7b85", display: "block", marginBottom: 4 }}>
-                  Množství {katAktivni?.jednotka ? `(${katAktivni.jednotka})` : ""}
-                </label>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input
-                    value={pocet} onChange={e => setPocet(e.target.value)}
-                    placeholder="0" inputMode="decimal"
-                    style={{
-                      width: 90, padding: "9px 11px", borderRadius: 9,
-                      border: "1px solid rgba(255,255,255,.12)", fontSize: 14,
-                      color: "#eaeaf0", outline: "none", background: "rgba(255,255,255,.05)",
-                    }}
-                  />
-                  {katAktivni && parseFloat(pocet) > 0 && (
-                    <span style={{ fontSize: 12, color: "#5a5b66" }}>
-                      {parseFloat(pocet)} {katAktivni.jednotka ?? "×"} {katAktivni.sazba.toLocaleString("cs-CZ")} Kč
-                      {" = "}
-                      <strong style={{ color: "#10b981" }}>
-                        {Math.round(parseFloat(pocet) * katAktivni.sazba).toLocaleString("cs-CZ")} Kč
-                      </strong>
-                    </span>
-                  )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  {/* Množství */}
+                  <div style={{ flex: "0 0 80px" }}>
+                    <label style={{ fontSize: 10, color: "#7a7b85", display: "block", marginBottom: 4, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase" }}>
+                      {katAktivni?.jednotka ?? "Množství"}
+                    </label>
+                    <input value={pocet} onChange={e => setPocet(e.target.value)}
+                      placeholder="0" inputMode="decimal"
+                      style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 9, border: "1px solid rgba(255,255,255,.12)", fontSize: 14, color: "#eaeaf0", outline: "none", background: "rgba(255,255,255,.05)" }}
+                    />
+                  </div>
+                  {/* Prodejní cena */}
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: "#7a7b85", display: "block", marginBottom: 4, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase" }}>
+                      Prodej / ks
+                    </label>
+                    <input value={prodejCena} onChange={e => setProdejCena(e.target.value)}
+                      placeholder="0" inputMode="decimal"
+                      style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 9, border: "1px solid rgba(255,255,255,.12)", fontSize: 13, color: "#a5b4fc", outline: "none", background: "rgba(99,102,241,.08)" }}
+                    />
+                  </div>
+                  {/* Nákupní cena */}
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: "#7a7b85", display: "block", marginBottom: 4, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase" }}>
+                      Nákup / ks
+                    </label>
+                    <input value={nakupCena} onChange={e => setNakupCena(e.target.value)}
+                      placeholder="0" inputMode="decimal"
+                      style={{ width: "100%", boxSizing: "border-box", padding: "9px 10px", borderRadius: 9, border: "1px solid rgba(255,255,255,.12)", fontSize: 13, color: "#6ee7b7", outline: "none", background: "rgba(16,185,129,.08)" }}
+                    />
+                  </div>
                 </div>
+                {katAktivni && parseFloat(pocet) > 0 && parseFloat(prodejCena) > 0 && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: "#5a5b66" }}>
+                    {parseFloat(pocet)} × {parseFloat(prodejCena).toLocaleString("cs-CZ")} ={" "}
+                    <strong style={{ color: "#10b981" }}>
+                      {(parseFloat(pocet.replace(",",".")) * parseFloat(prodejCena.replace(",","."))).toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč
+                    </strong>
+                    {parseFloat(nakupCena) > 0 && (
+                      <span style={{ color: "#5a5b66" }}>
+                        {" "}· marže{" "}
+                        <strong style={{ color: "#a5b4fc" }}>
+                          {((parseFloat(prodejCena.replace(",",".")) - parseFloat(nakupCena.replace(",","."))) * parseFloat(pocet.replace(",","."))).toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč
+                        </strong>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
