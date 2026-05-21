@@ -319,41 +319,20 @@ export default function RezervacePopup({
   }
 
   async function poslatZnovu() {
-    if (!rez || !polozka || !zakaznik?.email) return
+    if (!rez || !zakaznik?.email) return
     setPosilamZnovu(true)
     try {
-      const prislAgg: Record<number, { nazev: string; cnt: number; cena: number | null }> = {}
-      for (const { rez: r, polozka: p } of prislData) {
-        if (!p) continue
-        const c = vypocitejCenu(p, stupne, pocetDni(r.start_date, r.end_date))
-        prislAgg[p.id] = prislAgg[p.id]
-          ? { ...prislAgg[p.id], cnt: prislAgg[p.id].cnt + 1 }
-          : { nazev: p.name, cnt: 1, cena: c?.celkem ?? null }
-      }
-      await fetch("/api/mail/rezervace-pujcovna", {
-        method: "POST",
+      const res  = await fetch("/api/pujcovna/resend-rezervace", {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          zakaznik: { jmeno: zakaznik.jmeno, prijmeni: zakaznik.prijmeni, email: zakaznik.email, telefon: zakaznik.telefon },
-          polozka: polozka.name,
-          dateFrom: rez.start_date,
-          dateTo: rez.end_date,
-          dni,
-          vozidlo: rez.vozidlo ?? "",
-          casVyzvednuti: rez.cas_vyzvednuti ?? "",
-          casVraceni: rez.cas_vraceni ?? "",
-          pricniky: rez.pricniky ?? "",
-          poznamka: rez.notes ?? "",
-          drzakVariant: "",
-          prisl: Object.values(prislAgg),
-          cenaStan: cenaStan?.celkem ?? null,
-          montazPopl: montazPoplatek,
-          celkem,
-          groupId: rez.group_id ?? "",
-          ...(rez.sf_vs ? { platba: { vs: rez.sf_vs, invoice_no: "", cislo_uctu: "", qr_url: "" } } : {}),
-        }),
+        body:    JSON.stringify({ rezervaceId: rez.id }),
       })
-      alert(`Email odeslán na ${zakaznik.email}`)
+      const json = await res.json()
+      if (json.ok) {
+        alert(`Email odeslán na ${zakaznik.email}`)
+      } else {
+        alert("Chyba: " + json.error)
+      }
     } catch (err) {
       alert("Chyba: " + String(err))
     } finally {
