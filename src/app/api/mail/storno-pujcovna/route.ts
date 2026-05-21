@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendMail } from "@/lib/mailer"
+import { logEmail } from "@/lib/email-log"
 
 export interface StornoMailPayload {
   zakaznik: {
@@ -70,12 +71,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Zákazník nemá email" }, { status: 400 })
     }
 
-    await sendMail({
-      sluzba: "stany",
-      to: data.zakaznik.email,
-      subject: `Stornování rezervace – ${data.polozka}`,
-      html: htmlStorno(data),
-    })
+    const subj = `Stornování rezervace – ${data.polozka}`
+    const html = htmlStorno(data)
+
+    await sendMail({ sluzba: "stany", to: data.zakaznik.email, subject: subj, html })
+    await logEmail({ sluzba: "stany", typ: "storno-pujcovna", to_email: data.zakaznik.email, to_name: data.zakaznik.jmeno, subject: subj, html })
 
     return NextResponse.json({ ok: true })
   } catch (err: unknown) {

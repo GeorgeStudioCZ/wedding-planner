@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendMail } from "@/lib/mailer"
+import { logEmail } from "@/lib/email-log"
 
 const NOTIFIKACE_EMAIL = "info@stanujnaaute.cz"
 
@@ -205,21 +206,19 @@ export async function POST(req: NextRequest) {
   try {
     const data: RezervaceMailPayload = await req.json()
 
+    const subjZak = `Potvrzení rezervace – ${data.polozka}`
+    const subjNotif = `Nová rezervace: ${data.zakaznik.jmeno} ${data.zakaznik.prijmeni} – ${data.polozka}`
+    const htmlZak = htmlZakaznik(data)
+    const htmlNotif = htmlNotifikace(data)
+
     await Promise.all([
-      // 1. Potvrzení zákazníkovi
-      sendMail({
-        sluzba: "stany",
-        to: data.zakaznik.email,
-        subject: `Potvrzení rezervace – ${data.polozka}`,
-        html: htmlZakaznik(data),
-      }),
-      // 2. Notifikace majiteli
-      sendMail({
-        sluzba: "stany",
-        to: NOTIFIKACE_EMAIL,
-        subject: `Nová rezervace: ${data.zakaznik.jmeno} ${data.zakaznik.prijmeni} – ${data.polozka}`,
-        html: htmlNotifikace(data),
-      }),
+      sendMail({ sluzba: "stany", to: data.zakaznik.email, subject: subjZak, html: htmlZak }),
+      sendMail({ sluzba: "stany", to: NOTIFIKACE_EMAIL, subject: subjNotif, html: htmlNotif }),
+    ])
+
+    await Promise.all([
+      logEmail({ sluzba: "stany", typ: "rezervace-pujcovna", to_email: data.zakaznik.email, to_name: `${data.zakaznik.jmeno} ${data.zakaznik.prijmeni}`, subject: subjZak, html: htmlZak }),
+      logEmail({ sluzba: "stany", typ: "rezervace-notifikace", to_email: NOTIFIKACE_EMAIL, subject: subjNotif, html: htmlNotif }),
     ])
 
     return NextResponse.json({ ok: true })

@@ -25,6 +25,7 @@ const I = {
   users:    ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2","M9 7a4 4 0 100 8 4 4 0 000-8z","M23 21v-2a4 4 0 00-3-3.87","M16 3.13a4 4 0 010 7.75"],
   wallet:   ["M21 4H3a2 2 0 00-2 2v12a2 2 0 002 2h18a2 2 0 002-2V6a2 2 0 00-2-2z","M1 10h22","M16 14h.01"],
   logout:   ["M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4","M16 17l5-5-5-5","M21 12H9"],
+  mail:     ["M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z","M22 6l-10 7L2 6"],
   plus:     ["M12 5v14","M5 12h14"],
   search:   ["M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"],
   bell:     ["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9","M13.73 21a2 2 0 01-3.46 0"],
@@ -36,26 +37,29 @@ const I = {
 
 // ── Nav items ───────────────────────────────────────────────────────────────
 const NAV_WED = [
-  { key: "home",      label: "Přehled",       href: "/svatby",                  ico: I.home },
-  { key: "seznam",    label: "Seznam svateb", href: "/svatby/seznam",           ico: I.list },
-  { key: "kalendar",  label: "Kalendář",      href: "/svatby/kalendar",         ico: I.calendar },
-  { key: "schuzky",   label: "Schůzky",       href: "/svatby/schuzky",          ico: I.video },
-  { key: "klienti",   label: "Klienti",       href: "/zakaznici?from=wed",      ico: I.users },
-  { key: "nastaveni", label: "Nastavení",     href: "/svatby/nastaveni",        ico: I.settings },
+  { key: "home",         label: "Přehled",       href: "/svatby",                  ico: I.home },
+  { key: "seznam",       label: "Seznam svateb", href: "/svatby/seznam",           ico: I.list },
+  { key: "kalendar",     label: "Kalendář",      href: "/svatby/kalendar",         ico: I.calendar },
+  { key: "schuzky",      label: "Schůzky",       href: "/svatby/schuzky",          ico: I.video },
+  { key: "klienti",      label: "Klienti",       href: "/zakaznici?from=wed",      ico: I.users },
+  { key: "komunikace",   label: "Komunikace",    href: "/komunikace",              ico: I.mail },
+  { key: "nastaveni",    label: "Nastavení",     href: "/svatby/nastaveni",        ico: I.settings },
 ]
 
 const NAV_VAN = [
-  { key: "home",     label: "Přehled",    href: "/pujcovna",                   ico: I.home },
-  { key: "seznam",   label: "Seznam",     href: "/pujcovna/seznam",            ico: I.list },
-  { key: "kalendar", label: "Kalendář",   href: "/pujcovna/kalendar",          ico: I.calendar },
-  { key: "klienti",  label: "Zákazníci",  href: "/zakaznici?from=van",         ico: I.users },
-  { key: "cenik",    label: "Ceník",      href: "/pujcovna/cenik",             ico: I.wallet },
+  { key: "home",       label: "Přehled",    href: "/pujcovna",                   ico: I.home },
+  { key: "seznam",     label: "Seznam",     href: "/pujcovna/seznam",            ico: I.list },
+  { key: "kalendar",   label: "Kalendář",   href: "/pujcovna/kalendar",          ico: I.calendar },
+  { key: "klienti",    label: "Zákazníci",  href: "/zakaznici?from=van",         ico: I.users },
+  { key: "cenik",      label: "Ceník",      href: "/pujcovna/cenik",             ico: I.wallet },
+  { key: "komunikace", label: "Komunikace", href: "/komunikace",                 ico: I.mail },
 ]
 
 const NAV_STUDIO = [
-  { key: "home",    label: "Přehled",      href: "/george",                    ico: I.home },
-  { key: "cenik",   label: "Ceník služeb", href: "/george/cenik",              ico: I.wallet },
-  { key: "klienti", label: "Zákazníci",    href: "/zakaznici?from=studio",     ico: I.users },
+  { key: "home",       label: "Přehled",      href: "/george",                    ico: I.home },
+  { key: "cenik",      label: "Ceník služeb", href: "/george/cenik",              ico: I.wallet },
+  { key: "klienti",    label: "Zákazníci",    href: "/zakaznici?from=studio",     ico: I.users },
+  { key: "komunikace", label: "Komunikace",   href: "/komunikace",                ico: I.mail },
 ]
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -66,7 +70,7 @@ export default function AppShell({ module, children, extraActions }: { module: A
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const nav = module === "wed" ? NAV_WED : module === "van" ? NAV_VAN : NAV_STUDIO
-  const isActive = (href: string) => pathname === href
+  const isActive = (href: string) => pathname === href.split("?")[0]
 
   async function signOut() {
     const client = createClient()

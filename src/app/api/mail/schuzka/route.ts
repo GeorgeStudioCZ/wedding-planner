@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendMail } from "@/lib/mailer"
+import { logEmail } from "@/lib/email-log"
 
 const NOTIFIKACE_EMAIL = "info@svatebni-video-hk.cz"
 
@@ -197,30 +198,24 @@ export async function POST(req: NextRequest) {
     const data: SchuzkaMailPayload = await req.json()
 
     if (data.typ === "zadost") {
-      // Žádost: email zákazníkovi + notifikace mně
+      const subjZak = `Žádost o schůzku přijata — ${formatDatum(data.datum)} v ${data.cas}`
+      const subjNotif = `📅 Nová žádost: ${data.jmeno} — ${formatDatum(data.datum)} v ${data.cas}`
+      const htmlZak = htmlZadost(data)
+      const htmlNotif = htmlNotifikace(data)
+
       await Promise.all([
-        sendMail({
-          sluzba:  "svatby",
-          to:      data.email,
-          subject: `Žádost o schůzku přijata — ${formatDatum(data.datum)} v ${data.cas}`,
-          html:    htmlZadost(data),
-        }),
-        sendMail({
-          sluzba:  "svatby",
-          to:      NOTIFIKACE_EMAIL,
-          subject: `📅 Nová žádost: ${data.jmeno} — ${formatDatum(data.datum)} v ${data.cas}`,
-          html:    htmlNotifikace(data),
-          replyTo: data.email,
-        }),
+        sendMail({ sluzba: "svatby", to: data.email, subject: subjZak, html: htmlZak }),
+        sendMail({ sluzba: "svatby", to: NOTIFIKACE_EMAIL, subject: subjNotif, html: htmlNotif, replyTo: data.email }),
+      ])
+      await Promise.all([
+        logEmail({ sluzba: "svatby", typ: "schuzka-zadost", to_email: data.email, to_name: data.jmeno, subject: subjZak, html: htmlZak }),
+        logEmail({ sluzba: "svatby", typ: "schuzka-notifikace", to_email: NOTIFIKACE_EMAIL, subject: subjNotif, html: htmlNotif }),
       ])
     } else {
-      // Potvrzení: email zákazníkovi
-      await sendMail({
-        sluzba:  "svatby",
-        to:      data.email,
-        subject: `✅ Schůzka potvrzena — ${formatDatum(data.datum)} v ${data.cas}`,
-        html:    htmlPotvrzeni(data),
-      })
+      const subj = `✅ Schůzka potvrzena — ${formatDatum(data.datum)} v ${data.cas}`
+      const html = htmlPotvrzeni(data)
+      await sendMail({ sluzba: "svatby", to: data.email, subject: subj, html })
+      await logEmail({ sluzba: "svatby", typ: "schuzka-potvrzeni", to_email: data.email, to_name: data.jmeno, subject: subj, html })
     }
 
     return NextResponse.json({ ok: true })
