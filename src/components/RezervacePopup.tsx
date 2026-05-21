@@ -163,6 +163,7 @@ export default function RezervacePopup({
   const [chyba, setChyba] = useState<string | null>(null)
   const [ukladam, setUkladam] = useState(false)
   const [mazani, setMazani] = useState(false)
+  const [posilamZnovu, setPosilamZnovu] = useState(false)
 
   // Close on Escape
   useEffect(() => {
@@ -317,6 +318,49 @@ export default function RezervacePopup({
     }
   }
 
+  async function poslatZnovu() {
+    if (!rez || !polozka || !zakaznik?.email) return
+    setPosilamZnovu(true)
+    try {
+      const prislAgg: Record<number, { nazev: string; cnt: number; cena: number | null }> = {}
+      for (const { rez: r, polozka: p } of prislData) {
+        if (!p) continue
+        const c = vypocitejCenu(p, stupne, pocetDni(r.start_date, r.end_date))
+        prislAgg[p.id] = prislAgg[p.id]
+          ? { ...prislAgg[p.id], cnt: prislAgg[p.id].cnt + 1 }
+          : { nazev: p.name, cnt: 1, cena: c?.celkem ?? null }
+      }
+      await fetch("/api/mail/rezervace-pujcovna", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          zakaznik: { jmeno: zakaznik.jmeno, prijmeni: zakaznik.prijmeni, email: zakaznik.email, telefon: zakaznik.telefon },
+          polozka: polozka.name,
+          dateFrom: rez.start_date,
+          dateTo: rez.end_date,
+          dni,
+          vozidlo: rez.vozidlo ?? "",
+          casVyzvednuti: rez.cas_vyzvednuti ?? "",
+          casVraceni: rez.cas_vraceni ?? "",
+          pricniky: rez.pricniky ?? "",
+          poznamka: rez.notes ?? "",
+          drzakVariant: "",
+          prisl: Object.values(prislAgg),
+          cenaStan: cenaStan?.celkem ?? null,
+          montazPopl: montazPoplatek,
+          celkem,
+          groupId: rez.group_id ?? "",
+          ...(rez.sf_vs ? { platba: { vs: rez.sf_vs, invoice_no: "", cislo_uctu: "", qr_url: "" } } : {}),
+        }),
+      })
+      alert(`Email odeslán na ${zakaznik.email}`)
+    } catch (err) {
+      alert("Chyba: " + String(err))
+    } finally {
+      setPosilamZnovu(false)
+    }
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const updated = { ...form, [e.target.name]: e.target.value }
     if (e.target.name === "item_id") {
@@ -455,6 +499,19 @@ export default function RezervacePopup({
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <h2 className="font-bold text-gray-900">Detail výpůjčky</h2>
           <div className="flex items-center gap-2">
+            {zakaznik?.email && (
+              <button
+                onClick={poslatZnovu}
+                disabled={posilamZnovu}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                style={{ background: posilamZnovu ? "#f3f4f6" : "#ecfdf5", color: posilamZnovu ? "#9ca3af" : "#059669" }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {posilamZnovu ? "Odesílám…" : "Odeslat email"}
+              </button>
+            )}
             <button
               onClick={() => setView("edit")}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
