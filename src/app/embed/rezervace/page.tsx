@@ -147,6 +147,7 @@ export default function RezervacePage() {
   })
   const [gdpr,    setGdpr]    = useState(false)
   const [pujcRad, setPujcRad] = useState(false)
+  const [kauce,   setKauce]   = useState(false)
 
   // ── Auto-resize iframe ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -180,6 +181,8 @@ export default function RezervacePage() {
   const jeStany       = selPolozka?.category === "Stany"
   // Paddleboard a držák kol nevyžadují info o vozidle
   const jeBezvozidla  = selCat === "Paddleboardy" || selCat === DRZAK_KAT
+  // Výše kauce podle kategorie (null = bez kauce)
+  const kauceKc = selCat === "Stany" ? 5000 : selCat === "Paddleboardy" ? 1000 : selCat === DRZAK_KAT ? 2000 : null
   const prislusenstvi = useMemo(() => polozky.filter(p => PRISL_CATS.has(p.category)), [polozky])
   const katPrisl      = useMemo(() => {
     const cats = [...new Set(prislusenstvi.map(p => p.category))]
@@ -208,7 +211,8 @@ export default function RezervacePage() {
   const thulePolozka = useMemo(() => polozky.find(p => p.name === DRZAK_THULE_NAME) ?? null, [polozky])
   // Příčníky jsou povinné jen pro stany
   const canSubmit  = !!(form.jmeno && form.prijmeni && form.email && form.telefon &&
-    (jeBezvozidla || form.vozidlo) && (jeStany ? form.pricniky : true) && form.cas_vyzvednuti && form.cas_vraceni && gdpr && pujcRad)
+    (jeBezvozidla || form.vozidlo) && (jeStany ? form.pricniky : true) && form.cas_vyzvednuti && form.cas_vraceni && gdpr && pujcRad &&
+    (kauceKc === null || kauce))
 
   function upd(k: string, v: string) { setForm(f => ({...f, [k]: v})) }
 
@@ -970,18 +974,27 @@ export default function RezervacePage() {
             </div>
           </div>
 
-          {/* ── GDPR + půjčovní řád ── */}
+          {/* ── GDPR + půjčovní řád + kauce ── */}
           <div style={{...card,marginBottom:12}}>
             {[
               { s:gdpr,    set:setGdpr,    t:<>Souhlasím se <a href="#" style={{color:"#10b981"}}>zpracováním osobních údajů (GDPR)</a></> },
               { s:pujcRad, set:setPujcRad, t:<>Souhlasím s <a href="#" style={{color:"#10b981"}}>půjčovním řádem</a> a obchodními podmínkami</> },
             ].map((item,i) => (
-              <label key={i} style={{display:"flex",alignItems:"flex-start",gap:9,cursor:"pointer",marginBottom:i===0?10:0}}>
+              <label key={i} style={{display:"flex",alignItems:"flex-start",gap:9,cursor:"pointer",marginBottom:10}}>
                 <input type="checkbox" checked={item.s} onChange={e=>item.set(e.target.checked)}
                   style={{width:15,height:15,marginTop:2,accentColor:"#10b981",flexShrink:0}} />
                 <span style={{fontSize:13,color:"#374151",lineHeight:1.5}}>{item.t}</span>
               </label>
             ))}
+            {kauceKc !== null && (
+              <label style={{display:"flex",alignItems:"flex-start",gap:9,cursor:"pointer"}}>
+                <input type="checkbox" checked={kauce} onChange={e=>setKauce(e.target.checked)}
+                  style={{width:15,height:15,marginTop:2,accentColor:"#10b981",flexShrink:0}} />
+                <span style={{fontSize:13,color:"#374151",lineHeight:1.5}}>
+                  Souhlasím s úhradou kauce <strong>{kauceKc.toLocaleString("cs-CZ")} Kč</strong> při převzetí.
+                </span>
+              </label>
+            )}
           </div>
 
           {/* ── Submit ── */}
