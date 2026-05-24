@@ -272,6 +272,13 @@ export default function RezervacePopup({
     setRez({ ...rez, stav: novyStav })
     nactiHistorii(rez.id)
 
+    // Google Calendar sync
+    fetch("/api/pujcovna/gcal-sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rezervaceId: rez.id }),
+    }).catch(console.error)
+
     // Storno → email zákazníkovi
     if (novyStav === "storno" && zakaznik?.email && polozka) {
       fetch("/api/mail/storno-pujcovna", {

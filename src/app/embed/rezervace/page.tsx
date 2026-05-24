@@ -394,6 +394,15 @@ export default function RezervacePage() {
       }),
     }).catch(console.error)
 
+    // Google Calendar — vytvoř událost pro hlavní rezervaci
+    if (mainRez?.id) {
+      fetch("/api/pujcovna/gcal-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rezervaceId: mainRez.id }),
+      }).catch(console.error)
+    }
+
     setStep("hotovo")
   }
 
