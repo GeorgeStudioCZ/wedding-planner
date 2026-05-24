@@ -209,6 +209,9 @@ export default function DetailZakazky() {
   const params = useParams()
   const [zakazka, setZakazka] = useState<Zakazka | null>(null)
   const [schuzka, setSchuzka] = useState<SchuzkaDetail | null>(null)
+  const [editTermin, setEditTermin] = useState(false)
+  const [editDatum, setEditDatum] = useState("")
+  const [editCas,   setEditCas]   = useState("")
   const [loading, setLoading] = useState(true)
   const [mazani, setMazani] = useState(false)
   const [historie, setHistorie] = useState<{ id: string; created_at: string; stav: string }[]>([])
@@ -239,6 +242,16 @@ export default function DetailZakazky() {
     }])
     setZakazka({ ...zakazka, videohovor_datum: datum })
     nactiHistorii()
+  }
+
+  async function ulozTerminSchuzky() {
+    if (!schuzka || !editDatum || !editCas) return
+    const { error } = await supabase.from("schuzky")
+      .update({ datum: editDatum, cas: editCas })
+      .eq("id", schuzka.id)
+    if (error) { alert("Chyba: " + error.message); return }
+    setSchuzka({ ...schuzka, datum: editDatum, cas: editCas })
+    setEditTermin(false)
   }
 
   async function zmenStav(novyStav: string) {
@@ -891,14 +904,40 @@ export default function DetailZakazky() {
                 <div>
                   {/* Datum + čas + stav */}
                   <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>
-                        {new Date(schuzka.datum).toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-                      </span>
-                      <span style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
-                        {schuzka.cas.slice(0, 5)}
-                      </span>
-                    </div>
+                    {editTermin ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <input type="date" value={editDatum} onChange={e => setEditDatum(e.target.value)}
+                          style={{ fontSize: 13, border: "1px solid var(--line)", borderRadius: "var(--radius-md)", padding: "5px 9px", color: "var(--ink)", background: "var(--bg)", outline: "none" }} />
+                        <input type="time" value={editCas} onChange={e => setEditCas(e.target.value)}
+                          style={{ fontSize: 13, border: "1px solid var(--line)", borderRadius: "var(--radius-md)", padding: "5px 9px", color: "var(--ink)", background: "var(--bg)", outline: "none", width: 100 }} />
+                        <button onClick={ulozTerminSchuzky}
+                          style={{ fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: "var(--radius-md)", border: "none", cursor: "pointer", background: "#10b981", color: "#fff" }}>
+                          Uložit
+                        </button>
+                        <button onClick={() => setEditTermin(false)}
+                          style={{ fontSize: 12, padding: "5px 10px", borderRadius: "var(--radius-md)", border: "1px solid var(--line)", cursor: "pointer", background: "var(--bg)", color: "var(--muted)" }}>
+                          Zrušit
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>
+                            {new Date(schuzka.datum).toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                          </span>
+                          <span style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+                            {schuzka.cas.slice(0, 5)}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => { setEditDatum(schuzka.datum); setEditCas(schuzka.cas.slice(0,5)); setEditTermin(true) }}
+                          style={{ fontSize: 11, color: "var(--muted)", background: "none", border: "1px solid var(--line)", borderRadius: "var(--radius-md)", padding: "3px 8px", cursor: "pointer" }}
+                          onMouseOver={e => (e.currentTarget.style.color = "var(--ink)")}
+                          onMouseOut={e => (e.currentTarget.style.color = "var(--muted)")}>
+                          Změnit termín
+                        </button>
+                      </div>
+                    )}
                     <span style={{
                       fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99, textTransform: "uppercase", letterSpacing: ".04em",
                       background: schuzka.stav === "potvrzena" ? "#dcfce7" : "#fef9c3",
