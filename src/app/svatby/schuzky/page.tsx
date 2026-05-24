@@ -87,13 +87,14 @@ const KONTAKT: Record<string, { emoji: string; label: string; bg: string; color:
 
 // ── Karta schůzky ─────────────────────────────────────────────────────────────
 function SchuzkaKarta({
-  s, zakazka, onStav, onDelete, onTermin,
+  s, zakazka, onStav, onDelete, onTermin, onProbehla,
 }: {
   s: Schuzka
   zakazka: Zakazka | null
-  onStav:  (id: number, stav: Schuzka["stav"]) => void
-  onDelete:(id: number) => void
-  onTermin:(id: number, datum: string, cas: string) => void
+  onStav:     (id: number, stav: Schuzka["stav"]) => void
+  onDelete:   (id: number) => void
+  onTermin:   (id: number, datum: string, cas: string) => void
+  onProbehla: (schuzkaId: number, zakazkaId: number) => void
 }) {
   const [expanded,   setExpanded]   = useState(false)
   const [editTermin, setEditTermin] = useState(false)
@@ -279,7 +280,7 @@ function SchuzkaKarta({
         <div style={{
           display: "flex", gap: 6, marginTop: 14,
           paddingTop: 14, borderTop: "1px solid #f1f0ef",
-          flexWrap: "wrap",
+          flexWrap: "wrap", alignItems: "center",
         }}>
           {s.stav !== "potvrzena" && (
             <button onClick={() => onStav(s.id, "potvrzena")}
@@ -293,10 +294,10 @@ function SchuzkaKarta({
               × Zrušit
             </button>
           )}
-          {s.stav !== "nova" && (
-            <button onClick={() => onStav(s.id, "nova")}
-              style={{ ...btnStyle, background: "#f9fafb", color: "#6b7280", border: "1px solid #e5e7eb" }}>
-              ↩ Vrátit na novou
+          {(s.svatba_id || zakazka) && (
+            <button onClick={() => onProbehla(s.id, (s.svatba_id ?? zakazka!.id))}
+              style={{ ...btnStyle, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>
+              🎥 Proběhla
             </button>
           )}
           <div style={{ flex: 1 }} />
@@ -365,6 +366,20 @@ export default function SchuzkyPage() {
 
   function handleTermin(id: number, datum: string, cas: string) {
     setSchuzky(prev => prev.map(s => s.id === id ? { ...s, datum, cas } : s))
+  }
+
+  async function handleProbehla(schuzkaId: number, zakazkaId: number) {
+    const dnes = new Date().toISOString().slice(0, 10)
+    const db = createClient()
+    const { error } = await db.from("zakazky").update({ videohovor_datum: dnes }).eq("id", zakazkaId)
+    if (error) { alert("Chyba: " + error.message); return }
+    // Označ schůzku jako potvrzenou pokud ještě není
+    const s = schuzky.find(x => x.id === schuzkaId)
+    if (s && s.stav === "nova") {
+      await db.from("schuzky").update({ stav: "potvrzena" }).eq("id", schuzkaId)
+      setSchuzky(prev => prev.map(x => x.id === schuzkaId ? { ...x, stav: "potvrzena" as const } : x))
+    }
+    alert("Schůzka označena jako proběhlá ✓")
   }
 
   async function handleStav(id: number, stav: Schuzka["stav"]) {
@@ -485,7 +500,7 @@ export default function SchuzkyPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {budouci.map(s => (
                     <SchuzkaKarta key={s.id} s={s} zakazka={najdiSvatbu(s, zakazky)}
-                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} />
+                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} onProbehla={handleProbehla} />
                   ))}
                 </div>
               </section>
@@ -497,7 +512,7 @@ export default function SchuzkyPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {minule.map(s => (
                     <SchuzkaKarta key={s.id} s={s} zakazka={najdiSvatbu(s, zakazky)}
-                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} />
+                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} onProbehla={handleProbehla} />
                   ))}
                 </div>
               </section>
