@@ -36,19 +36,16 @@ type StavFilter = "vse" | "nova" | "potvrzena" | "zrusena"
 function datumCZ(iso: string) {
   return new Date(iso).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })
 }
-
-function parseHod(cas: string) {
-  return parseInt(cas.split(":")[0])
+function datumKratky(iso: string) {
+  return new Date(iso).toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long" })
 }
 
 // Nalezne nejpravděpodobnější svatbu pro schůzku
 function najdiSvatbu(s: Schuzka, zakazky: Zakazka[]): Zakazka | null {
-  // 1. Přesná shoda data
   if (s.datum_svadby) {
     const datShoda = zakazky.find(z => z.datum_svatby?.slice(0, 10) === s.datum_svadby)
     if (datShoda) return datShoda
   }
-  // 2. Shoda jmen
   const jmenaParts = s.jmeno.toLowerCase().split(/\s+/)
   const jmenoShoda = zakazky.find(z => {
     const jmena = (z.jmeno_nevesty + " " + z.jmeno_zenicha).toLowerCase()
@@ -57,14 +54,13 @@ function najdiSvatbu(s: Schuzka, zakazky: Zakazka[]): Zakazka | null {
   return jmenoShoda ?? null
 }
 
-// Google Calendar odkaz (event na 1 hodinu)
+// Google Calendar odkaz
 function gcalUrl(s: Schuzka) {
-  const hod = parseHod(s.cas)
+  const [hod, min] = s.cas.split(":").map(Number)
   const datStr = s.datum.replace(/-/g, "")
-  const casOd = `${String(hod).padStart(2,"0")}0000`
-  const casDo = `${String(hod + 1).padStart(2,"0")}0000`
-  const start = `${datStr}T${casOd}`
-  const end   = `${datStr}T${casDo}`
+  const start = `${datStr}T${String(hod).padStart(2,"0")}${String(min||0).padStart(2,"0")}00`
+  const endHod = hod + 1
+  const end   = `${datStr}T${String(endHod).padStart(2,"0")}${String(min||0).padStart(2,"0")}00`
   const title = encodeURIComponent(`Videohovor – ${s.jmeno}`)
   let details = ""
   if (s.typ_kontaktu === "whatsapp") details += `WhatsApp: ${s.kontakt}`
@@ -75,20 +71,18 @@ function gcalUrl(s: Schuzka) {
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${encodeURIComponent(details)}`
 }
 
-// ── Stav badge ────────────────────────────────────────────────────────────────
-const STAV_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  nova:      { bg: "#fef9c3", color: "#854d0e", label: "Nová" },
-  potvrzena: { bg: "#dcfce7", color: "#166534", label: "Potvrzena" },
-  zrusena:   { bg: "#fee2e2", color: "#991b1b", label: "Zrušena" },
+// ── Stav config ───────────────────────────────────────────────────────────────
+const STAV: Record<string, { label: string; bg: string; color: string; bar: string }> = {
+  nova:      { label: "Nová",      bg: "#fffbeb", color: "#92400e", bar: "#f59e0b" },
+  potvrzena: { label: "Potvrzena", bg: "#f0fdf4", color: "#166534", bar: "#10b981" },
+  zrusena:   { label: "Zrušena",   bg: "#fff1f2", color: "#9f1239", bar: "#f43f5e" },
 }
 
-function StavBadge({ stav }: { stav: string }) {
-  const s = STAV_STYLE[stav] ?? { bg: "#f3f4f6", color: "#6b7280", label: stav }
-  return (
-    <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 99, background: s.bg, color: s.color, letterSpacing: ".04em", textTransform: "uppercase" }}>
-      {s.label}
-    </span>
-  )
+// ── Kontakt config ────────────────────────────────────────────────────────────
+const KONTAKT: Record<string, { emoji: string; label: string; bg: string; color: string }> = {
+  whatsapp: { emoji: "📱", label: "WhatsApp", bg: "#dcfce7", color: "#166534" },
+  facetime: { emoji: "📹", label: "FaceTime", bg: "#dbeafe", color: "#1e40af" },
+  osobne:   { emoji: "🤝", label: "Osobně",   bg: "#fef3c7", color: "#92400e" },
 }
 
 // ── Karta schůzky ─────────────────────────────────────────────────────────────
@@ -97,15 +91,20 @@ function SchuzkaKarta({
 }: {
   s: Schuzka
   zakazka: Zakazka | null
-  onStav: (id: number, stav: Schuzka["stav"]) => void
-  onDelete: (id: number) => void
-  onTermin: (id: number, datum: string, cas: string) => void
+  onStav:  (id: number, stav: Schuzka["stav"]) => void
+  onDelete:(id: number) => void
+  onTermin:(id: number, datum: string, cas: string) => void
 }) {
-  const hod = parseHod(s.cas)
   const [expanded,   setExpanded]   = useState(false)
   const [editTermin, setEditTermin] = useState(false)
   const [editDatum,  setEditDatum]  = useState(s.datum)
   const [editCas,    setEditCas]    = useState(s.cas.slice(0, 5))
+
+  const st   = STAV[s.stav] ?? STAV.nova
+  const kt   = KONTAKT[s.typ_kontaktu] ?? KONTAKT.osobne
+  const d    = new Date(s.datum)
+  const dnes = new Date(); dnes.setHours(0,0,0,0)
+  const jeMinula = d < dnes
 
   async function ulozTermin() {
     if (!editDatum || !editCas) return
@@ -117,152 +116,194 @@ function SchuzkaKarta({
 
   return (
     <div style={{
-      background: "white", borderRadius: 14, padding: "16px 18px",
-      boxShadow: "var(--shadow-1)", border: s.stav === "nova" ? "1.5px solid #fde68a" : "1px solid var(--line)",
+      background: "white",
+      borderRadius: 16,
+      overflow: "hidden",
+      boxShadow: "0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04)",
+      border: "1px solid #f1f0ef",
+      opacity: s.stav === "zrusena" ? 0.6 : 1,
+      transition: "box-shadow .15s",
     }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
 
-        {/* Datum + čas blok */}
-        {editTermin ? (
-          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 5, minWidth: 58 }}>
-            <input type="date" value={editDatum} onChange={e => setEditDatum(e.target.value)}
-              style={{ fontSize: 12, border: "1px solid #e5e7eb", borderRadius: 7, padding: "4px 7px", outline: "none", width: 130 }} />
-            <input type="time" value={editCas} onChange={e => setEditCas(e.target.value)}
-              style={{ fontSize: 12, border: "1px solid #e5e7eb", borderRadius: 7, padding: "4px 7px", outline: "none", width: 90 }} />
-            <div style={{ display: "flex", gap: 5, marginTop: 2 }}>
-              <button onClick={ulozTermin}
-                style={{ flex: 1, fontSize: 11, fontWeight: 700, padding: "4px 0", borderRadius: 7, border: "none", cursor: "pointer", background: "#10b981", color: "#fff" }}>
-                Uložit
-              </button>
-              <button onClick={() => setEditTermin(false)}
-                style={{ flex: 1, fontSize: 11, padding: "4px 0", borderRadius: 7, border: "1px solid #e5e7eb", cursor: "pointer", background: "white", color: "#9ca3af" }}>
-                Zrušit
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div
-            onClick={() => { setEditDatum(s.datum); setEditCas(s.cas.slice(0,5)); setEditTermin(true) }}
-            title="Klikni pro změnu termínu"
-            style={{
-              flexShrink: 0, width: 58, textAlign: "center", background: "#fafaf9", borderRadius: 10,
-              padding: "8px 4px", border: "1px solid #f0ede8", cursor: "pointer",
-            }}
-            onMouseOver={e => (e.currentTarget.style.background = "#fff1f2")}
-            onMouseOut={e => (e.currentTarget.style.background = "#fafaf9")}
-          >
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#be123c", lineHeight: 1 }}>
-              {new Date(s.datum).getDate()}
-            </div>
-            <div style={{ fontSize: 10.5, color: "#9ca3af", fontWeight: 600, marginTop: 1 }}>
-              {new Date(s.datum).toLocaleDateString("cs-CZ", { month: "short" }).replace(".","").toUpperCase()}
-            </div>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: "#374151", marginTop: 5 }}>
-              {String(hod).padStart(2,"0")}:00
-            </div>
-          </div>
-        )}
+      {/* Barevný pruh nahoře */}
+      <div style={{ height: 3, background: st.bar }} />
 
-        {/* Hlavní info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 }}>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>{s.jmeno}</span>
-            <StavBadge stav={s.stav} />
-          </div>
+      <div style={{ padding: "18px 20px" }}>
+        {/* Horní řádek: datum blok + info + akce */}
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
 
-          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12.5, color: "#6b7280" }}>
-            {/* Kontakt */}
-            <span>
-              {s.typ_kontaktu === "whatsapp" ? "📱" : s.typ_kontaktu === "facetime" ? "📹" : "🤝"}
-              {" "}{s.kontakt}
-            </span>
-            {/* Datum svatby */}
-            {s.datum_svadby && (
-              <span>💒 {datumCZ(s.datum_svadby)}</span>
+          {/* Datum blok */}
+          {editTermin ? (
+            <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+              <input type="date" value={editDatum} onChange={e => setEditDatum(e.target.value)}
+                style={{ fontSize: 12, border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "5px 8px", outline: "none", colorScheme: "light" }} />
+              <input type="time" value={editCas} onChange={e => setEditCas(e.target.value)}
+                style={{ fontSize: 12, border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "5px 8px", outline: "none", width: 110 }} />
+              <div style={{ display: "flex", gap: 5 }}>
+                <button onClick={ulozTermin}
+                  style={{ flex: 1, fontSize: 11, fontWeight: 700, padding: "5px 0", borderRadius: 7, border: "none", cursor: "pointer", background: "#10b981", color: "#fff" }}>
+                  Uložit
+                </button>
+                <button onClick={() => setEditTermin(false)}
+                  style={{ flex: 1, fontSize: 11, padding: "5px 0", borderRadius: 7, border: "1px solid #e5e7eb", cursor: "pointer", background: "white", color: "#9ca3af" }}>
+                  Zrušit
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => { setEditDatum(s.datum); setEditCas(s.cas.slice(0,5)); setEditTermin(true) }}
+              title="Klikni pro změnu termínu"
+              style={{
+                flexShrink: 0, width: 62, textAlign: "center",
+                background: jeMinula ? "#fafaf9" : "#fff1f2",
+                borderRadius: 12, padding: "10px 4px",
+                border: `1.5px solid ${jeMinula ? "#f0ede8" : "#fecdd3"}`,
+                cursor: "pointer", transition: "all .15s",
+              }}
+              onMouseOver={e => { e.currentTarget.style.background = "#ffe4e6"; e.currentTarget.style.borderColor = "#fb7185" }}
+              onMouseOut={e => { e.currentTarget.style.background = jeMinula ? "#fafaf9" : "#fff1f2"; e.currentTarget.style.borderColor = jeMinula ? "#f0ede8" : "#fecdd3" }}
+            >
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#be123c", lineHeight: 1 }}>
+                {d.getDate()}
+              </div>
+              <div style={{ fontSize: 10, color: "#be123c", fontWeight: 700, marginTop: 2, letterSpacing: ".06em" }}>
+                {d.toLocaleDateString("cs-CZ", { month: "short" }).replace(".","").toUpperCase()}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginTop: 6, letterSpacing: ".02em" }}>
+                {s.cas.slice(0,5)}
+              </div>
+              <div style={{ fontSize: 9, color: "#be123c", marginTop: 2, opacity: .6 }}>✏️</div>
+            </div>
+          )}
+
+          {/* Hlavní info */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Jméno + stav */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{s.jmeno}</span>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 99,
+                background: st.bg, color: st.color,
+                letterSpacing: ".06em", textTransform: "uppercase",
+              }}>{st.label}</span>
+            </div>
+
+            {/* Datum schůzky — plný text */}
+            <div style={{ fontSize: 12.5, color: "#6b7280", marginBottom: 8 }}>
+              📅 {datumKratky(s.datum)}
+            </div>
+
+            {/* Kontakt pill */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99,
+                background: kt.bg, color: kt.color,
+              }}>
+                {kt.emoji} {s.kontakt}
+              </span>
+              {s.datum_svadby && (
+                <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                  💒 Svatba {datumCZ(s.datum_svadby)}
+                </span>
+              )}
+            </div>
+
+            {/* Párovaná zakázka */}
+            {zakazka && (
+              <div style={{ marginTop: 10 }}>
+                <Link
+                  href={`/svatby/zakazky/${zakazka.id}`}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    fontSize: 12, fontWeight: 600, color: "#be123c",
+                    textDecoration: "none", background: "#fff1f2",
+                    padding: "4px 12px", borderRadius: 99,
+                    border: "1px solid #fecdd3",
+                  }}
+                >
+                  ✨ {zakazka.jmeno_nevesty} &amp; {zakazka.jmeno_zenicha}
+                  <span style={{ opacity: .55, fontWeight: 400 }}>· {datumCZ(zakazka.datum_svatby)}</span>
+                </Link>
+              </div>
             )}
           </div>
 
-          {/* Párovaná svatba */}
-          {zakazka && (
-            <div style={{ marginTop: 7 }}>
-              <Link
-                href={`/svatby/zakazky/${zakazka.id}`}
-                style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#be123c", textDecoration: "none", background: "#fff1f2", padding: "3px 10px", borderRadius: 99, border: "1px solid #fecdd3" }}
-              >
-                ✨ Párováno: {zakazka.jmeno_nevesty} &amp; {zakazka.jmeno_zenicha} · {datumCZ(zakazka.datum_svatby)}
-              </Link>
-            </div>
-          )}
-
-          {/* Otázky (expandovatelné) */}
-          {s.otazky && (
-            <div style={{ marginTop: 8 }}>
-              <button
-                onClick={() => setExpanded(e => !e)}
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9ca3af", padding: 0, display: "flex", alignItems: "center", gap: 4 }}
-              >
-                {expanded ? "▾" : "▸"} Otázky klienta
-              </button>
-              {expanded && (
-                <div style={{ marginTop: 6, fontSize: 13, color: "#374151", background: "#fafaf9", borderRadius: 8, padding: "10px 12px", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                  {s.otazky}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Akce */}
-        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-          {/* Google Kalendář */}
+          {/* Google Kalendář — vpravo nahoře */}
           <a
             href={gcalUrl(s)}
             target="_blank"
             rel="noopener noreferrer"
             title="Přidat do Google Kalendáře"
             style={{
-              display: "flex", alignItems: "center", gap: 5,
-              padding: "6px 12px", borderRadius: 8,
-              background: "white", border: "1.5px solid #e5e7eb",
-              color: "#374151", fontSize: 12, fontWeight: 600, textDecoration: "none",
-              whiteSpace: "nowrap",
+              flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
+              padding: "6px 12px", borderRadius: 9,
+              background: "#f8fafc", border: "1.5px solid #e5e7eb",
+              color: "#374151", fontSize: 12, fontWeight: 600,
+              textDecoration: "none", whiteSpace: "nowrap",
             }}
           >
-            <GcalIco /> Přidat do Kalendáře
+            <GcalIco /> Kalendář
           </a>
+        </div>
 
-          {/* Změna stavu */}
-          {s.stav !== "potvrzena" && (
+        {/* Otázky (expandovatelné) */}
+        {s.otazky && (
+          <div style={{ marginTop: 12 }}>
             <button
-              onClick={() => onStav(s.id, "potvrzena")}
-              style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "#dcfce7", color: "#166534", fontSize: 12, fontWeight: 600 }}
+              onClick={() => setExpanded(e => !e)}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                fontSize: 12, color: "#9ca3af", padding: 0,
+                display: "flex", alignItems: "center", gap: 4,
+              }}
             >
+              <span style={{ transition: "transform .15s", display: "inline-block", transform: expanded ? "rotate(90deg)" : "none" }}>▸</span>
+              Otázky klienta
+            </button>
+            {expanded && (
+              <div style={{
+                marginTop: 8, fontSize: 13, color: "#374151",
+                background: "#fafaf9", borderRadius: 10,
+                padding: "12px 14px", lineHeight: 1.7, whiteSpace: "pre-wrap",
+                border: "1px solid #f0ede8",
+              }}>
+                {s.otazky}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dolní akce */}
+        <div style={{
+          display: "flex", gap: 6, marginTop: 14,
+          paddingTop: 14, borderTop: "1px solid #f1f0ef",
+          flexWrap: "wrap",
+        }}>
+          {s.stav !== "potvrzena" && (
+            <button onClick={() => onStav(s.id, "potvrzena")}
+              style={{ ...btnStyle, background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" }}>
               ✓ Potvrdit
             </button>
           )}
           {s.stav !== "zrusena" && (
-            <button
-              onClick={() => onStav(s.id, "zrusena")}
-              style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "#fee2e2", color: "#991b1b", fontSize: 12, fontWeight: 600 }}
-            >
+            <button onClick={() => onStav(s.id, "zrusena")}
+              style={{ ...btnStyle, background: "#fff1f2", color: "#9f1239", border: "1px solid #fecdd3" }}>
               × Zrušit
             </button>
           )}
           {s.stav !== "nova" && (
-            <button
-              onClick={() => onStav(s.id, "nova")}
-              style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "#f3f4f6", color: "#6b7280", fontSize: 12 }}
-            >
-              ↩ Vrátit
+            <button onClick={() => onStav(s.id, "nova")}
+              style={{ ...btnStyle, background: "#f9fafb", color: "#6b7280", border: "1px solid #e5e7eb" }}>
+              ↩ Vrátit na novou
             </button>
           )}
-          {/* Smazat */}
-          <button
-            onClick={() => onDelete(s.id)}
+          <div style={{ flex: 1 }} />
+          <button onClick={() => onDelete(s.id)}
             title="Smazat schůzku"
-            style={{ marginTop: 4, padding: "6px 8px", borderRadius: 8, border: "1.5px solid #fecdd3", cursor: "pointer", background: "white", color: "#be123c", display: "flex", alignItems: "center", justifyContent: "center" }}
-          >
-            <TrashIco />
+            style={{ ...btnStyle, background: "white", color: "#be123c", border: "1px solid #fecdd3" }}>
+            <TrashIco /> Smazat
           </button>
         </div>
       </div>
@@ -270,9 +311,15 @@ function SchuzkaKarta({
   )
 }
 
+const btnStyle: React.CSSProperties = {
+  display: "inline-flex", alignItems: "center", gap: 5,
+  fontSize: 12, fontWeight: 600, padding: "6px 13px",
+  borderRadius: 8, cursor: "pointer",
+}
+
 function TrashIco() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="3 6 5 6 21 6" />
       <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
       <path d="M10 11v6M14 11v6" />
@@ -283,7 +330,7 @@ function TrashIco() {
 
 function GcalIco() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="4" width="18" height="18" rx="2" />
       <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
@@ -310,7 +357,7 @@ export default function SchuzkyPage() {
   }, [])
 
   async function handleDelete(id: number) {
-    if (!window.confirm("Opravdu chceš tuto schůzku smazat? Tato akce je nevratná.")) return
+    if (!window.confirm("Opravdu chceš tuto schůzku smazat?")) return
     const db = createClient()
     await db.from("schuzky").delete().eq("id", id)
     setSchuzky(prev => prev.filter(s => s.id !== id))
@@ -325,7 +372,6 @@ export default function SchuzkyPage() {
     await db.from("schuzky").update({ stav }).eq("id", id)
     setSchuzky(prev => prev.map(s => s.id === id ? { ...s, stav } : s))
 
-    // Při potvrzení pošli email zákazníkovi
     if (stav === "potvrzena") {
       const s = schuzky.find(x => x.id === id)
       if (s?.email) {
@@ -333,15 +379,9 @@ export default function SchuzkyPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            typ:          "potvrzeni",
-            jmeno:        s.jmeno,
-            email:        s.email,
-            datum:        s.datum,
-            cas:          s.cas,
-            typ_kontaktu: s.typ_kontaktu,
-            kontakt:      s.kontakt,
-            datum_svadby: s.datum_svadby,
-            otazky:       s.otazky,
+            typ: "potvrzeni", jmeno: s.jmeno, email: s.email,
+            datum: s.datum, cas: s.cas, typ_kontaktu: s.typ_kontaktu,
+            kontakt: s.kontakt, datum_svadby: s.datum_svadby, otazky: s.otazky,
           }),
         }).catch(e => console.error("Potvrzeni mail:", e))
       }
@@ -349,124 +389,115 @@ export default function SchuzkyPage() {
   }
 
   const filtered = schuzky.filter(s => filtr === "vse" || s.stav === filtr)
-
-  // Skupiny: budoucí / minulé
   const dnes = new Date(); dnes.setHours(0,0,0,0)
   const budouci = filtered.filter(s => new Date(s.datum) >= dnes)
   const minule  = filtered.filter(s => new Date(s.datum) < dnes)
 
   const counts = {
-    vse:      schuzky.length,
-    nova:     schuzky.filter(s => s.stav === "nova").length,
-    potvrzena:schuzky.filter(s => s.stav === "potvrzena").length,
-    zrusena:  schuzky.filter(s => s.stav === "zrusena").length,
+    vse:       schuzky.length,
+    nova:      schuzky.filter(s => s.stav === "nova").length,
+    potvrzena: schuzky.filter(s => s.stav === "potvrzena").length,
+    zrusena:   schuzky.filter(s => s.stav === "zrusena").length,
   }
 
   return (
     <AppShell module="wed">
-      <div style={{ padding: "28px", maxWidth: 820 }}>
+      <div style={{ padding: "32px 28px", maxWidth: 860 }}>
 
         {/* Hlavička */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ink)", margin: 0 }}>Schůzky</h1>
-            <p style={{ fontSize: 14, color: "var(--muted)", margin: "4px 0 0" }}>
-              Videohovory s potenciálními klienty
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111827", margin: 0, letterSpacing: "-.3px" }}>Schůzky</h1>
+            <p style={{ fontSize: 13.5, color: "#9ca3af", margin: "5px 0 0" }}>
+              Předsvatební videohovory s potenciálními klienty
             </p>
           </div>
-
-          {/* Iframe link */}
-          <div style={{ display: "flex", gap: 8 }}>
-            <a
-              href="/embed/videohovor"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "8px 16px", borderRadius: 9, border: "1.5px solid #e5e7eb",
-                background: "white", color: "#374151", fontSize: 13, fontWeight: 600,
-                textDecoration: "none",
-              }}
-            >
-              🔗 Náhled formuláře
-            </a>
-          </div>
+          <a
+            href="/embed/videohovor"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "9px 16px", borderRadius: 10,
+              background: "white", border: "1.5px solid #e5e7eb",
+              color: "#374151", fontSize: 13, fontWeight: 600,
+              textDecoration: "none",
+              boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+            }}
+          >
+            🔗 Formulář pro klienty
+          </a>
         </div>
 
-        {/* Filtry */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+        {/* Statistiky */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
           {([
-            { key: "vse",      label: "Vše" },
-            { key: "nova",     label: "Nové" },
-            { key: "potvrzena",label: "Potvrzené" },
-            { key: "zrusena",  label: "Zrušené" },
-          ] as { key: StavFilter; label: string }[]).map(({ key, label }) => (
+            { key: "vse",       label: "Celkem",     color: "#374151", bg: "#f9fafb", border: "#e5e7eb" },
+            { key: "nova",      label: "Nové",        color: "#92400e", bg: "#fffbeb", border: "#fde68a" },
+            { key: "potvrzena", label: "Potvrzené",   color: "#166534", bg: "#f0fdf4", border: "#bbf7d0" },
+            { key: "zrusena",   label: "Zrušené",     color: "#9f1239", bg: "#fff1f2", border: "#fecdd3" },
+          ] as { key: StavFilter; label: string; color: string; bg: string; border: string }[]).map(({ key, label, color, bg, border }) => (
             <button
               key={key}
               onClick={() => setFiltr(key)}
               style={{
-                padding: "7px 16px", borderRadius: 9, cursor: "pointer", fontSize: 13,
-                border: "1.5px solid",
-                borderColor: filtr === key ? "#be123c" : "#e5e7eb",
-                background: filtr === key ? "#fff1f2" : "white",
-                color: filtr === key ? "#be123c" : "#6b7280",
-                fontWeight: filtr === key ? 700 : 400,
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "8px 16px", borderRadius: 10, cursor: "pointer",
+                border: `1.5px solid ${filtr === key ? border : "#e5e7eb"}`,
+                background: filtr === key ? bg : "white",
+                color: filtr === key ? color : "#6b7280",
+                fontWeight: filtr === key ? 700 : 500,
+                fontSize: 13, transition: "all .12s",
+                boxShadow: filtr === key ? `0 0 0 2px ${border}` : "none",
               }}
             >
               {label}
-              <span style={{ marginLeft: 6, fontSize: 11, opacity: .7 }}>({counts[key]})</span>
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 99,
+                background: filtr === key ? "rgba(0,0,0,.08)" : "#f3f4f6",
+                color: filtr === key ? color : "#9ca3af",
+              }}>
+                {counts[key]}
+              </span>
             </button>
           ))}
         </div>
 
+        {/* Obsah */}
         {loading ? (
-          <div style={{ color: "var(--muted)", fontSize: 14 }}>Načítám…</div>
+          <div style={{ color: "#9ca3af", fontSize: 14, padding: "40px 0", textAlign: "center" }}>Načítám…</div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "64px 0" }}>
-            <div style={{ fontSize: 36, marginBottom: 14 }}>📅</div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-2)", marginBottom: 6 }}>
+          <div style={{ textAlign: "center", padding: "80px 0" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#374151", marginBottom: 8 }}>
               {filtr === "vse" ? "Zatím žádné schůzky" : "Žádné schůzky v tomto filtru"}
             </div>
-            <div style={{ fontSize: 13, color: "var(--muted)" }}>
+            <div style={{ fontSize: 13.5, color: "#9ca3af" }}>
               Schůzky se zobrazí po vyplnění formuláře klientem
             </div>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
-            {/* Budoucí */}
             {budouci.length > 0 && (
               <section>
-                <SecHeader>Nadcházející · {budouci.length}</SecHeader>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <SekceHeader pocet={budouci.length} budouci />
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {budouci.map(s => (
-                    <SchuzkaKarta
-                      key={s.id}
-                      s={s}
-                      zakazka={najdiSvatbu(s, zakazky)}
-                      onStav={handleStav}
-                      onDelete={handleDelete}
-                      onTermin={handleTermin}
-                    />
+                    <SchuzkaKarta key={s.id} s={s} zakazka={najdiSvatbu(s, zakazky)}
+                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} />
                   ))}
                 </div>
               </section>
             )}
 
-            {/* Minulé */}
             {minule.length > 0 && (
               <section>
-                <SecHeader>Proběhlé · {minule.length}</SecHeader>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <SekceHeader pocet={minule.length} budouci={false} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {minule.map(s => (
-                    <SchuzkaKarta
-                      key={s.id}
-                      s={s}
-                      zakazka={najdiSvatbu(s, zakazky)}
-                      onStav={handleStav}
-                      onDelete={handleDelete}
-                      onTermin={handleTermin}
-                    />
+                    <SchuzkaKarta key={s.id} s={s} zakazka={najdiSvatbu(s, zakazky)}
+                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} />
                   ))}
                 </div>
               </section>
@@ -478,13 +509,20 @@ export default function SchuzkyPage() {
   )
 }
 
-function SecHeader({ children }: { children: React.ReactNode }) {
+function SekceHeader({ pocet, budouci }: { pocet: number; budouci: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#9ca3af" }}>
-        {children}
-      </div>
-      <div style={{ flex: 1, height: 1, background: "#f3f4f6" }} />
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+      <div style={{
+        width: 8, height: 8, borderRadius: "50%",
+        background: budouci ? "#be123c" : "#d1d5db",
+      }} />
+      <span style={{
+        fontSize: 11, fontWeight: 700, textTransform: "uppercase",
+        letterSpacing: ".1em", color: budouci ? "#be123c" : "#9ca3af",
+      }}>
+        {budouci ? "Nadcházející" : "Proběhlé"} · {pocet}
+      </span>
+      <div style={{ flex: 1, height: 1, background: budouci ? "#fecdd3" : "#f3f4f6" }} />
     </div>
   )
 }
