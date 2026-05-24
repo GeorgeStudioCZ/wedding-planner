@@ -73,6 +73,7 @@ function buildEvent(rez: GCalRezervace) {
   return {
     summary:     title,
     description: lines,
+    colorId:     "11",  // Graphite (nejbližší černé)
     start: { date: rez.start_date },
     end:   { date: addDay(rez.end_date) },  // Google all-day end is exclusive
   }
@@ -111,6 +112,7 @@ function buildPickupEvent(rez: GCalRezervace) {
   return {
     summary:     `⛺ Vyzvednutí autostanu – ${zakaznikJmeno}`,
     description,
+    colorId:     "11",  // Graphite (nejbližší černé)
     start: times
       ? { dateTime: `${rez.start_date}T${times.start}:00`, timeZone: "Europe/Prague" }
       : { date: rez.start_date },
@@ -136,6 +138,7 @@ function buildReturnEvent(rez: GCalRezervace) {
   return {
     summary:     `⛺ Vrácení autostanu – ${zakaznikJmeno}`,
     description,
+    colorId:     "11",  // Graphite (nejbližší černé)
     start: times
       ? { dateTime: `${rez.end_date}T${times.start}:00`, timeZone: "Europe/Prague" }
       : { date: rez.end_date },
