@@ -44,6 +44,8 @@ type Rezervace = {
   stav: string
   sf_proforma_id: number | null
   sf_vs: string | null
+  datum_vyzvednuti: string | null
+  datum_vraceni:    string | null
 }
 
 type ZakaznikData = {
@@ -156,6 +158,7 @@ export default function RezervacePopup({
     item_id: 0, unit_index: 0, customer: "",
     start_date: "", end_date: "", color: "", notes: "",
     vozidlo: "", cas_vyzvednuti: "", cas_vraceni: "", pricniky: "",
+    datum_vyzvednuti: "", datum_vraceni: "",
   })
   const [editZakaznikId, setEditZakaznikId] = useState<number | null>(null)
   const [editPrisl, setEditPrisl] = useState<Record<number, number>>({})
@@ -227,6 +230,8 @@ export default function RezervacePopup({
         notes: r.notes ?? "", vozidlo: r.vozidlo ?? "",
         cas_vyzvednuti: r.cas_vyzvednuti ?? "", cas_vraceni: r.cas_vraceni ?? "",
         pricniky: r.pricniky ?? "",
+        datum_vyzvednuti: r.datum_vyzvednuti ?? r.start_date,
+        datum_vraceni:    r.datum_vraceni    ?? r.end_date,
       })
       setEditZakaznikId(r.zakaznik_id)
       setLoading(false)
@@ -406,9 +411,20 @@ export default function RezervacePopup({
     if (jeKonflikt()) { setChyba("Konflikt: tato položka je již rezervována v tomto termínu"); return }
     setUkladam(true)
 
+    // Zachyt staré hodnoty logistiky pro porovnání
+    const oldDatumVyzvednuti = rez?.datum_vyzvednuti ?? rez?.start_date ?? ""
+    const oldDatumVraceni    = rez?.datum_vraceni    ?? rez?.end_date   ?? ""
+    const oldCasVyzvednuti   = rez?.cas_vyzvednuti   ?? ""
+    const oldCasVraceni      = rez?.cas_vraceni      ?? ""
+
     const groupId = rez?.group_id ?? (jeStanVybran ? crypto.randomUUID() : null)
     await supabase.from("pujcovna_rezervace").update({
-      ...form, item_id: Number(form.item_id), group_id: groupId, zakaznik_id: editZakaznikId,
+      ...form,
+      item_id: Number(form.item_id),
+      group_id: groupId,
+      zakaznik_id: editZakaznikId,
+      datum_vyzvednuti: form.datum_vyzvednuti || null,
+      datum_vraceni:    form.datum_vraceni    || null,
     }).eq("id", rezervaceId)
 
     if (groupId) {
@@ -416,6 +432,38 @@ export default function RezervacePopup({
       const prislRows = sestavPrisl(groupId)
       if (prislRows.length > 0) await supabase.from("pujcovna_rezervace").insert(prislRows)
     }
+
+    // Detekce změny logistiky → GCal sync + email zákazníkovi
+    const POTVRZENE = ["zaplaceno", "vypujceno", "dokonceno"]
+    const logistikaZmenena =
+      form.cas_vyzvednuti   !== oldCasVyzvednuti ||
+      form.cas_vraceni      !== oldCasVraceni    ||
+      (form.datum_vyzvednuti || "") !== oldDatumVyzvednuti ||
+      (form.datum_vraceni    || "") !== oldDatumVraceni
+
+    if (logistikaZmenena && rez && POTVRZENE.includes(rez.stav)) {
+      fetch("/api/pujcovna/gcal-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rezervaceId: rez.id }),
+      }).catch(console.error)
+
+      if (zakaznik?.email && polozka) {
+        fetch("/api/mail/zmena-logistiky", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            zakaznik: { jmeno: zakaznik.jmeno, email: zakaznik.email },
+            polozka: polozka.name,
+            datumVyzvednuti: form.datum_vyzvednuti || rez.start_date,
+            casVyzvednuti:   form.cas_vyzvednuti,
+            datumVraceni:    form.datum_vraceni    || rez.end_date,
+            casVraceni:      form.cas_vraceni,
+          }),
+        }).catch(console.error)
+      }
+    }
+
     onSave()
   }
 
@@ -569,8 +617,28 @@ export default function RezervacePopup({
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Vozidlo a logistika</p>
               <div className="space-y-2">
                 {rez.vozidlo && <div className="flex justify-between"><span className="text-xs text-gray-400">Vozidlo</span><span className="text-sm font-medium text-gray-900">{rez.vozidlo}</span></div>}
-                {rez.cas_vyzvednuti && <div className="flex justify-between"><span className="text-xs text-gray-400">Vyzvednutí</span><span className="text-sm font-medium text-gray-900">{rez.cas_vyzvednuti} hod</span></div>}
-                {rez.cas_vraceni && <div className="flex justify-between"><span className="text-xs text-gray-400">Vrácení</span><span className="text-sm font-medium text-gray-900">{rez.cas_vraceni} hod</span></div>}
+                {rez.cas_vyzvednuti && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-xs text-gray-400 shrink-0">Vyzvednutí</span>
+                    <span className="text-sm font-medium text-gray-900 text-right">
+                      {rez.datum_vyzvednuti && rez.datum_vyzvednuti !== rez.start_date
+                        ? <span className="text-emerald-600 mr-1">{formatDatum(rez.datum_vyzvednuti)} ·</span>
+                        : null}
+                      {rez.cas_vyzvednuti} hod
+                    </span>
+                  </div>
+                )}
+                {rez.cas_vraceni && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-xs text-gray-400 shrink-0">Vrácení</span>
+                    <span className="text-sm font-medium text-gray-900 text-right">
+                      {rez.datum_vraceni && rez.datum_vraceni !== rez.end_date
+                        ? <span className="text-emerald-600 mr-1">{formatDatum(rez.datum_vraceni)} ·</span>
+                        : null}
+                      {rez.cas_vraceni} hod
+                    </span>
+                  </div>
+                )}
                 {rez.pricniky && <div className="flex justify-between"><span className="text-xs text-gray-400">Příčníky</span><span className="text-sm font-medium text-gray-900">{rez.pricniky === "vlastni" ? "Má vlastní" : "Chce půjčit"}</span></div>}
               </div>
             </div>
@@ -739,20 +807,25 @@ export default function RezervacePopup({
             <input name="vozidlo" value={form.vozidlo} onChange={handleChange} placeholder="např. Škoda Octavia Combi" className={inp} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={lbl}>Vyzvednutí</label>
+          <div>
+            <label className={lbl}>Vyzvednutí</label>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" name="datum_vyzvednuti" value={form.datum_vyzvednuti} onChange={handleChange} className={inp} />
               <select name="cas_vyzvednuti" value={form.cas_vyzvednuti} onChange={handleChange} className={inp}>
-                <option value="">Vybrat...</option>
+                <option value="">Čas...</option>
                 {Array.from({ length: 14 }, (_, i) => i + 8).map(h => (
                   <option key={h} value={`${h}:00 - ${h + 1}:00`}>{h}:00 – {h + 1}:00</option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className={lbl}>Vrácení</label>
+          </div>
+
+          <div>
+            <label className={lbl}>Vrácení</label>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" name="datum_vraceni" value={form.datum_vraceni} onChange={handleChange} className={inp} />
               <select name="cas_vraceni" value={form.cas_vraceni} onChange={handleChange} className={inp}>
-                <option value="">Vybrat...</option>
+                <option value="">Čas...</option>
                 {Array.from({ length: 14 }, (_, i) => i + 8).map(h => (
                   <option key={h} value={`${h}:00 - ${h + 1}:00`}>{h}:00 – {h + 1}:00</option>
                 ))}

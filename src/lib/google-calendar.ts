@@ -34,17 +34,19 @@ function getCalendar() {
 }
 
 export interface GCalRezervace {
-  id:            number
-  start_date:    string        // "2026-06-10"
-  end_date:      string        // "2026-06-14"
-  cas_vyzvednuti: string       // "9:00 - 10:00"
-  cas_vraceni:   string        // "17:00 - 18:00"
-  notes:         string
-  stav:          string
-  vozidlo?:      string
-  polozka:       string        // name
-  kategorie:     string        // category
-  zakaznik?:     { jmeno: string; prijmeni: string; email?: string; telefon?: string } | null
+  id:                number
+  start_date:        string        // "2026-06-10"
+  end_date:          string        // "2026-06-14"
+  datum_vyzvednuti?: string | null // přesný den vyzvednutí (může se lišit od start_date)
+  datum_vraceni?:    string | null // přesný den vrácení (může se lišit od end_date)
+  cas_vyzvednuti:    string        // "9:00 - 10:00"
+  cas_vraceni:       string        // "17:00 - 18:00"
+  notes:             string
+  stav:              string
+  vozidlo?:          string
+  polozka:           string        // name
+  kategorie:         string        // category
+  zakaznik?:         { jmeno: string; prijmeni: string; email?: string; telefon?: string } | null
 }
 
 function buildEvent(rez: GCalRezervace) {
@@ -109,16 +111,17 @@ function buildPickupEvent(rez: GCalRezervace) {
   ].filter(Boolean).join("\n")
 
   const times = parseTimeRange(rez.cas_vyzvednuti)
+  const den = rez.datum_vyzvednuti || rez.start_date
   return {
     summary:     `⛺ Vyzvednutí autostanu – ${zakaznikJmeno}`,
     description,
     colorId:     null,  // výchozí barva kalendáře
     start: times
-      ? { dateTime: `${rez.start_date}T${times.start}:00`, timeZone: "Europe/Prague" }
-      : { date: rez.start_date },
+      ? { dateTime: `${den}T${times.start}:00`, timeZone: "Europe/Prague" }
+      : { date: den },
     end: times
-      ? { dateTime: `${rez.start_date}T${times.end}:00`, timeZone: "Europe/Prague" }
-      : { date: addDay(rez.start_date) },
+      ? { dateTime: `${den}T${times.end}:00`, timeZone: "Europe/Prague" }
+      : { date: addDay(den) },
   }
 }
 
@@ -135,16 +138,17 @@ function buildReturnEvent(rez: GCalRezervace) {
   ].filter(Boolean).join("\n")
 
   const times = parseTimeRange(rez.cas_vraceni)
+  const den = rez.datum_vraceni || rez.end_date
   return {
     summary:     `⛺ Vrácení autostanu – ${zakaznikJmeno}`,
     description,
     colorId:     null,  // výchozí barva kalendáře
     start: times
-      ? { dateTime: `${rez.end_date}T${times.start}:00`, timeZone: "Europe/Prague" }
-      : { date: rez.end_date },
+      ? { dateTime: `${den}T${times.start}:00`, timeZone: "Europe/Prague" }
+      : { date: den },
     end: times
-      ? { dateTime: `${rez.end_date}T${times.end}:00`, timeZone: "Europe/Prague" }
-      : { date: addDay(rez.end_date) },
+      ? { dateTime: `${den}T${times.end}:00`, timeZone: "Europe/Prague" }
+      : { date: addDay(den) },
   }
 }
 

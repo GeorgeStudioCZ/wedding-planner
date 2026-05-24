@@ -43,16 +43,18 @@ export async function POST() {
         const zakaznik = rez.zakaznik_id ? zakaznikMap[rez.zakaznik_id] ?? null : null
 
         const gcalData: GCalRezervace = {
-          id:             rez.id,
-          start_date:     rez.start_date,
-          end_date:       rez.end_date,
-          cas_vyzvednuti: rez.cas_vyzvednuti ?? "",
-          cas_vraceni:    rez.cas_vraceni    ?? "",
-          notes:          rez.notes          ?? "",
-          stav:           rez.stav,
-          vozidlo:        rez.vozidlo        ?? "",
-          polozka:        polozka?.name      ?? "Výpůjčka",
-          kategorie:      polozka?.category  ?? "",
+          id:                rez.id,
+          start_date:        rez.start_date,
+          end_date:          rez.end_date,
+          datum_vyzvednuti:  rez.datum_vyzvednuti ?? null,
+          datum_vraceni:     rez.datum_vraceni    ?? null,
+          cas_vyzvednuti:    rez.cas_vyzvednuti   ?? "",
+          cas_vraceni:       rez.cas_vraceni      ?? "",
+          notes:             rez.notes            ?? "",
+          stav:              rez.stav,
+          vozidlo:           rez.vozidlo          ?? "",
+          polozka:           polozka?.name        ?? "Výpůjčka",
+          kategorie:         polozka?.category    ?? "",
           zakaznik,
         }
 
