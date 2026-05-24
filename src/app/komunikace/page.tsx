@@ -33,6 +33,8 @@ const TYP_LABEL: Record<string, string> = {
   "rezervace-pujcovna":   "Rezervace",
   "rezervace-notifikace": "Rezervace (notif.)",
   "storno-pujcovna":      "Storno",
+  "zmena-logistiky":      "Změna logistiky",
+  "platba-reminder":      "Upomínka platby",
   "schuzka-zadost":       "Schůzka žádost",
   "schuzka-potvrzeni":    "Schůzka potvrzení",
   "schuzka-notifikace":   "Schůzka (notif.)",
@@ -89,7 +91,11 @@ function KomunikaceInner() {
   }
 
   const filtered = emails
-    .filter(e => filter === "vse" || e.sluzba === filter)
+    .filter(e => {
+      if (filter === "vse") return true
+      if (filter === "upominky") return e.typ === "platba-reminder"
+      return e.sluzba === filter
+    })
     .filter(e => {
       if (!search) return true
       const q = search.toLowerCase()
@@ -101,7 +107,10 @@ function KomunikaceInner() {
     })
 
   const counts: Record<string, number> = { vse: emails.length }
-  for (const e of emails) counts[e.sluzba] = (counts[e.sluzba] ?? 0) + 1
+  for (const e of emails) {
+    counts[e.sluzba] = (counts[e.sluzba] ?? 0) + 1
+    if (e.typ === "platba-reminder") counts["upominky"] = (counts["upominky"] ?? 0) + 1
+  }
 
   return (
     <AppShell module={from}>
@@ -122,10 +131,11 @@ function KomunikaceInner() {
           {/* Filter tabs */}
           <div style={{ display: "flex", gap: 4, background: "var(--bg-2, #f3f4f6)", borderRadius: 10, padding: 3 }}>
             {[
-              { key: "vse",    label: "Vše" },
-              { key: "stany",  label: "Autostany" },
-              { key: "svatby", label: "Svatby" },
-              { key: "george", label: "George" },
+              { key: "vse",      label: "Vše" },
+              { key: "stany",    label: "Autostany" },
+              { key: "svatby",   label: "Svatby" },
+              { key: "george",   label: "George" },
+              { key: "upominky", label: "⏰ Upomínky" },
             ].map(f => (
               <button key={f.key} onClick={() => setFilter(f.key)}
                 style={{

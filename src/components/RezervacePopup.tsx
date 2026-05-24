@@ -75,6 +75,7 @@ const STAVY = [
   { value: "dokonceno",       label: "Dokončeno",        barva: "bg-sky-100 text-sky-700" },
   { value: "storno",          label: "Storno",           barva: "bg-red-100 text-red-700" },
   { value: "zmena-logistiky", label: "Změna logistiky",  barva: "bg-indigo-50 text-indigo-600" },
+  { value: "platba-reminder", label: "Upomínka platby", barva: "bg-orange-50 text-orange-600" },
 ]
 
 const KATEGORIE_ORDER = ["Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Ostatní"]

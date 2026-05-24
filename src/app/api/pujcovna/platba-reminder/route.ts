@@ -160,6 +160,14 @@ export async function GET() {
         })
 
         await sb.from("pujcovna_rezervace").update({ pripominacka_sent: true }).eq("id", rez.id)
+
+        // Zapsat do historie výpůjčky
+        await sb.from("pujcovna_rezervace_historie").insert([{
+          rezervace_id: rez.id,
+          stav: "platba-reminder",
+          poznamka: "Odeslaná upomínka platby zákazníkovi",
+        }])
+
         results.push({ id: rez.id, result: "sent" })
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
