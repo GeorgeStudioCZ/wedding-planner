@@ -11,6 +11,9 @@ const sb = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
+// Stavy kdy rezervace existuje v kalendáři (závazně potvrzená)
+const POTVRZENE_STAVY = ["zaplaceno", "vypujceno", "dokonceno"]
+
 // POST /api/pujcovna/gcal-sync
 // Body: { rezervaceId: number }
 export async function POST(req: NextRequest) {
@@ -25,6 +28,18 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (!rez) return NextResponse.json({ ok: false, error: "Rezervace nenalezena" }, { status: 404 })
+
+    // Nezaplacená nebo storno → smaž všechny události (pokud existují)
+    if (!POTVRZENE_STAVY.includes(rez.stav)) {
+      const updates: Record<string, null> = {}
+      if (rez.gcal_event_id)      { await gcalDelete(rez.gcal_event_id);      updates.gcal_event_id = null }
+      if (rez.gcal_vyzvednuti_id) { await gcalDelete(rez.gcal_vyzvednuti_id); updates.gcal_vyzvednuti_id = null }
+      if (rez.gcal_vraceni_id)    { await gcalDelete(rez.gcal_vraceni_id);    updates.gcal_vraceni_id = null }
+      if (Object.keys(updates).length > 0) {
+        await sb.from("pujcovna_rezervace").update(updates).eq("id", rezervaceId)
+      }
+      return NextResponse.json({ ok: true, action: "deleted_or_skipped" })
+    }
 
     // Načti zákazníka
     let zakaznik = null
@@ -52,21 +67,9 @@ export async function POST(req: NextRequest) {
       zakaznik,
     }
 
-    // Storno → smaž všechny události
-    if (rez.stav === "storno") {
-      const updates: Record<string, null> = {}
-      if (rez.gcal_event_id)       { await gcalDelete(rez.gcal_event_id);       updates.gcal_event_id = null }
-      if (rez.gcal_vyzvednuti_id)  { await gcalDelete(rez.gcal_vyzvednuti_id);  updates.gcal_vyzvednuti_id = null }
-      if (rez.gcal_vraceni_id)     { await gcalDelete(rez.gcal_vraceni_id);     updates.gcal_vraceni_id = null }
-      if (Object.keys(updates).length > 0) {
-        await sb.from("pujcovna_rezervace").update(updates).eq("id", rezervaceId)
-      }
-      return NextResponse.json({ ok: true, action: "deleted" })
-    }
-
     const dbUpdates: Record<string, string | null> = {}
 
-    // Vždy: celodenní přehledová událost
+    // Celodenní přehledová událost
     if (rez.gcal_event_id) {
       await gcalUpdate(rez.gcal_event_id, gcalData)
     } else {
@@ -74,21 +77,19 @@ export async function POST(req: NextRequest) {
       if (eventId) dbUpdates.gcal_event_id = eventId
     }
 
-    // Zaplaceno: navíc události vyzvednutí a vrácení
-    if (rez.stav === "zaplaceno") {
-      if (rez.gcal_vyzvednuti_id) {
-        await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
-      } else {
-        const vId = await gcalCreateVyzvednuti(gcalData)
-        if (vId) dbUpdates.gcal_vyzvednuti_id = vId
-      }
+    // Události vyzvednutí a vrácení
+    if (rez.gcal_vyzvednuti_id) {
+      await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
+    } else {
+      const vId = await gcalCreateVyzvednuti(gcalData)
+      if (vId) dbUpdates.gcal_vyzvednuti_id = vId
+    }
 
-      if (rez.gcal_vraceni_id) {
-        await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
-      } else {
-        const rId = await gcalCreateVraceni(gcalData)
-        if (rId) dbUpdates.gcal_vraceni_id = rId
-      }
+    if (rez.gcal_vraceni_id) {
+      await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+    } else {
+      const rId = await gcalCreateVraceni(gcalData)
+      if (rId) dbUpdates.gcal_vraceni_id = rId
     }
 
     if (Object.keys(dbUpdates).length > 0) {
