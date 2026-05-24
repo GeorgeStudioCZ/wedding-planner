@@ -61,18 +61,20 @@ type HistorieZaznam = {
   id: string
   created_at: string
   stav: string
+  poznamka: string | null
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const STAVY = [
-  { value: "web-rezervace", label: "Rezervace · web", barva: "bg-purple-100 text-purple-700" },
-  { value: "rezervace",    label: "Rezervace",    barva: "bg-gray-100 text-gray-600" },
-  { value: "cekam-platbu", label: "Čekám platbu", barva: "bg-orange-100 text-orange-700" },
-  { value: "zaplaceno",    label: "Zaplaceno",    barva: "bg-green-100 text-green-700" },
-  { value: "vypujceno",    label: "Vypůjčeno",    barva: "bg-blue-100 text-blue-700" },
-  { value: "dokonceno",    label: "Dokončeno",    barva: "bg-sky-100 text-sky-700" },
-  { value: "storno",       label: "Storno",       barva: "bg-red-100 text-red-700" },
+  { value: "web-rezervace",   label: "Rezervace · web",  barva: "bg-purple-100 text-purple-700" },
+  { value: "rezervace",       label: "Rezervace",        barva: "bg-gray-100 text-gray-600" },
+  { value: "cekam-platbu",    label: "Čekám platbu",     barva: "bg-orange-100 text-orange-700" },
+  { value: "zaplaceno",       label: "Zaplaceno",        barva: "bg-green-100 text-green-700" },
+  { value: "vypujceno",       label: "Vypůjčeno",        barva: "bg-blue-100 text-blue-700" },
+  { value: "dokonceno",       label: "Dokončeno",        barva: "bg-sky-100 text-sky-700" },
+  { value: "storno",          label: "Storno",           barva: "bg-red-100 text-red-700" },
+  { value: "zmena-logistiky", label: "Změna logistiky",  barva: "bg-indigo-50 text-indigo-600" },
 ]
 
 const KATEGORIE_ORDER = ["Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Ostatní"]
@@ -179,7 +181,7 @@ export default function RezervacePopup({
     const sb = createClient()
     const { data } = await sb
       .from("pujcovna_rezervace_historie")
-      .select("id, created_at, stav")
+      .select("id, created_at, stav, poznamka")
       .eq("rezervace_id", rezId)
       .order("created_at", { ascending: false })
     setHistorie(data ?? [])
@@ -440,6 +442,17 @@ export default function RezervacePopup({
       form.cas_vraceni      !== oldCasVraceni    ||
       (form.datum_vyzvednuti || "") !== oldDatumVyzvednuti ||
       (form.datum_vraceni    || "") !== oldDatumVraceni
+
+    if (logistikaZmenena && rez) {
+      // Zapsat do historie
+      const fmtD = (d: string) => d ? new Date(d).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" }) : ""
+      const poznamka = [
+        `Vyzvednutí: ${fmtD(form.datum_vyzvednuti || rez.start_date)}${form.cas_vyzvednuti ? " · " + form.cas_vyzvednuti : ""}`,
+        `Vrácení: ${fmtD(form.datum_vraceni || rez.end_date)}${form.cas_vraceni ? " · " + form.cas_vraceni : ""}`,
+      ].join(" | ")
+      const sbH = createClient()
+      await sbH.from("pujcovna_rezervace_historie").insert([{ rezervace_id: rez.id, stav: "zmena-logistiky", poznamka }])
+    }
 
     if (logistikaZmenena && rez && POTVRZENE.includes(rez.stav)) {
       fetch("/api/pujcovna/gcal-sync", {
@@ -719,18 +732,23 @@ export default function RezervacePopup({
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Historie</p>
               <div className="space-y-2">
                 {historie.map((h, i) => (
-                  <div key={h.id} className="flex items-center gap-3">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-2 h-2 rounded-full ${stavInfo(h.stav).barva.split(" ")[0]}`} />
-                      {i < historie.length - 1 && <div className="w-px h-5 bg-gray-200 mt-1" />}
+                  <div key={h.id} className="flex items-start gap-3">
+                    <div className="flex flex-col items-center mt-1">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${stavInfo(h.stav).barva.split(" ")[0]}`} />
+                      {i < historie.length - 1 && <div className="w-px bg-gray-200 mt-1" style={{ height: h.poznamka ? 28 : 20 }} />}
                     </div>
-                    <div className="flex-1 flex items-center justify-between">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${stavInfo(h.stav).barva}`}>{stavInfo(h.stav).label}</span>
-                      <span className="text-xs text-gray-400">
-                        {new Date(h.created_at).toLocaleDateString("cs-CZ", { day: "numeric", month: "short" })}
-                        {" "}
-                        {new Date(h.created_at).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap ${stavInfo(h.stav).barva}`}>{stavInfo(h.stav).label}</span>
+                        <span className="text-xs text-gray-400 shrink-0">
+                          {new Date(h.created_at).toLocaleDateString("cs-CZ", { day: "numeric", month: "short" })}
+                          {" "}
+                          {new Date(h.created_at).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      {h.poznamka && (
+                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{h.poznamka}</p>
+                      )}
                     </div>
                   </div>
                 ))}
