@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { gcalCreate, gcalUpdate, gcalDelete, GCalRezervace } from "@/lib/google-calendar"
+import {
+  gcalCreate, gcalUpdate, gcalDelete, GCalRezervace,
+  gcalCreateVyzvednuti, gcalUpdateVyzvednuti,
+  gcalCreateVraceni,   gcalUpdateVraceni,
+} from "@/lib/google-calendar"
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
       zakaznik = zak
     }
 
-    const polozka  = rez.pujcovna_polozky as { name: string; category: string } | null
+    const polozka = rez.pujcovna_polozky as { name: string; category: string } | null
     const gcalData: GCalRezervace = {
       id:             rez.id,
       start_date:     rez.start_date,
@@ -48,26 +52,50 @@ export async function POST(req: NextRequest) {
       zakaznik,
     }
 
-    // Storno → smaž událost
+    // Storno → smaž všechny události
     if (rez.stav === "storno") {
-      if (rez.gcal_event_id) {
-        await gcalDelete(rez.gcal_event_id)
-        await sb.from("pujcovna_rezervace").update({ gcal_event_id: null }).eq("id", rezervaceId)
+      const updates: Record<string, null> = {}
+      if (rez.gcal_event_id)       { await gcalDelete(rez.gcal_event_id);       updates.gcal_event_id = null }
+      if (rez.gcal_vyzvednuti_id)  { await gcalDelete(rez.gcal_vyzvednuti_id);  updates.gcal_vyzvednuti_id = null }
+      if (rez.gcal_vraceni_id)     { await gcalDelete(rez.gcal_vraceni_id);     updates.gcal_vraceni_id = null }
+      if (Object.keys(updates).length > 0) {
+        await sb.from("pujcovna_rezervace").update(updates).eq("id", rezervaceId)
       }
       return NextResponse.json({ ok: true, action: "deleted" })
     }
 
-    // Aktualizuj nebo vytvoř
+    const dbUpdates: Record<string, string | null> = {}
+
+    // Vždy: celodenní přehledová událost
     if (rez.gcal_event_id) {
       await gcalUpdate(rez.gcal_event_id, gcalData)
-      return NextResponse.json({ ok: true, action: "updated", eventId: rez.gcal_event_id })
     } else {
       const eventId = await gcalCreate(gcalData)
-      if (eventId) {
-        await sb.from("pujcovna_rezervace").update({ gcal_event_id: eventId }).eq("id", rezervaceId)
-      }
-      return NextResponse.json({ ok: true, action: "created", eventId })
+      if (eventId) dbUpdates.gcal_event_id = eventId
     }
+
+    // Zaplaceno: navíc události vyzvednutí a vrácení
+    if (rez.stav === "zaplaceno") {
+      if (rez.gcal_vyzvednuti_id) {
+        await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
+      } else {
+        const vId = await gcalCreateVyzvednuti(gcalData)
+        if (vId) dbUpdates.gcal_vyzvednuti_id = vId
+      }
+
+      if (rez.gcal_vraceni_id) {
+        await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+      } else {
+        const rId = await gcalCreateVraceni(gcalData)
+        if (rId) dbUpdates.gcal_vraceni_id = rId
+      }
+    }
+
+    if (Object.keys(dbUpdates).length > 0) {
+      await sb.from("pujcovna_rezervace").update(dbUpdates).eq("id", rezervaceId)
+    }
+
+    return NextResponse.json({ ok: true, action: "synced" })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error("[gcal-sync]", msg)

@@ -86,6 +86,68 @@ function addDay(iso: string): string {
   return d.toISOString().slice(0, 10)
 }
 
+// Parsuje čas ve formátu "9:00 - 10:00" nebo "09:00–10:00"
+function parseTimeRange(timeStr: string): { start: string; end: string } | null {
+  if (!timeStr) return null
+  const match = timeStr.match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/)
+  if (!match) return null
+  const pad = (t: string) => t.length === 4 ? "0" + t : t
+  return { start: pad(match[1]), end: pad(match[2]) }
+}
+
+function buildPickupEvent(rez: GCalRezervace) {
+  const zakaznikJmeno = rez.zakaznik
+    ? `${rez.zakaznik.jmeno} ${rez.zakaznik.prijmeni}`.trim()
+    : "Zákazník"
+
+  const description = [
+    `Stan: ${rez.polozka}`,
+    rez.vozidlo          ? `🚗 ${rez.vozidlo}`            : null,
+    rez.zakaznik?.telefon ? `📞 ${rez.zakaznik.telefon}`  : null,
+    rez.zakaznik?.email   ? `✉️ ${rez.zakaznik.email}`    : null,
+    rez.notes            ? `📝 ${rez.notes}`               : null,
+  ].filter(Boolean).join("\n")
+
+  const times = parseTimeRange(rez.cas_vyzvednuti)
+  return {
+    summary:     `Vyzvednutí autostanu – ${zakaznikJmeno}`,
+    description,
+    colorId:     "2",  // Sage/green
+    start: times
+      ? { dateTime: `${rez.start_date}T${times.start}:00`, timeZone: "Europe/Prague" }
+      : { date: rez.start_date },
+    end: times
+      ? { dateTime: `${rez.start_date}T${times.end}:00`, timeZone: "Europe/Prague" }
+      : { date: addDay(rez.start_date) },
+  }
+}
+
+function buildReturnEvent(rez: GCalRezervace) {
+  const zakaznikJmeno = rez.zakaznik
+    ? `${rez.zakaznik.jmeno} ${rez.zakaznik.prijmeni}`.trim()
+    : "Zákazník"
+
+  const description = [
+    `Stan: ${rez.polozka}`,
+    rez.vozidlo          ? `🚗 ${rez.vozidlo}`            : null,
+    rez.zakaznik?.telefon ? `📞 ${rez.zakaznik.telefon}`  : null,
+    rez.zakaznik?.email   ? `✉️ ${rez.zakaznik.email}`    : null,
+  ].filter(Boolean).join("\n")
+
+  const times = parseTimeRange(rez.cas_vraceni)
+  return {
+    summary:     `Vrácení autostanu – ${zakaznikJmeno}`,
+    description,
+    colorId:     "6",  // Tangerine/orange
+    start: times
+      ? { dateTime: `${rez.end_date}T${times.start}:00`, timeZone: "Europe/Prague" }
+      : { date: rez.end_date },
+    end: times
+      ? { dateTime: `${rez.end_date}T${times.end}:00`, timeZone: "Europe/Prague" }
+      : { date: addDay(rez.end_date) },
+  }
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function gcalCreate(rez: GCalRezervace): Promise<string | null> {
@@ -121,5 +183,45 @@ export async function gcalDelete(eventId: string): Promise<void> {
     await cal.events.delete({ calendarId: CALENDAR_ID, eventId })
   } catch (err) {
     console.error("[gcal] delete failed:", err)
+  }
+}
+
+export async function gcalCreateVyzvednuti(rez: GCalRezervace): Promise<string | null> {
+  try {
+    const cal = getCalendar()
+    const res = await cal.events.insert({ calendarId: CALENDAR_ID, requestBody: buildPickupEvent(rez) })
+    return res.data.id ?? null
+  } catch (err) {
+    console.error("[gcal] create vyzvednuti failed:", err)
+    return null
+  }
+}
+
+export async function gcalUpdateVyzvednuti(eventId: string, rez: GCalRezervace): Promise<void> {
+  try {
+    const cal = getCalendar()
+    await cal.events.patch({ calendarId: CALENDAR_ID, eventId, requestBody: buildPickupEvent(rez) })
+  } catch (err) {
+    console.error("[gcal] update vyzvednuti failed:", err)
+  }
+}
+
+export async function gcalCreateVraceni(rez: GCalRezervace): Promise<string | null> {
+  try {
+    const cal = getCalendar()
+    const res = await cal.events.insert({ calendarId: CALENDAR_ID, requestBody: buildReturnEvent(rez) })
+    return res.data.id ?? null
+  } catch (err) {
+    console.error("[gcal] create vraceni failed:", err)
+    return null
+  }
+}
+
+export async function gcalUpdateVraceni(eventId: string, rez: GCalRezervace): Promise<void> {
+  try {
+    const cal = getCalendar()
+    await cal.events.patch({ calendarId: CALENDAR_ID, eventId, requestBody: buildReturnEvent(rez) })
+  } catch (err) {
+    console.error("[gcal] update vraceni failed:", err)
   }
 }
