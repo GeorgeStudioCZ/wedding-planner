@@ -28,6 +28,7 @@ type Zakazka = {
   datum_svatby: string
   typ_sluzby: string
   stav: string
+  videohovor_datum: string | null
 }
 
 type StavFilter = "vse" | "nova" | "potvrzena" | "zrusena"
@@ -87,10 +88,11 @@ const KONTAKT: Record<string, { emoji: string; label: string; bg: string; color:
 
 // ── Karta schůzky ─────────────────────────────────────────────────────────────
 function SchuzkaKarta({
-  s, zakazka, onStav, onDelete, onTermin, onProbehla,
+  s, zakazka, probehla, onStav, onDelete, onTermin, onProbehla,
 }: {
   s: Schuzka
   zakazka: Zakazka | null
+  probehla: boolean
   onStav:     (id: number, stav: Schuzka["stav"]) => void
   onDelete:   (id: number) => void
   onTermin:   (id: number, datum: string, cas: string) => void
@@ -153,28 +155,31 @@ function SchuzkaKarta({
             </div>
           ) : (
             <div
-              onClick={() => { setEditDatum(s.datum); setEditCas(s.cas.slice(0,5)); setEditTermin(true) }}
-              title="Klikni pro změnu termínu"
+              onClick={probehla ? undefined : () => { setEditDatum(s.datum); setEditCas(s.cas.slice(0,5)); setEditTermin(true) }}
+              title={probehla ? undefined : "Klikni pro změnu termínu"}
               style={{
                 flexShrink: 0, width: 62, textAlign: "center",
-                background: jeMinula ? "#fafaf9" : "#fff1f2",
+                background: probehla ? "#f0fdf4" : jeMinula ? "#fafaf9" : "#fff1f2",
                 borderRadius: 12, padding: "10px 4px",
-                border: `1.5px solid ${jeMinula ? "#f0ede8" : "#fecdd3"}`,
-                cursor: "pointer", transition: "all .15s",
+                border: `1.5px solid ${probehla ? "#bbf7d0" : jeMinula ? "#f0ede8" : "#fecdd3"}`,
+                cursor: probehla ? "default" : "pointer", transition: "all .15s",
               }}
-              onMouseOver={e => { e.currentTarget.style.background = "#ffe4e6"; e.currentTarget.style.borderColor = "#fb7185" }}
-              onMouseOut={e => { e.currentTarget.style.background = jeMinula ? "#fafaf9" : "#fff1f2"; e.currentTarget.style.borderColor = jeMinula ? "#f0ede8" : "#fecdd3" }}
+              onMouseOver={e => { if (!probehla) { e.currentTarget.style.background = "#ffe4e6"; e.currentTarget.style.borderColor = "#fb7185" } }}
+              onMouseOut={e => { if (!probehla) { e.currentTarget.style.background = jeMinula ? "#fafaf9" : "#fff1f2"; e.currentTarget.style.borderColor = jeMinula ? "#f0ede8" : "#fecdd3" } }}
             >
-              <div style={{ fontSize: 22, fontWeight: 900, color: "#be123c", lineHeight: 1 }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: probehla ? "#16a34a" : "#be123c", lineHeight: 1 }}>
                 {d.getDate()}
               </div>
-              <div style={{ fontSize: 10, color: "#be123c", fontWeight: 700, marginTop: 2, letterSpacing: ".06em" }}>
+              <div style={{ fontSize: 10, color: probehla ? "#16a34a" : "#be123c", fontWeight: 700, marginTop: 2, letterSpacing: ".06em" }}>
                 {d.toLocaleDateString("cs-CZ", { month: "short" }).replace(".","").toUpperCase()}
               </div>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginTop: 6, letterSpacing: ".02em" }}>
                 {s.cas.slice(0,5)}
               </div>
-              <div style={{ fontSize: 9, color: "#be123c", marginTop: 2, opacity: .6 }}>✏️</div>
+              {probehla
+                ? <div style={{ fontSize: 9, color: "#16a34a", marginTop: 2 }}>✓</div>
+                : <div style={{ fontSize: 9, color: "#be123c", marginTop: 2, opacity: .6 }}>✏️</div>
+              }
             </div>
           )}
 
@@ -282,23 +287,41 @@ function SchuzkaKarta({
           paddingTop: 14, borderTop: "1px solid #f1f0ef",
           flexWrap: "wrap", alignItems: "center",
         }}>
-          {s.stav !== "potvrzena" && (
-            <button onClick={() => onStav(s.id, "potvrzena")}
-              style={{ ...btnStyle, background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" }}>
-              ✓ Potvrdit
-            </button>
-          )}
-          {s.stav !== "zrusena" && (
-            <button onClick={() => onStav(s.id, "zrusena")}
-              style={{ ...btnStyle, background: "#fff1f2", color: "#9f1239", border: "1px solid #fecdd3" }}>
-              × Zrušit
-            </button>
-          )}
-          {(s.svatba_id || zakazka) && (
-            <button onClick={() => onProbehla(s.id, (s.svatba_id ?? zakazka!.id))}
-              style={{ ...btnStyle, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>
-              🎥 Proběhla
-            </button>
+          {probehla ? (
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              fontSize: 12, fontWeight: 700, color: "#166534",
+              background: "#f0fdf4", border: "1px solid #bbf7d0",
+              padding: "5px 12px", borderRadius: 8,
+            }}>
+              ✓ Schůzka proběhla
+              {zakazka?.videohovor_datum && (
+                <span style={{ fontWeight: 400, color: "#4ade80" }}>
+                  · {new Date(zakazka.videohovor_datum).toLocaleDateString("cs-CZ", { day: "numeric", month: "long" })}
+                </span>
+              )}
+            </span>
+          ) : (
+            <>
+              {s.stav !== "potvrzena" && (
+                <button onClick={() => onStav(s.id, "potvrzena")}
+                  style={{ ...btnStyle, background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" }}>
+                  ✓ Potvrdit
+                </button>
+              )}
+              {s.stav !== "zrusena" && (
+                <button onClick={() => onStav(s.id, "zrusena")}
+                  style={{ ...btnStyle, background: "#fff1f2", color: "#9f1239", border: "1px solid #fecdd3" }}>
+                  × Zrušit
+                </button>
+              )}
+              {(s.svatba_id || zakazka) && (
+                <button onClick={() => onProbehla(s.id, (s.svatba_id ?? zakazka!.id))}
+                  style={{ ...btnStyle, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>
+                  🎥 Proběhla
+                </button>
+              )}
+            </>
           )}
           <div style={{ flex: 1 }} />
           <button onClick={() => onDelete(s.id)}
@@ -349,7 +372,7 @@ export default function SchuzkyPage() {
     const db = createClient()
     Promise.all([
       db.from("schuzky").select("*").order("datum", { ascending: true }).order("cas", { ascending: true }),
-      db.from("zakazky").select("id, jmeno_nevesty, jmeno_zenicha, datum_svatby, typ_sluzby, stav"),
+      db.from("zakazky").select("id, jmeno_nevesty, jmeno_zenicha, datum_svatby, typ_sluzby, stav, videohovor_datum"),
     ]).then(([{ data: s }, { data: z }]) => {
       setSchuzky((s ?? []) as Schuzka[])
       setZakazky((z ?? []) as Zakazka[])
@@ -369,17 +392,18 @@ export default function SchuzkyPage() {
   }
 
   async function handleProbehla(schuzkaId: number, zakazkaId: number) {
-    const dnes = new Date().toISOString().slice(0, 10)
+    const dnesIso = new Date().toISOString().slice(0, 10)
     const db = createClient()
-    const { error } = await db.from("zakazky").update({ videohovor_datum: dnes }).eq("id", zakazkaId)
+    const { error } = await db.from("zakazky").update({ videohovor_datum: dnesIso }).eq("id", zakazkaId)
     if (error) { alert("Chyba: " + error.message); return }
+    // Aktualizuj lokální stav zákazky
+    setZakazky(prev => prev.map(z => z.id === zakazkaId ? { ...z, videohovor_datum: dnesIso } : z))
     // Označ schůzku jako potvrzenou pokud ještě není
     const s = schuzky.find(x => x.id === schuzkaId)
     if (s && s.stav === "nova") {
       await db.from("schuzky").update({ stav: "potvrzena" }).eq("id", schuzkaId)
       setSchuzky(prev => prev.map(x => x.id === schuzkaId ? { ...x, stav: "potvrzena" as const } : x))
     }
-    alert("Schůzka označena jako proběhlá ✓")
   }
 
   async function handleStav(id: number, stav: Schuzka["stav"]) {
@@ -405,8 +429,9 @@ export default function SchuzkyPage() {
 
   const filtered = schuzky.filter(s => filtr === "vse" || s.stav === filtr)
   const dnes = new Date(); dnes.setHours(0,0,0,0)
-  const budouci = filtered.filter(s => new Date(s.datum) >= dnes)
-  const minule  = filtered.filter(s => new Date(s.datum) < dnes)
+  const jeProbehl = (s: Schuzka) => !!najdiSvatbu(s, zakazky)?.videohovor_datum || new Date(s.datum) < dnes
+  const budouci = filtered.filter(s => !jeProbehl(s))
+  const minule  = filtered.filter(s =>  jeProbehl(s))
 
   const counts = {
     vse:       schuzky.length,
@@ -500,6 +525,7 @@ export default function SchuzkyPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {budouci.map(s => (
                     <SchuzkaKarta key={s.id} s={s} zakazka={najdiSvatbu(s, zakazky)}
+                      probehla={!!najdiSvatbu(s, zakazky)?.videohovor_datum}
                       onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} onProbehla={handleProbehla} />
                   ))}
                 </div>
@@ -512,6 +538,7 @@ export default function SchuzkyPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {minule.map(s => (
                     <SchuzkaKarta key={s.id} s={s} zakazka={najdiSvatbu(s, zakazky)}
+                      probehla={!!najdiSvatbu(s, zakazky)?.videohovor_datum}
                       onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} onProbehla={handleProbehla} />
                   ))}
                 </div>
