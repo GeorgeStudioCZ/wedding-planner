@@ -700,8 +700,9 @@ export default function Home() {
           <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {(() => {
               const ds = z.datum_svatby || ""
-              const maProbehlou = schuzkyMinuleDny.has(ds) || !!z.videohovor_datum
-              const maBudouci   = schuzkyBudouciDny.has(ds) && !maProbehlou
+              const maSchuzku   = schuzkyMinuleDny.has(ds) || schuzkyBudouciDny.has(ds)
+              const maProbehlou = !!z.videohovor_datum
+              const maBudouci   = maSchuzku && !maProbehlou
               if (!maProbehlou && !maBudouci) return null
               return (
                 <span
