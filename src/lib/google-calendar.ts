@@ -73,7 +73,6 @@ function buildEvent(rez: GCalRezervace) {
   return {
     summary:     title,
     description: lines,
-    colorId:     color,
     start: { date: rez.start_date },
     end:   { date: addDay(rez.end_date) },  // Google all-day end is exclusive
   }
@@ -110,9 +109,8 @@ function buildPickupEvent(rez: GCalRezervace) {
 
   const times = parseTimeRange(rez.cas_vyzvednuti)
   return {
-    summary:     `Vyzvednutí autostanu – ${zakaznikJmeno}`,
+    summary:     `⛺ Vyzvednutí autostanu – ${zakaznikJmeno}`,
     description,
-    colorId:     "2",  // Sage/green
     start: times
       ? { dateTime: `${rez.start_date}T${times.start}:00`, timeZone: "Europe/Prague" }
       : { date: rez.start_date },
@@ -136,9 +134,8 @@ function buildReturnEvent(rez: GCalRezervace) {
 
   const times = parseTimeRange(rez.cas_vraceni)
   return {
-    summary:     `Vrácení autostanu – ${zakaznikJmeno}`,
+    summary:     `⛺ Vrácení autostanu – ${zakaznikJmeno}`,
     description,
-    colorId:     "6",  // Tangerine/orange
     start: times
       ? { dateTime: `${rez.end_date}T${times.start}:00`, timeZone: "Europe/Prague" }
       : { date: rez.end_date },
