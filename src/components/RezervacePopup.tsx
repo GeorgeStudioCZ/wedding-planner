@@ -814,7 +814,7 @@ export default function RezervacePopup({
               <select name="cas_vyzvednuti" value={form.cas_vyzvednuti} onChange={handleChange} className={inp}>
                 <option value="">Čas...</option>
                 {Array.from({ length: 14 }, (_, i) => i + 8).map(h => (
-                  <option key={h} value={`${h}:00 - ${h + 1}:00`}>{h}:00 – {h + 1}:00</option>
+                  <option key={h} value={`${h}:00 – ${h + 1}:00`}>{h}:00 – {h + 1}:00</option>
                 ))}
               </select>
             </div>
@@ -827,7 +827,7 @@ export default function RezervacePopup({
               <select name="cas_vraceni" value={form.cas_vraceni} onChange={handleChange} className={inp}>
                 <option value="">Čas...</option>
                 {Array.from({ length: 14 }, (_, i) => i + 8).map(h => (
-                  <option key={h} value={`${h}:00 - ${h + 1}:00`}>{h}:00 – {h + 1}:00</option>
+                  <option key={h} value={`${h}:00 – ${h + 1}:00`}>{h}:00 – {h + 1}:00</option>
                 ))}
               </select>
             </div>
