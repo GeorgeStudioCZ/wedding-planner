@@ -421,10 +421,18 @@ export default function RezervacePage() {
   const platbaInfo = platbaRef.current
   return (
     <div style={{padding:"32px 16px",maxWidth:520,margin:"0 auto"}}>
-      <div style={{textAlign:"center",marginBottom:24}}>
+      <div style={{textAlign:"center",marginBottom:20}}>
         <div style={{fontSize:52,marginBottom:8}}>✅</div>
         <h2 style={{margin:"0 0 8px",fontSize:21,fontWeight:800,color:"#111827"}}>Rezervace přijata!</h2>
         <p style={{margin:0,color:"#6b7280",lineHeight:1.6}}>Zkontrolujte prosím níže platební údaje a proveďte platbu.</p>
+      </div>
+
+      {/* 72h platební lhůta */}
+      <div style={{background:"#fff7ed",borderRadius:10,padding:"14px 18px",border:"2px solid #f97316",marginBottom:16}}>
+        <div style={{fontSize:12,fontWeight:700,color:"#c2410c",textTransform:"uppercase" as const,letterSpacing:".06em",marginBottom:6}}>⏰ Rezervaci potvrďte platbou do 72 hodin</div>
+        <p style={{margin:0,fontSize:13,color:"#9a3412",lineHeight:1.6}}>
+          Pokud platba nedorazí do <strong>72 hodin od odeslání rezervace</strong>, bude rezervace automaticky stornována a termín uvolněn.
+        </p>
       </div>
 
       {/* Shrnutí rezervace */}

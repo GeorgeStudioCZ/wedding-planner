@@ -63,8 +63,16 @@ function htmlZakaznik(d: RezervaceMailPayload): string {
 
     <!-- tělo -->
     <div style="padding:28px 32px">
-      <p style="margin:0 0 20px;font-size:15px;color:#374151">Ahoj <strong>${jmeno}</strong>,<br>
-      děkujeme za vaši rezervaci. Níže najdete shrnutí objednávky. Brzy se vám ozveme pro potvrzení termínu.</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#374151">Ahoj <strong>${jmeno}</strong>,<br>
+      děkujeme za vaši rezervaci. Níže najdete shrnutí objednávky a platební údaje.</p>
+
+      <div style="background:#fff7ed;border:2px solid #f97316;border-radius:8px;padding:14px 18px;margin-bottom:20px">
+        <div style="font-size:12px;font-weight:700;color:#c2410c;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">⏰ Rezervaci potvrďte platbou</div>
+        <p style="margin:0;font-size:13px;color:#9a3412;line-height:1.6">
+          Na zaplacení máte <strong>72 hodin od odeslání rezervace</strong>.<br>
+          Pokud platba v tomto termínu nedorazí, bude rezervace automaticky stornována.
+        </p>
+      </div>
 
       <!-- rezervace -->
       <div style="background:#f9fafb;border-radius:8px;padding:16px 20px;margin-bottom:20px">
@@ -206,7 +214,7 @@ export async function POST(req: NextRequest) {
   try {
     const data: RezervaceMailPayload = await req.json()
 
-    const subjZak = `Potvrzení rezervace – ${data.polozka}`
+    const subjZak = `Přijali jsme vaši rezervaci – ${data.polozka}`
     const subjNotif = `Nová rezervace: ${data.zakaznik.jmeno} ${data.zakaznik.prijmeni} – ${data.polozka}`
     const htmlZak = htmlZakaznik(data)
     const htmlNotif = htmlNotifikace(data)

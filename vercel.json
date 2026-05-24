@@ -3,6 +3,10 @@
     {
       "path": "/api/pujcovna/fio-sync",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/pujcovna/platba-reminder",
+      "schedule": "0 7 * * *"
     }
   ]
 }
