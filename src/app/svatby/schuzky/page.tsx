@@ -93,15 +93,27 @@ function StavBadge({ stav }: { stav: string }) {
 
 // ── Karta schůzky ─────────────────────────────────────────────────────────────
 function SchuzkaKarta({
-  s, zakazka, onStav, onDelete,
+  s, zakazka, onStav, onDelete, onTermin,
 }: {
   s: Schuzka
   zakazka: Zakazka | null
   onStav: (id: number, stav: Schuzka["stav"]) => void
   onDelete: (id: number) => void
+  onTermin: (id: number, datum: string, cas: string) => void
 }) {
   const hod = parseHod(s.cas)
-  const [expanded, setExpanded] = useState(false)
+  const [expanded,   setExpanded]   = useState(false)
+  const [editTermin, setEditTermin] = useState(false)
+  const [editDatum,  setEditDatum]  = useState(s.datum)
+  const [editCas,    setEditCas]    = useState(s.cas.slice(0, 5))
+
+  async function ulozTermin() {
+    if (!editDatum || !editCas) return
+    const db = createClient()
+    await db.from("schuzky").update({ datum: editDatum, cas: editCas }).eq("id", s.id)
+    onTermin(s.id, editDatum, editCas)
+    setEditTermin(false)
+  }
 
   return (
     <div style={{
@@ -111,20 +123,45 @@ function SchuzkaKarta({
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
 
         {/* Datum + čas blok */}
-        <div style={{
-          flexShrink: 0, width: 58, textAlign: "center", background: "#fafaf9", borderRadius: 10,
-          padding: "8px 4px", border: "1px solid #f0ede8",
-        }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#be123c", lineHeight: 1 }}>
-            {new Date(s.datum).getDate()}
+        {editTermin ? (
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 5, minWidth: 58 }}>
+            <input type="date" value={editDatum} onChange={e => setEditDatum(e.target.value)}
+              style={{ fontSize: 12, border: "1px solid #e5e7eb", borderRadius: 7, padding: "4px 7px", outline: "none", width: 130 }} />
+            <input type="time" value={editCas} onChange={e => setEditCas(e.target.value)}
+              style={{ fontSize: 12, border: "1px solid #e5e7eb", borderRadius: 7, padding: "4px 7px", outline: "none", width: 90 }} />
+            <div style={{ display: "flex", gap: 5, marginTop: 2 }}>
+              <button onClick={ulozTermin}
+                style={{ flex: 1, fontSize: 11, fontWeight: 700, padding: "4px 0", borderRadius: 7, border: "none", cursor: "pointer", background: "#10b981", color: "#fff" }}>
+                Uložit
+              </button>
+              <button onClick={() => setEditTermin(false)}
+                style={{ flex: 1, fontSize: 11, padding: "4px 0", borderRadius: 7, border: "1px solid #e5e7eb", cursor: "pointer", background: "white", color: "#9ca3af" }}>
+                Zrušit
+              </button>
+            </div>
           </div>
-          <div style={{ fontSize: 10.5, color: "#9ca3af", fontWeight: 600, marginTop: 1 }}>
-            {new Date(s.datum).toLocaleDateString("cs-CZ", { month: "short" }).replace(".","").toUpperCase()}
+        ) : (
+          <div
+            onClick={() => { setEditDatum(s.datum); setEditCas(s.cas.slice(0,5)); setEditTermin(true) }}
+            title="Klikni pro změnu termínu"
+            style={{
+              flexShrink: 0, width: 58, textAlign: "center", background: "#fafaf9", borderRadius: 10,
+              padding: "8px 4px", border: "1px solid #f0ede8", cursor: "pointer",
+            }}
+            onMouseOver={e => (e.currentTarget.style.background = "#fff1f2")}
+            onMouseOut={e => (e.currentTarget.style.background = "#fafaf9")}
+          >
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#be123c", lineHeight: 1 }}>
+              {new Date(s.datum).getDate()}
+            </div>
+            <div style={{ fontSize: 10.5, color: "#9ca3af", fontWeight: 600, marginTop: 1 }}>
+              {new Date(s.datum).toLocaleDateString("cs-CZ", { month: "short" }).replace(".","").toUpperCase()}
+            </div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "#374151", marginTop: 5 }}>
+              {String(hod).padStart(2,"0")}:00
+            </div>
           </div>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: "#374151", marginTop: 5 }}>
-            {String(hod).padStart(2,"0")}:00
-          </div>
-        </div>
+        )}
 
         {/* Hlavní info */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -279,6 +316,10 @@ export default function SchuzkyPage() {
     setSchuzky(prev => prev.filter(s => s.id !== id))
   }
 
+  function handleTermin(id: number, datum: string, cas: string) {
+    setSchuzky(prev => prev.map(s => s.id === id ? { ...s, datum, cas } : s))
+  }
+
   async function handleStav(id: number, stav: Schuzka["stav"]) {
     const db = createClient()
     await db.from("schuzky").update({ stav }).eq("id", id)
@@ -405,6 +446,7 @@ export default function SchuzkyPage() {
                       zakazka={najdiSvatbu(s, zakazky)}
                       onStav={handleStav}
                       onDelete={handleDelete}
+                      onTermin={handleTermin}
                     />
                   ))}
                 </div>
@@ -423,6 +465,7 @@ export default function SchuzkyPage() {
                       zakazka={najdiSvatbu(s, zakazky)}
                       onStav={handleStav}
                       onDelete={handleDelete}
+                      onTermin={handleTermin}
                     />
                   ))}
                 </div>
