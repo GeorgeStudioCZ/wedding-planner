@@ -117,7 +117,6 @@ export async function vytvorFakturuZeZalohy(
       invoice_currency: "CZK",
       logo_id: 405873,
       proforma_id: String(proformaId),
-      already_paid: 1,
       bank_accounts: [{ id: BANK_ACC_ID }],
     },
     Client: buildClient(klient),
