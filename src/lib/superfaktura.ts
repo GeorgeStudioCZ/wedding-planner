@@ -159,6 +159,34 @@ export async function getInvoice(id: number): Promise<SFFakturaVystup> {
   }
 }
 
+// ── Najdi ostrou fakturu napojenou na zálohu (zabraňuje duplicitám) ───────────
+
+export async function findInvoiceByProforma(proformaId: number): Promise<SFFakturaVystup | null> {
+  try {
+    // SF index endpoint — hledáme ostrá faktura (regular) se stejným proforma_id
+    const json = await sfGet(`/invoices/index.json?type=regular&search_attributes[proforma_id]=${proformaId}`)
+    const raw  = (json.data ?? json) as unknown
+    // SF vrací buď pole nebo objekt s .items
+    const list: unknown[] = Array.isArray(raw)
+      ? raw
+      : Array.isArray((raw as Record<string,unknown>)?.items)
+        ? (raw as Record<string,unknown[]>).items
+        : []
+    if (list.length === 0) return null
+    const first = list[0] as Record<string, unknown>
+    const inv   = (first.Invoice ?? first) as Record<string, unknown>
+    if (!inv?.id) return null
+    return {
+      id:         Number(inv.id),
+      invoice_no: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
+      pdf_url:    `${SF_BASE}/invoices/pdf/${inv.id}/token:${inv.token}`,
+    }
+  } catch {
+    // SF API nemusí filtr podporovat — vrátime null, volající se rozhodne co dál
+    return null
+  }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildClient(k: SFKlient): Record<string, unknown> {

@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse }                       from "next/server"
 import { createClient }                                    from "@supabase/supabase-js"
-import { getInvoice, vytvorFakturuZeZalohy, SFKlient, SFPolozka } from "@/lib/superfaktura"
+import { getInvoice, findInvoiceByProforma, vytvorFakturuZeZalohy, SFKlient, SFPolozka } from "@/lib/superfaktura"
 import { sendMail }                                        from "@/lib/mailer"
 import { logEmail }                                        from "@/lib/email-log"
 import { htmlFaktura }                                     from "@/app/api/pujcovna/faktura-zaplaceno/route"
@@ -64,15 +64,26 @@ export async function POST(req: NextRequest) {
     if (rez.sf_faktura_id) {
       // Faktura existuje → načti aktuální data ze SF
       faktura = await getInvoice(rez.sf_faktura_id)
-    } else if (rez.sf_proforma_id && platba.klient && platba.polozky?.length) {
-      // Faktura nebyla vytvořena (nebo se ID neuložilo) → vytvoř ze zálohy
-      faktura = await vytvorFakturuZeZalohy(
-        rez.sf_proforma_id,
-        platba.klient,
-        platba.polozky,
-      )
-      // Ulož ID faktury do DB
-      await sb.from("pujcovna_rezervace").update({ sf_faktura_id: faktura.id }).eq("id", rez.id)
+    } else if (rez.sf_proforma_id) {
+      // sf_faktura_id není uloženo — nejdřív zkus najít existující fakturu v SF
+      // (zabraňuje vytvoření duplikátů)
+      const existing = platba.klient ? await findInvoiceByProforma(rez.sf_proforma_id) : null
+
+      if (existing) {
+        // Faktura existuje v SF, jen ID nebylo uloženo do DB
+        faktura = existing
+        await sb.from("pujcovna_rezervace").update({ sf_faktura_id: existing.id }).eq("id", rez.id)
+      } else if (platba.klient && platba.polozky?.length) {
+        // Faktura v SF opravdu neexistuje → vytvoř novou ze zálohy
+        faktura = await vytvorFakturuZeZalohy(
+          rez.sf_proforma_id,
+          platba.klient,
+          platba.polozky,
+        )
+        await sb.from("pujcovna_rezervace").update({ sf_faktura_id: faktura.id }).eq("id", rez.id)
+      } else {
+        return NextResponse.json({ ok: false, error: "Chybí sf_platba_data (klient/polozky) — nelze vytvořit fakturu. Zkontrolujte rezervaci v SF ručně." }, { status: 422 })
+      }
     } else {
       return NextResponse.json({ ok: false, error: "Chybí sf_faktura_id i sf_proforma_id — nelze vytvořit fakturu" }, { status: 422 })
     }
