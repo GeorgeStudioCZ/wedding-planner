@@ -202,13 +202,25 @@ function buildClient(k: SFKlient): Record<string, unknown> {
 }
 
 function buildItem(p: SFPolozka): Record<string, unknown> {
+  // Zaokrouhlovací chyba fix:
+  // Počítáme bez-DPH cenu z CELKOVÉ částky (cena × pocet), nikoli z jednotkové.
+  // Pak pošleme quantity=1 — eliminuje kumulaci zaokrouhlovacích chyb.
+  //
+  // Př. 7 dní × 500 Kč:
+  //   ❌ bezDPH(500) = 413.22 → × 7 × 1.21 = 3499.97 Kč (chyba -0.03)
+  //   ✅ bezDPH(3500) = 2892.56 → × 1 × 1.21 = 3500.00 Kč ✓
+  const totalBezDPH   = Math.round(bezDPH(p.cena_sdph * p.pocet) * 100) / 100
+  const jednotkaLabel = p.pocet > 1 && p.jednotka
+    ? `${p.pocet} ${p.jednotka}`   // "7 dní", "3 ks" …
+    : p.jednotka
+
   return {
     name:       p.nazev,
-    unit_price: Math.round(bezDPH(p.cena_sdph) * 100) / 100,
+    unit_price: totalBezDPH,
     tax:        21,
-    quantity:   p.pocet,
-    ...(p.jednotka ? { unit:        p.jednotka } : {}),
-    ...(p.popis    ? { description: p.popis    } : {}),
+    quantity:   1,
+    ...(jednotkaLabel ? { unit:        jednotkaLabel } : {}),
+    ...(p.popis       ? { description: p.popis       } : {}),
   }
 }
 
