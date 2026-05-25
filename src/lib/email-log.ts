@@ -6,16 +6,38 @@ const supabase = createClient(
 )
 
 export async function logEmail(entry: {
-  sluzba: string
-  typ: string
+  sluzba:   string
+  typ:      string
   to_email: string
   to_name?: string | null
-  subject: string
-  html: string
-  status?: string
+  subject:  string
+  html:     string
+  status?:  string
 }) {
   const { error } = await supabase
     .from("komunikace_emaily")
-    .insert({ ...entry, status: entry.status ?? "sent" })
+    .insert({ ...entry, kanal: "email", status: entry.status ?? "sent" })
   if (error) console.error("[logEmail]", error.message)
+}
+
+export async function logSms(entry: {
+  sluzba:   string
+  typ:      string
+  to_tel:   string
+  to_name?: string | null
+  text:     string
+}) {
+  const { error } = await supabase
+    .from("komunikace_emaily")
+    .insert({
+      kanal:    "sms",
+      sluzba:   entry.sluzba,
+      typ:      entry.typ,
+      to_email: entry.to_tel,   // pole reuse — pro SMS ukládáme telefonní číslo
+      to_name:  entry.to_name ?? null,
+      subject:  entry.text,
+      html:     "",
+      status:   "sent",
+    })
+  if (error) console.error("[logSms]", error.message)
 }

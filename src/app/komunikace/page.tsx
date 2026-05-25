@@ -15,6 +15,7 @@ type Email = {
   subject: string
   html: string
   status: string
+  kanal: string | null   // "email" | "sms" | null (starší záznamy)
 }
 
 const SLUZBA_LABEL: Record<string, string> = {
@@ -38,6 +39,11 @@ const TYP_LABEL: Record<string, string> = {
   "schuzka-zadost":       "Schůzka žádost",
   "schuzka-potvrzeni":    "Schůzka potvrzení",
   "schuzka-notifikace":   "Schůzka (notif.)",
+  // SMS
+  "sms-rezervace":        "SMS: Rezervace",
+  "sms-upominka":         "SMS: Upomínka",
+  "sms-platba":           "SMS: Platba přijata",
+  "sms-logistika":        "SMS: Změna logistiky",
 }
 
 function formatDatumCas(iso: string) {
@@ -93,7 +99,8 @@ function KomunikaceInner() {
   const filtered = emails
     .filter(e => {
       if (filter === "vse") return true
-      if (filter === "upominky") return e.typ === "platba-reminder"
+      if (filter === "upominky") return e.typ === "platba-reminder" || e.typ === "sms-upominka"
+      if (filter === "sms") return e.kanal === "sms"
       return e.sluzba === filter
     })
     .filter(e => {
@@ -109,7 +116,8 @@ function KomunikaceInner() {
   const counts: Record<string, number> = { vse: emails.length }
   for (const e of emails) {
     counts[e.sluzba] = (counts[e.sluzba] ?? 0) + 1
-    if (e.typ === "platba-reminder") counts["upominky"] = (counts["upominky"] ?? 0) + 1
+    if (e.typ === "platba-reminder" || e.typ === "sms-upominka") counts["upominky"] = (counts["upominky"] ?? 0) + 1
+    if (e.kanal === "sms") counts["sms"] = (counts["sms"] ?? 0) + 1
   }
 
   return (
@@ -136,6 +144,7 @@ function KomunikaceInner() {
               { key: "svatby",   label: "Svatby" },
               { key: "george",   label: "George" },
               { key: "upominky", label: "⏰ Upomínky" },
+              { key: "sms",      label: "💬 SMS" },
             ].map(f => (
               <button key={f.key} onClick={() => setFilter(f.key)}
                 style={{
@@ -202,7 +211,10 @@ function KomunikaceInner() {
               </thead>
               <tbody>
                 {filtered.map((email, i) => {
-                  const sc = SLUZBA_COLOR[email.sluzba] ?? { bg: "#f3f4f6", text: "#6b7280" }
+                  const isSms = email.kanal === "sms"
+                  const sc = isSms
+                    ? { bg: "rgba(99,102,241,.1)", text: "#4f46e5" }
+                    : (SLUZBA_COLOR[email.sluzba] ?? { bg: "#f3f4f6", text: "#6b7280" })
                   return (
                     <tr key={email.id}
                       style={{ borderBottom: i < filtered.length - 1 ? "1px solid var(--line)" : "none" }}
@@ -218,7 +230,7 @@ function KomunikaceInner() {
                           fontSize: 11.5, fontWeight: 600,
                           background: sc.bg, color: sc.text,
                         }}>
-                          {SLUZBA_LABEL[email.sluzba] ?? email.sluzba}
+                          {isSms ? "💬 SMS" : (SLUZBA_LABEL[email.sluzba] ?? email.sluzba)}
                         </span>
                       </td>
                       <td style={{ padding: "12px 16px", fontSize: 12.5, color: "#374151", whiteSpace: "nowrap" }}>
@@ -230,7 +242,9 @@ function KomunikaceInner() {
                             {email.to_name}
                           </div>
                         )}
-                        <div style={{ fontSize: 12, color: "#6b7280" }}>{email.to_email}</div>
+                        <div style={{ fontSize: 12, color: "#6b7280" }}>
+                          {isSms ? "📱 " : ""}{email.to_email}
+                        </div>
                       </td>
                       <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--ink)", maxWidth: 320 }}>
                         <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -247,19 +261,21 @@ function KomunikaceInner() {
                             }}>
                             Náhled
                           </button>
-                          <button
-                            onClick={() => resend(email)}
-                            disabled={resending === email.id}
-                            style={{
-                              padding: "5px 11px", borderRadius: 7,
-                              border: "none",
-                              background: resending === email.id ? "#e5e7eb" : "#111827",
-                              fontSize: 12, color: resending === email.id ? "#9ca3af" : "white",
-                              cursor: resending === email.id ? "default" : "pointer",
-                              fontWeight: 500,
-                            }}>
-                            {resending === email.id ? "Odesílám…" : "↺ Znovu"}
-                          </button>
+                          {!isSms && (
+                            <button
+                              onClick={() => resend(email)}
+                              disabled={resending === email.id}
+                              style={{
+                                padding: "5px 11px", borderRadius: 7,
+                                border: "none",
+                                background: resending === email.id ? "#e5e7eb" : "#111827",
+                                fontSize: 12, color: resending === email.id ? "#9ca3af" : "white",
+                                cursor: resending === email.id ? "default" : "pointer",
+                                fontWeight: 500,
+                              }}>
+                              {resending === email.id ? "Odesílám…" : "↺ Znovu"}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -313,14 +329,29 @@ function KomunikaceInner() {
                 }}>×</button>
             </div>
 
-            {/* Iframe preview */}
-            <div style={{ flex: 1, overflow: "hidden" }}>
-              <iframe
-                srcDoc={preview.html}
-                sandbox="allow-same-origin"
-                style={{ width: "100%", height: "100%", minHeight: 500, border: "none" }}
-                title="Náhled e-mailu"
-              />
+            {/* Preview — iframe pro email, plain text pro SMS */}
+            <div style={{ flex: 1, overflow: "auto" }}>
+              {preview.kanal === "sms" ? (
+                <div style={{ padding: "28px 32px" }}>
+                  <div style={{
+                    background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12,
+                    padding: "16px 20px", fontSize: 15, color: "#111827", lineHeight: 1.6,
+                    whiteSpace: "pre-wrap",
+                  }}>
+                    💬 {preview.subject}
+                  </div>
+                  <div style={{ marginTop: 12, fontSize: 12, color: "#9ca3af" }}>
+                    Odesláno na: {preview.to_email}
+                  </div>
+                </div>
+              ) : (
+                <iframe
+                  srcDoc={preview.html}
+                  sandbox="allow-same-origin"
+                  style={{ width: "100%", height: "100%", minHeight: 500, border: "none" }}
+                  title="Náhled e-mailu"
+                />
+              )}
             </div>
 
             {/* Modal footer */}
@@ -335,16 +366,18 @@ function KomunikaceInner() {
                 }}>
                 Zavřít
               </button>
-              <button
-                onClick={() => { resend(preview); setPreview(null) }}
-                disabled={resending === preview.id}
-                style={{
-                  padding: "7px 16px", borderRadius: 8, border: "none",
-                  background: "#111827", fontSize: 13, color: "white",
-                  cursor: "pointer", fontWeight: 500,
-                }}>
-                ↺ Odeslat znovu
-              </button>
+              {preview.kanal !== "sms" && (
+                <button
+                  onClick={() => { resend(preview); setPreview(null) }}
+                  disabled={resending === preview.id}
+                  style={{
+                    padding: "7px 16px", borderRadius: 8, border: "none",
+                    background: "#111827", fontSize: 13, color: "white",
+                    cursor: "pointer", fontWeight: 500,
+                  }}>
+                  ↺ Odeslat znovu
+                </button>
+              )}
             </div>
           </div>
         </div>

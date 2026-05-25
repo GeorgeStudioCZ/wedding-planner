@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
 import { sendSms, smsUpominkaPlatby } from "@/lib/bulkgate"
+import { logSms } from "@/lib/email-log"
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -164,10 +165,16 @@ export async function GET() {
 
         // SMS upomínka
         if (zak.telefon) {
-          sendSms(zak.telefon, smsUpominkaPlatby({
-            vs:      rez.sf_vs ?? "",
-            polozka,
-          })).catch(err => console.error("[SMS] platba-reminder:", err))
+          const smsText = smsUpominkaPlatby({ vs: rez.sf_vs ?? "", polozka })
+          sendSms(zak.telefon, smsText)
+            .then(() => logSms({
+              sluzba:  "stany",
+              typ:     "sms-upominka",
+              to_tel:  zak.telefon as string,
+              to_name: jmeno,
+              text:    smsText,
+            }))
+            .catch(err => console.error("[SMS] platba-reminder:", err))
         }
 
         // Zapsat do historie výpůjčky

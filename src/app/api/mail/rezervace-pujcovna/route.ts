@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
 import { sendSms, smsNoveRezervace } from "@/lib/bulkgate"
+import { logSms } from "@/lib/email-log"
 
 const NOTIFIKACE_EMAIL = "info@stanujnaaute.cz"
 
@@ -232,13 +233,22 @@ export async function POST(req: NextRequest) {
 
     // SMS zákazníkovi (neblokuje odpověď)
     if (data.zakaznik.telefon && data.platba?.vs) {
-      sendSms(data.zakaznik.telefon, smsNoveRezervace({
-        jmeno:      data.zakaznik.jmeno,
-        polozka:    data.polozka,
-        vs:         data.platba.vs,
-        castka:     data.celkem,
-        cisloUctu:  data.platba.cislo_uctu,
-      })).catch(err => console.error("[SMS] nová rezervace:", err))
+      const smsText = smsNoveRezervace({
+        jmeno:     data.zakaznik.jmeno,
+        polozka:   data.polozka,
+        vs:        data.platba.vs,
+        castka:    data.celkem,
+        cisloUctu: data.platba.cislo_uctu,
+      })
+      sendSms(data.zakaznik.telefon, smsText)
+        .then(() => logSms({
+          sluzba:  "stany",
+          typ:     "sms-rezervace",
+          to_tel:  data.zakaznik.telefon,
+          to_name: `${data.zakaznik.jmeno} ${data.zakaznik.prijmeni}`.trim(),
+          text:    smsText,
+        }))
+        .catch(err => console.error("[SMS] nová rezervace:", err))
     }
 
     return NextResponse.json({ ok: true })

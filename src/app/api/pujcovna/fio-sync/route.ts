@@ -16,6 +16,7 @@ import { vytvorFakturuZeZalohy, SFKlient, SFPolozka } from "@/lib/superfaktura"
 import { sendMail }                   from "@/lib/mailer"
 import { logEmail }                   from "@/lib/email-log"
 import { sendSms, smsPlatbaPrijata }  from "@/lib/bulkgate"
+import { logSms }                     from "@/lib/email-log"
 import { htmlFaktura }                from "@/app/api/pujcovna/faktura-zaplaceno/route"
 
 // ── Ochrana endpointu ─────────────────────────────────────────────────────────
@@ -150,17 +151,24 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // SMS potvrzení platby (neblokuje)
-      const telefonPlatba = (platba.klient as { telefon?: string })?.telefon
-      const telefonZaloha = telefonPlatba ?? ""
-      if (telefonZaloha || rez.zakaznik_id) {
-        // Pokus o SMS — telefon z platba_data, jinak přeskočíme (nechceme extra DB dotaz)
-        if (telefonZaloha) {
-          sendSms(telefonZaloha, smsPlatbaPrijata({
-            jmeno:      jmenoTo,
-            invoice_no: faktura.invoice_no,
-          })).catch(err => console.error("[SMS] fio-sync platba:", err))
-        }
+      // SMS potvrzení platby — telefon z sf_platba_data nebo záložně ze zakaznici
+      const telefonPlatba = (platba.klient as { telefon?: string })?.telefon ?? ""
+      const telefonSms = telefonPlatba || (rez.zakaznik_id
+        ? await sb.from("zakaznici").select("telefon").eq("id", rez.zakaznik_id).maybeSingle()
+            .then(r => (r.data as { telefon?: string } | null)?.telefon ?? "")
+        : "")
+
+      if (telefonSms) {
+        const smsText = smsPlatbaPrijata({ jmeno: jmenoTo, invoice_no: faktura.invoice_no })
+        sendSms(telefonSms, smsText)
+          .then(() => logSms({
+            sluzba:  "stany",
+            typ:     "sms-platba",
+            to_tel:  telefonSms,
+            to_name: jmenoTo,
+            text:    smsText,
+          }))
+          .catch(err => console.error("[SMS] fio-sync platba:", err))
       }
 
       if (emailTo) {
