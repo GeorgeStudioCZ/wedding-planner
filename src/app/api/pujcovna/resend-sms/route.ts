@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: `Neplatné telefonní číslo: ${telefonTo}` }, { status: 422 })
     }
 
-    const polozka = (rez.pujcovna_polozky as { name: string } | null)?.name ?? "Výpůjčka"
+    const polozka = (rez.pujcovna_polozky as unknown as { name: string } | null)?.name ?? "Výpůjčka"
     const stavRez = rez.stav as string
 
     // 3. Sestavit SMS podle stavu
