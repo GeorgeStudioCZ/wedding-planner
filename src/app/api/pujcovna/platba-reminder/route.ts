@@ -114,7 +114,7 @@ export async function GET() {
     const { data: rezervace, error } = await sb
       .from("pujcovna_rezervace")
       .select("*, pujcovna_polozky(name)")
-      .in("stav", ["web-rezervace", "rezervace"])
+      .in("stav", ["web-rezervace", "rezervace", "cekam-platbu"])
       .lt("created_at", cutoff48h)
       .gt("created_at", cutoff72h)
       .or("pripominacka_sent.is.null,pripominacka_sent.eq.false")
