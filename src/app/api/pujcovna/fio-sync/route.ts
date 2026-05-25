@@ -15,7 +15,8 @@ import { fetchTransactionsByPeriod }  from "@/lib/fio"
 import { vytvorFakturuZeZalohy, SFKlient, SFPolozka } from "@/lib/superfaktura"
 import { sendMail }                   from "@/lib/mailer"
 import { logEmail }                   from "@/lib/email-log"
-import { sendSms, smsPlatbaPrijata }  from "@/lib/bulkgate"
+import { sendSms }                    from "@/lib/bulkgate"
+import { textPlatbaPrijata }          from "@/lib/sms-templates"
 import { logSms }                     from "@/lib/email-log"
 import { htmlFaktura }                from "@/app/api/pujcovna/faktura-zaplaceno/route"
 
@@ -159,7 +160,7 @@ export async function GET(req: NextRequest) {
         : "")
 
       if (telefonSms) {
-        const smsText = smsPlatbaPrijata({ jmeno: jmenoTo, invoice_no: faktura.invoice_no })
+        const smsText = await textPlatbaPrijata({ jmeno: jmenoTo.split(" ")[0], invoice_no: faktura.invoice_no })
         try {
           await sendSms(telefonSms, smsText)
           await logSms({ sluzba: "stany", typ: "sms-platba", to_tel: telefonSms, to_name: jmenoTo, text: smsText })

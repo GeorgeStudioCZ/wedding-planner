@@ -9,7 +9,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createClient }              from "@supabase/supabase-js"
-import { sendSms, smsNoveRezervace, smsPlatbaPrijata, normalizePhone } from "@/lib/bulkgate"
+import { sendSms, normalizePhone } from "@/lib/bulkgate"
+import { textNovaRezervace, textPlatbaPrijata } from "@/lib/sms-templates"
 import { logSms }                    from "@/lib/email-log"
 
 const SF_CISLO_UCTU = process.env.SF_CISLO_UCTU ?? ""
@@ -75,19 +76,19 @@ export async function POST(req: NextRequest) {
     if (["zaplaceno", "vypujceno", "dokonceno"].includes(stavRez)) {
       // SMS potvrzení platby
       const invoice_no = platba.invoice_no ?? `VS ${rez.sf_vs ?? ""}`
-      smsText = smsPlatbaPrijata({ jmeno: jmenoTo.split(" ")[0], invoice_no })
+      smsText = await textPlatbaPrijata({ jmeno: jmenoTo.split(" ")[0], invoice_no })
       typ     = "sms-platba"
     } else {
       // SMS s platebními údaji (nová rezervace / čeká na platbu)
       if (!rez.sf_vs) {
         return NextResponse.json({ ok: false, error: "Rezervace nemá variabilní symbol (sf_vs) — nelze poslat SMS s platebními údaji" }, { status: 422 })
       }
-      smsText = smsNoveRezervace({
-        jmeno:     jmenoTo.split(" ")[0],
+      smsText = await textNovaRezervace({
+        jmeno:      jmenoTo.split(" ")[0],
         polozka,
-        vs:        rez.sf_vs,
-        castka:    platba.celkem ?? 0,
-        cisloUctu: SF_CISLO_UCTU,
+        vs:         rez.sf_vs,
+        castka:     platba.celkem ?? 0,
+        cislo_uctu: SF_CISLO_UCTU,
       })
       typ = "sms-rezervace"
     }

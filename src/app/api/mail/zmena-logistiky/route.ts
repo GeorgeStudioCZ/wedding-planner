@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
-import { sendSms, smsZmenaLogistiky } from "@/lib/bulkgate"
+import { sendSms } from "@/lib/bulkgate"
 import { logSms } from "@/lib/email-log"
+import { textZmenaLogistiky } from "@/lib/sms-templates"
 
 export interface ZmenaLogistikyPayload {
   zakaznik: {
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     // SMS o změně logistiky
     if (data.zakaznik.telefon) {
-      const smsText = smsZmenaLogistiky({
+      const smsText = await textZmenaLogistiky({
         polozka:         data.polozka,
         datumVyzvednuti: data.datumVyzvednuti,
         casVyzvednuti:   data.casVyzvednuti,

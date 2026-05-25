@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import AppShell, { AppModule } from "@/components/AppShell"
 import { createClient } from "@/lib/supabase-browser"
+import SablonaEditor from "./SablonaEditor"
 
 type Email = {
   id: number
@@ -55,6 +56,7 @@ function KomunikaceInner() {
   const searchParams = useSearchParams()
   const from = (searchParams.get("from") ?? "wed") as AppModule
 
+  const [view, setView]         = useState<"zpravy" | "sablony">("zpravy")
   const [emails, setEmails]     = useState<Email[]>([])
   const [loading, setLoading]   = useState(true)
   const [filter, setFilter]     = useState("vse")
@@ -125,16 +127,36 @@ function KomunikaceInner() {
       <div style={{ padding: "28px 32px" }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
-            Komunikace
-          </h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13.5, color: "var(--ink-2)" }}>
-            Historie odeslaných e-mailů napříč všemi projekty
-          </p>
+        <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
+              Komunikace
+            </h1>
+            <p style={{ margin: "4px 0 0", fontSize: 13.5, color: "var(--ink-2)" }}>
+              {view === "sablony" ? "Šablony SMS zpráv — editujte texty odesílané zákazníkům" : "Historie odeslaných e-mailů napříč všemi projekty"}
+            </p>
+          </div>
+          {/* Přepínač zobrazení */}
+          <div style={{ display: "flex", background: "var(--bg-2, #f3f4f6)", borderRadius: 10, padding: 3, flexShrink: 0 }}>
+            {([["zpravy", "📬 Zprávy"], ["sablony", "📝 Šablony SMS"]] as const).map(([v, label]) => (
+              <button key={v} onClick={() => setView(v)}
+                style={{
+                  padding: "7px 16px", borderRadius: 7, border: "none", cursor: "pointer",
+                  fontSize: 13, fontWeight: view === v ? 600 : 400,
+                  background: view === v ? "white" : "transparent",
+                  color: view === v ? "var(--ink)" : "var(--ink-2)",
+                  boxShadow: view === v ? "0 1px 3px rgba(0,0,0,.1)" : "none",
+                  transition: "all .15s",
+                }}>{label}</button>
+            ))}
+          </div>
         </div>
 
-        {/* Controls */}
+        {/* Šablony SMS */}
+        {view === "sablony" && <SablonaEditor />}
+
+        {/* Controls + Table (only in zpravy view) */}
+        {view === "zpravy" && (<>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18, alignItems: "center" }}>
           {/* Filter tabs */}
           <div style={{ display: "flex", gap: 4, background: "var(--bg-2, #f3f4f6)", borderRadius: 10, padding: 3 }}>
@@ -308,6 +330,7 @@ function KomunikaceInner() {
             </table>
           )}
         </div>
+        </>)}
 
       </div>
 

@@ -5,8 +5,9 @@ import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
-import { sendSms, smsUpominkaPlatby } from "@/lib/bulkgate"
+import { sendSms } from "@/lib/bulkgate"
 import { logSms } from "@/lib/email-log"
+import { textUpominkaPlatby } from "@/lib/sms-templates"
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -165,7 +166,7 @@ export async function GET() {
 
         // SMS upomínka
         if (zak.telefon) {
-          const smsText = smsUpominkaPlatby({ vs: rez.sf_vs ?? "", polozka })
+          const smsText = await textUpominkaPlatby({ vs: rez.sf_vs ?? "", polozka })
           try {
             await sendSms(zak.telefon, smsText)
             await logSms({ sluzba: "stany", typ: "sms-upominka", to_tel: zak.telefon as string, to_name: jmeno, text: smsText })

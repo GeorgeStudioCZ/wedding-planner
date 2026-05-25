@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
-import { sendSms, smsNoveRezervace } from "@/lib/bulkgate"
+import { sendSms } from "@/lib/bulkgate"
 import { logSms } from "@/lib/email-log"
+import { textNovaRezervace } from "@/lib/sms-templates"
 
 const NOTIFIKACE_EMAIL = "info@stanujnaaute.cz"
 
@@ -233,12 +234,12 @@ export async function POST(req: NextRequest) {
 
     // SMS zákazníkovi (neblokuje odpověď)
     if (data.zakaznik.telefon && data.platba?.vs) {
-      const smsText = smsNoveRezervace({
-        jmeno:     data.zakaznik.jmeno,
-        polozka:   data.polozka,
-        vs:        data.platba.vs,
-        castka:    data.celkem,
-        cisloUctu: data.platba.cislo_uctu,
+      const smsText = await textNovaRezervace({
+        jmeno:      data.zakaznik.jmeno,
+        polozka:    data.polozka,
+        vs:         data.platba.vs,
+        castka:     data.celkem,
+        cislo_uctu: data.platba.cislo_uctu,
       })
       ;(async () => {
         try {
