@@ -171,6 +171,7 @@ export default function RezervacePopup({
   const [mazani, setMazani] = useState(false)
   const [posilamZnovu, setPosilamZnovu] = useState(false)
   const [posilamFakturu, setPosilamFakturu] = useState(false)
+  const [posilamSms, setPosilamSms] = useState(false)
 
   // Close on Escape
   useEffect(() => {
@@ -375,6 +376,28 @@ export default function RezervacePopup({
       alert("Chyba: " + String(err))
     } finally {
       setPosilamFakturu(false)
+    }
+  }
+
+  async function poslatSms() {
+    if (!rez) return
+    setPosilamSms(true)
+    try {
+      const res  = await fetch("/api/pujcovna/resend-sms", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ rezervaceId: rez.id }),
+      })
+      const json = await res.json()
+      if (json.ok) {
+        alert(`SMS odeslána na ${json.to}`)
+      } else {
+        alert("Chyba: " + json.error)
+      }
+    } catch (err) {
+      alert("Chyba: " + String(err))
+    } finally {
+      setPosilamSms(false)
     }
   }
 
@@ -594,6 +617,15 @@ export default function RezervacePopup({
                 📄 {posilamFakturu ? "Odesílám…" : "Faktura"}
               </button>
             )}
+            <button
+              onClick={poslatSms}
+              disabled={posilamSms}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: posilamSms ? "#f3f4f6" : "#f5f3ff", color: posilamSms ? "#9ca3af" : "#7c3aed" }}
+              title="Znovu odeslat SMS zákazníkovi"
+            >
+              📱 {posilamSms ? "Odesílám…" : "SMS"}
+            </button>
             <button
               onClick={() => setView("edit")}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
