@@ -5,6 +5,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
+import { sendSms, smsUpominkaPlatby } from "@/lib/bulkgate"
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -129,7 +130,7 @@ export async function GET() {
 
         const { data: zak } = await sb
           .from("zakaznici")
-          .select("jmeno, prijmeni, email")
+          .select("jmeno, prijmeni, email, telefon")
           .eq("id", rez.zakaznik_id)
           .single()
 
@@ -160,6 +161,14 @@ export async function GET() {
         })
 
         await sb.from("pujcovna_rezervace").update({ pripominacka_sent: true }).eq("id", rez.id)
+
+        // SMS upomínka
+        if (zak.telefon) {
+          sendSms(zak.telefon, smsUpominkaPlatby({
+            vs:      rez.sf_vs ?? "",
+            polozka,
+          })).catch(err => console.error("[SMS] platba-reminder:", err))
+        }
 
         // Zapsat do historie výpůjčky
         await sb.from("pujcovna_rezervace_historie").insert([{

@@ -15,6 +15,7 @@ import { fetchTransactionsByPeriod }  from "@/lib/fio"
 import { vytvorFakturuZeZalohy, SFKlient, SFPolozka } from "@/lib/superfaktura"
 import { sendMail }                   from "@/lib/mailer"
 import { logEmail }                   from "@/lib/email-log"
+import { sendSms, smsPlatbaPrijata }  from "@/lib/bulkgate"
 import { htmlFaktura }                from "@/app/api/pujcovna/faktura-zaplaceno/route"
 
 // ── Ochrana endpointu ─────────────────────────────────────────────────────────
@@ -146,6 +147,19 @@ export async function GET(req: NextRequest) {
         if (zak?.email) {
           emailTo = zak.email
           if (!jmenoTo) jmenoTo = `${zak.jmeno ?? ""} ${zak.prijmeni ?? ""}`.trim()
+        }
+      }
+
+      // SMS potvrzení platby (neblokuje)
+      const telefonPlatba = (platba.klient as { telefon?: string })?.telefon
+      const telefonZaloha = telefonPlatba ?? ""
+      if (telefonZaloha || rez.zakaznik_id) {
+        // Pokus o SMS — telefon z platba_data, jinak přeskočíme (nechceme extra DB dotaz)
+        if (telefonZaloha) {
+          sendSms(telefonZaloha, smsPlatbaPrijata({
+            jmeno:      jmenoTo,
+            invoice_no: faktura.invoice_no,
+          })).catch(err => console.error("[SMS] fio-sync platba:", err))
         }
       }
 

@@ -490,7 +490,7 @@ export default function RezervacePopup({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            zakaznik: { jmeno: zakaznik.jmeno, email: zakaznik.email },
+            zakaznik: { jmeno: zakaznik.jmeno, email: zakaznik.email, telefon: zakaznik.telefon },
             polozka: polozka.name,
             datumVyzvednuti: form.datum_vyzvednuti || rez.start_date,
             casVyzvednuti:   form.cas_vyzvednuti,

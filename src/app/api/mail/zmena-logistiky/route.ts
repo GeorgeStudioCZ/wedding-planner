@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
+import { sendSms, smsZmenaLogistiky } from "@/lib/bulkgate"
 
 export interface ZmenaLogistikyPayload {
   zakaznik: {
-    jmeno: string
-    email: string
+    jmeno:    string
+    email:    string
+    telefon?: string
   }
   polozka: string
   datumVyzvednuti: string   // ISO "2026-06-10"
@@ -79,6 +81,17 @@ export async function POST(req: NextRequest) {
 
     await sendMail({ sluzba: "stany", to: data.zakaznik.email, subject: subj, html })
     await logEmail({ sluzba: "stany", typ: "zmena-logistiky", to_email: data.zakaznik.email, to_name: data.zakaznik.jmeno, subject: subj, html })
+
+    // SMS o změně logistiky
+    if (data.zakaznik.telefon) {
+      sendSms(data.zakaznik.telefon, smsZmenaLogistiky({
+        polozka:         data.polozka,
+        datumVyzvednuti: data.datumVyzvednuti,
+        casVyzvednuti:   data.casVyzvednuti,
+        datumVraceni:    data.datumVraceni,
+        casVraceni:      data.casVraceni,
+      })).catch(err => console.error("[SMS] zmena-logistiky:", err))
+    }
 
     return NextResponse.json({ ok: true })
   } catch (err: unknown) {

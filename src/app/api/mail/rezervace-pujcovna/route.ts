@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
+import { sendSms, smsNoveRezervace } from "@/lib/bulkgate"
 
 const NOTIFIKACE_EMAIL = "info@stanujnaaute.cz"
 
@@ -228,6 +229,17 @@ export async function POST(req: NextRequest) {
       logEmail({ sluzba: "stany", typ: "rezervace-pujcovna", to_email: data.zakaznik.email, to_name: `${data.zakaznik.jmeno} ${data.zakaznik.prijmeni}`, subject: subjZak, html: htmlZak }),
       logEmail({ sluzba: "stany", typ: "rezervace-notifikace", to_email: NOTIFIKACE_EMAIL, subject: subjNotif, html: htmlNotif }),
     ])
+
+    // SMS zákazníkovi (neblokuje odpověď)
+    if (data.zakaznik.telefon && data.platba?.vs) {
+      sendSms(data.zakaznik.telefon, smsNoveRezervace({
+        jmeno:      data.zakaznik.jmeno,
+        polozka:    data.polozka,
+        vs:         data.platba.vs,
+        castka:     data.celkem,
+        cisloUctu:  data.platba.cislo_uctu,
+      })).catch(err => console.error("[SMS] nová rezervace:", err))
+    }
 
     return NextResponse.json({ ok: true })
   } catch (err: unknown) {
