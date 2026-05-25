@@ -122,7 +122,7 @@ function KomunikaceInner() {
 
   return (
     <AppShell module={from}>
-      <div style={{ padding: "28px 32px", maxWidth: 1100 }}>
+      <div style={{ padding: "28px 32px" }}>
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
@@ -186,7 +186,7 @@ function KomunikaceInner() {
         </div>
 
         {/* Table */}
-        <div style={{ background: "white", borderRadius: 14, border: "1px solid var(--line)", overflow: "hidden" }}>
+        <div style={{ background: "white", borderRadius: 14, border: "1px solid var(--line)", overflow: "hidden", overflowX: "auto" }}>
           {loading ? (
             <div style={{ padding: 40, textAlign: "center", color: "var(--ink-2)", fontSize: 14 }}>
               Načítám…
@@ -199,9 +199,9 @@ function KomunikaceInner() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#fafaf9", borderBottom: "1px solid var(--line)" }}>
-                  {["Datum a čas", "Projekt", "Typ", "Příjemce", "Předmět", ""].map((h, i) => (
+                  {["Datum a čas", "Kanál", "Projekt", "Typ", "Příjemce", "Předmět", ""].map((h, i) => (
                     <th key={i} style={{
-                      padding: "10px 16px", textAlign: "left",
+                      padding: "10px 12px", textAlign: "left",
                       fontSize: 11, fontWeight: 600, letterSpacing: ".07em",
                       textTransform: "uppercase", color: "#9ca3af",
                       whiteSpace: "nowrap",
@@ -212,31 +212,48 @@ function KomunikaceInner() {
               <tbody>
                 {filtered.map((email, i) => {
                   const isSms = email.kanal === "sms"
-                  const sc = isSms
-                    ? { bg: "rgba(99,102,241,.1)", text: "#4f46e5" }
-                    : (SLUZBA_COLOR[email.sluzba] ?? { bg: "#f3f4f6", text: "#6b7280" })
+                  const sc   = SLUZBA_COLOR[email.sluzba] ?? { bg: "#f3f4f6", text: "#6b7280" }
                   return (
                     <tr key={email.id}
                       style={{ borderBottom: i < filtered.length - 1 ? "1px solid var(--line)" : "none" }}
                       onMouseOver={e => (e.currentTarget.style.background = "#fafaf9")}
                       onMouseOut={e => (e.currentTarget.style.background = "transparent")}
                     >
-                      <td style={{ padding: "12px 16px", fontSize: 12.5, color: "#6b7280", whiteSpace: "nowrap" }}>
+                      {/* Datum */}
+                      <td style={{ padding: "11px 12px", fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>
                         {formatDatumCas(email.created_at)}
                       </td>
-                      <td style={{ padding: "12px 16px" }}>
+
+                      {/* Kanál — nový sloupec */}
+                      <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          padding: "2px 8px", borderRadius: 6, fontSize: 11.5, fontWeight: 600,
+                          background: isSms ? "rgba(99,102,241,.1)" : "rgba(16,185,129,.1)",
+                          color:      isSms ? "#4f46e5"            : "#059669",
+                        }}>
+                          {isSms ? "💬 SMS" : "✉️ Email"}
+                        </span>
+                      </td>
+
+                      {/* Projekt */}
+                      <td style={{ padding: "11px 12px" }}>
                         <span style={{
                           display: "inline-block", padding: "2px 8px", borderRadius: 6,
                           fontSize: 11.5, fontWeight: 600,
                           background: sc.bg, color: sc.text,
                         }}>
-                          {isSms ? "💬 SMS" : (SLUZBA_LABEL[email.sluzba] ?? email.sluzba)}
+                          {SLUZBA_LABEL[email.sluzba] ?? email.sluzba}
                         </span>
                       </td>
-                      <td style={{ padding: "12px 16px", fontSize: 12.5, color: "#374151", whiteSpace: "nowrap" }}>
+
+                      {/* Typ */}
+                      <td style={{ padding: "11px 12px", fontSize: 12.5, color: "#374151", whiteSpace: "nowrap" }}>
                         {TYP_LABEL[email.typ] ?? email.typ}
                       </td>
-                      <td style={{ padding: "12px 16px" }}>
+
+                      {/* Příjemce */}
+                      <td style={{ padding: "11px 12px" }}>
                         {email.to_name && (
                           <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>
                             {email.to_name}
@@ -246,12 +263,16 @@ function KomunikaceInner() {
                           {isSms ? "📱 " : ""}{email.to_email}
                         </div>
                       </td>
-                      <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--ink)", maxWidth: 320 }}>
+
+                      {/* Předmět / text SMS */}
+                      <td style={{ padding: "11px 12px", fontSize: 13, color: "var(--ink)", maxWidth: 300 }}>
                         <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {email.subject}
                         </div>
                       </td>
-                      <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+
+                      {/* Akce */}
+                      <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button onClick={() => setPreview(email)}
                             style={{
