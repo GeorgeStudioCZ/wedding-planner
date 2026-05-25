@@ -44,7 +44,8 @@ export async function sendSms(to: string, text: string): Promise<void> {
       // gSystem = systémové číslo BulkGate, funguje bez registrace
       // Pro vlastní jméno odesílatele zaregistruj "Autostany" v BulkGate portálu
       // a změň na: sender_id: "gText", sender_id_value: "Autostany"
-      sender_id:         "gSystem",
+      sender_id:         "gText",
+      sender_id_value:   "Stanujnaaute",
     }),
   })
 
