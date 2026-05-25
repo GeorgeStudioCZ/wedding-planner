@@ -170,6 +170,7 @@ export default function RezervacePopup({
   const [ukladam, setUkladam] = useState(false)
   const [mazani, setMazani] = useState(false)
   const [posilamZnovu, setPosilamZnovu] = useState(false)
+  const [posilamFakturu, setPosilamFakturu] = useState(false)
 
   // Close on Escape
   useEffect(() => {
@@ -352,6 +353,28 @@ export default function RezervacePopup({
       alert("Chyba: " + String(err))
     } finally {
       setPosilamZnovu(false)
+    }
+  }
+
+  async function poslatFakturu() {
+    if (!rez) return
+    setPosilamFakturu(true)
+    try {
+      const res  = await fetch("/api/pujcovna/resend-faktura", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ rezervaceId: rez.id }),
+      })
+      const json = await res.json()
+      if (json.ok) {
+        alert(`Faktura ${json.invoice_no} odeslána na ${json.to}`)
+      } else {
+        alert("Chyba: " + json.error)
+      }
+    } catch (err) {
+      alert("Chyba: " + String(err))
+    } finally {
+      setPosilamFakturu(false)
     }
   }
 
@@ -558,6 +581,17 @@ export default function RezervacePopup({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 {posilamZnovu ? "Odesílám…" : "Odeslat email"}
+              </button>
+            )}
+            {["zaplaceno", "vypujceno", "dokonceno"].includes(rez.stav) && (
+              <button
+                onClick={poslatFakturu}
+                disabled={posilamFakturu}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                style={{ background: posilamFakturu ? "#f3f4f6" : "#eff6ff", color: posilamFakturu ? "#9ca3af" : "#2563eb" }}
+                title="Znovu odeslat email s fakturou zákazníkovi"
+              >
+                📄 {posilamFakturu ? "Odesílám…" : "Faktura"}
               </button>
             )}
             <button

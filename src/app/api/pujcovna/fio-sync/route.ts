@@ -14,6 +14,7 @@ import { createClient }               from "@supabase/supabase-js"
 import { fetchTransactionsByPeriod }  from "@/lib/fio"
 import { vytvorFakturuZeZalohy, SFKlient, SFPolozka } from "@/lib/superfaktura"
 import { sendMail }                   from "@/lib/mailer"
+import { logEmail }                   from "@/lib/email-log"
 import { htmlFaktura }                from "@/app/api/pujcovna/faktura-zaplaceno/route"
 
 // ── Ochrana endpointu ─────────────────────────────────────────────────────────
@@ -78,7 +79,7 @@ export async function GET(req: NextRequest) {
       //    fio_id_pohybu IS NULL = ještě nebylo zpracováno (idempotency)
       const { data: rez } = await sb
         .from("pujcovna_rezervace")
-        .select("id, group_id, customer, sf_proforma_id, sf_platba_data, start_date, end_date")
+        .select("id, group_id, customer, zakaznik_id, sf_proforma_id, sf_platba_data, start_date, end_date")
         .eq("sf_vs", t.vs!)
         .eq("stav", "cekam-platbu")
         .is("fio_id_pohybu", null)
@@ -128,20 +129,43 @@ export async function GET(req: NextRequest) {
       })
 
       // 7. Pošli fakturu zákazníkovi emailem
-      if (platba.klient.email) {
-        await sendMail({
-          sluzba: "stany",
-          to:      platba.klient.email,
-          subject: `Platba přijata – rezervace potvrzena ✅`,
-          html:    htmlFaktura({
-            jmeno:      platba.klient.jmeno_display,
-            invoice_no: faktura.invoice_no,
-            pdf_url:    faktura.pdf_url,
-            polozka:    platba.polozky[0]?.nazev,
-            startDate:  rez.start_date,
-            endDate:    rez.end_date,
-          }),
+      //    Primárně použij email ze sf_platba_data; záložně načti z tabulky zakaznici
+      let emailTo   = platba.klient.email ?? ""
+      let jmenoTo   = platba.klient.jmeno_display ?? rez.customer ?? ""
+
+      if (!emailTo && rez.zakaznik_id) {
+        const { data: zak } = await sb
+          .from("zakaznici")
+          .select("jmeno, prijmeni, email")
+          .eq("id", rez.zakaznik_id)
+          .maybeSingle()
+        if (zak?.email) {
+          emailTo = zak.email
+          if (!jmenoTo) jmenoTo = `${zak.jmeno ?? ""} ${zak.prijmeni ?? ""}`.trim()
+        }
+      }
+
+      if (emailTo) {
+        const subj = `Platba přijata – rezervace potvrzena ✅`
+        const html = htmlFaktura({
+          jmeno:      jmenoTo,
+          invoice_no: faktura.invoice_no,
+          pdf_url:    faktura.pdf_url,
+          polozka:    platba.polozky[0]?.nazev,
+          startDate:  rez.start_date,
+          endDate:    rez.end_date,
         })
+        await sendMail({ sluzba: "stany", to: emailTo, subject: subj, html })
+        await logEmail({
+          sluzba:   "stany",
+          typ:      "rezervace-pujcovna",
+          to_email: emailTo,
+          to_name:  jmenoTo,
+          subject:  subj,
+          html,
+        })
+      } else {
+        console.warn(`[fio-sync] VS ${t.vs}: rezervace ${rez.id} – email nenalezen, faktura ${faktura.invoice_no} odeslána bez emailu zákazníkovi`)
       }
 
       stats.sparovano++

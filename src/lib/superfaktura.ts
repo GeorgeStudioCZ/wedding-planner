@@ -18,6 +18,16 @@ function authHeader(): string {
   return `SFAPI email=${encodeURIComponent(email)}&apikey=${apikey}&module=${SF_MODULE}&company_id=${companyId}`
 }
 
+async function sfGet(endpoint: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${SF_BASE}${endpoint}`, {
+    headers: { "Authorization": authHeader() },
+    cache: "no-store",
+  })
+  if (!res.ok) throw new Error(`SF HTTP ${res.status}: ${await res.text()}`)
+  const json = await res.json() as Record<string, unknown>
+  return json
+}
+
 async function sfPost(endpoint: string, payload: object): Promise<Record<string, unknown>> {
   const res = await fetch(`${SF_BASE}${endpoint}`, {
     method: "POST",
@@ -128,6 +138,20 @@ export async function vytvorFakturuZeZalohy(
   const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
   if (!inv?.id) throw new Error(`SF: nepodařilo se načíst Invoice z odpovědi: ${JSON.stringify(json).slice(0, 300)}`)
 
+  return {
+    id:         Number(inv.id),
+    invoice_no: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
+    pdf_url:    `${SF_BASE}/invoices/pdf/${inv.id}/token:${inv.token}`,
+  }
+}
+
+// ── Načti existující fakturu ──────────────────────────────────────────────────
+
+export async function getInvoice(id: number): Promise<SFFakturaVystup> {
+  const json = await sfGet(`/invoices/view/${id}.json`)
+  const wrapper = (json.data ?? json) as Record<string, unknown>
+  const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
+  if (!inv?.id) throw new Error(`SF: nepodařilo se načíst fakturu ${id}: ${JSON.stringify(json).slice(0, 300)}`)
   return {
     id:         Number(inv.id),
     invoice_no: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
