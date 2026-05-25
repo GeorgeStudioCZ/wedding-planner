@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createClient }               from "@supabase/supabase-js"
-import { fetchNewTransactions }       from "@/lib/fio"
+import { fetchTransactionsByPeriod }  from "@/lib/fio"
 import { vytvorFakturuZeZalohy, SFKlient, SFPolozka } from "@/lib/superfaktura"
 import { sendMail }                   from "@/lib/mailer"
 import { htmlFaktura }                from "@/app/api/pujcovna/faktura-zaplaceno/route"
@@ -50,10 +50,16 @@ export async function GET(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  // 1. Stáhni nové pohyby z Fio (od poslední zarážky)
+  // 1. Stáhni pohyby z Fio za posledních 14 dní (idempotency zajišťuje fio_id_pohybu)
+  //    Používáme /periods/ místo /last/ aby se nikdy nevynechala platba při přechodu stavů.
   let transactions
   try {
-    transactions = await fetchNewTransactions()
+    const dnes  = new Date()
+    const pred14 = new Date(dnes)
+    pred14.setDate(dnes.getDate() - 14)
+    const dateTo   = dnes.toISOString().slice(0, 10)
+    const dateFrom = pred14.toISOString().slice(0, 10)
+    transactions = await fetchTransactionsByPeriod(dateFrom, dateTo)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error("[fio-sync] Fio fetch error:", msg)

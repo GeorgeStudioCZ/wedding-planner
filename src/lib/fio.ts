@@ -49,25 +49,51 @@ async function nastavZarazku(token: string, isoDate: string): Promise<void> {
   await fetch(url, { cache: "no-store" })
 }
 
-// ── Stáhni pohyby od posledního dotazu (zarážka je serverová — automatická) ──
+// ── Stáhni pohyby za zadané období ───────────────────────────────────────────
+
+export async function fetchTransactionsByPeriod(
+  dateFrom: string,  // "YYYY-MM-DD"
+  dateTo:   string,  // "YYYY-MM-DD"
+): Promise<FioTransaction[]> {
+  const token = process.env.FIO_TOKEN
+  if (!token) throw new Error("FIO_TOKEN není nastaven")
+
+  const url = `${FIO_BASE}/periods/${token}/${dateFrom}/${dateTo}/transactions.json`
+  const res = await fetch(url, { cache: "no-store" })
+
+  if (!res.ok) throw new Error(`Fio HTTP ${res.status}: ${await res.text()}`)
+
+  type FioJson = {
+    accountStatement: {
+      transactionList: {
+        transaction: Array<Record<string, RawColumn>> | null
+      }
+    }
+  }
+
+  const json = (await res.json()) as FioJson
+  const list = json.accountStatement?.transactionList?.transaction
+  if (!list) return []
+
+  return list.map(parseTransaction)
+}
+
+// ── Stáhni pohyby od posledního dotazu (zarážka) — zachováno pro kompatibilitu ──
 
 export async function fetchNewTransactions(): Promise<FioTransaction[]> {
   const token = process.env.FIO_TOKEN
   if (!token) throw new Error("FIO_TOKEN není nastaven")
 
   const url = `${FIO_BASE}/last/${token}/transactions.json`
-
   const res = await fetch(url, { cache: "no-store" })
 
-  // HTTP 422 = zarážka ukazuje na datum starší než 90 dní → automaticky ji posuneme
-  // na včerejšek a vrátíme prázdný seznam (příští volání już bude fungovat)
   if (res.status === 422) {
     const vcera = new Date()
     vcera.setDate(vcera.getDate() - 1)
     const isoVcera = vcera.toISOString().slice(0, 10)
     await nastavZarazku(token, isoVcera)
-    console.log(`[fio] Zarážka posunuta na ${isoVcera}, příští sync stáhne nové pohyby`)
-    return []   // toto volání vrátí prázdný seznam, příště bude OK
+    console.log(`[fio] Zarážka posunuta na ${isoVcera}`)
+    return []
   }
 
   if (!res.ok) throw new Error(`Fio HTTP ${res.status}: ${await res.text()}`)
