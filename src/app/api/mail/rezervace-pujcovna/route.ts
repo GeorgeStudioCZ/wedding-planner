@@ -240,15 +240,19 @@ export async function POST(req: NextRequest) {
         castka:    data.celkem,
         cisloUctu: data.platba.cislo_uctu,
       })
-      sendSms(data.zakaznik.telefon, smsText)
-        .then(() => logSms({
-          sluzba:  "stany",
-          typ:     "sms-rezervace",
-          to_tel:  data.zakaznik.telefon,
-          to_name: `${data.zakaznik.jmeno} ${data.zakaznik.prijmeni}`.trim(),
-          text:    smsText,
-        }))
-        .catch(err => console.error("[SMS] nová rezervace:", err))
+      ;(async () => {
+        try {
+          await sendSms(data.zakaznik.telefon, smsText)
+          await logSms({ sluzba: "stany", typ: "sms-rezervace", to_tel: data.zakaznik.telefon,
+            to_name: `${data.zakaznik.jmeno} ${data.zakaznik.prijmeni}`.trim(), text: smsText })
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error("[SMS] nová rezervace:", msg)
+          await logSms({ sluzba: "stany", typ: "sms-rezervace", to_tel: data.zakaznik.telefon,
+            to_name: `${data.zakaznik.jmeno} ${data.zakaznik.prijmeni}`.trim(), text: smsText,
+            status: "error", error: msg })
+        }
+      })()
     }
 
     return NextResponse.json({ ok: true })

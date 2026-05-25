@@ -160,15 +160,14 @@ export async function GET(req: NextRequest) {
 
       if (telefonSms) {
         const smsText = smsPlatbaPrijata({ jmeno: jmenoTo, invoice_no: faktura.invoice_no })
-        sendSms(telefonSms, smsText)
-          .then(() => logSms({
-            sluzba:  "stany",
-            typ:     "sms-platba",
-            to_tel:  telefonSms,
-            to_name: jmenoTo,
-            text:    smsText,
-          }))
-          .catch(err => console.error("[SMS] fio-sync platba:", err))
+        try {
+          await sendSms(telefonSms, smsText)
+          await logSms({ sluzba: "stany", typ: "sms-platba", to_tel: telefonSms, to_name: jmenoTo, text: smsText })
+        } catch (smsErr) {
+          const smsMsg = smsErr instanceof Error ? smsErr.message : String(smsErr)
+          console.error("[SMS] fio-sync platba:", smsMsg)
+          await logSms({ sluzba: "stany", typ: "sms-platba", to_tel: telefonSms, to_name: jmenoTo, text: smsText, status: "error", error: smsMsg })
+        }
       }
 
       if (emailTo) {

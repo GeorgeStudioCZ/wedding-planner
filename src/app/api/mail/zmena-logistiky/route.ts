@@ -92,15 +92,14 @@ export async function POST(req: NextRequest) {
         datumVraceni:    data.datumVraceni,
         casVraceni:      data.casVraceni,
       })
-      sendSms(data.zakaznik.telefon, smsText)
-        .then(() => logSms({
-          sluzba:  "stany",
-          typ:     "sms-logistika",
-          to_tel:  data.zakaznik.telefon as string,
-          to_name: data.zakaznik.jmeno,
-          text:    smsText,
-        }))
-        .catch(err => console.error("[SMS] zmena-logistiky:", err))
+      try {
+        await sendSms(data.zakaznik.telefon, smsText)
+        await logSms({ sluzba: "stany", typ: "sms-logistika", to_tel: data.zakaznik.telefon as string, to_name: data.zakaznik.jmeno, text: smsText })
+      } catch (smsErr) {
+        const smsMsg = smsErr instanceof Error ? smsErr.message : String(smsErr)
+        console.error("[SMS] zmena-logistiky:", smsMsg)
+        await logSms({ sluzba: "stany", typ: "sms-logistika", to_tel: data.zakaznik.telefon as string, to_name: data.zakaznik.jmeno, text: smsText, status: "error", error: smsMsg })
+      }
     }
 
     return NextResponse.json({ ok: true })

@@ -26,6 +26,8 @@ export async function logSms(entry: {
   to_tel:   string
   to_name?: string | null
   text:     string
+  status?:  string          // "sent" | "error"
+  error?:   string          // chybová zpráva pokud status="error"
 }) {
   const { error } = await supabase
     .from("komunikace_emaily")
@@ -36,8 +38,8 @@ export async function logSms(entry: {
       to_email: entry.to_tel,   // pole reuse — pro SMS ukládáme telefonní číslo
       to_name:  entry.to_name ?? null,
       subject:  entry.text,
-      html:     "",
-      status:   "sent",
+      html:     entry.error ? `Chyba: ${entry.error}` : "",
+      status:   entry.status ?? "sent",
     })
   if (error) console.error("[logSms]", error.message)
 }

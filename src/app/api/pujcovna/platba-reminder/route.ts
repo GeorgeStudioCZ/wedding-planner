@@ -166,15 +166,14 @@ export async function GET() {
         // SMS upomínka
         if (zak.telefon) {
           const smsText = smsUpominkaPlatby({ vs: rez.sf_vs ?? "", polozka })
-          sendSms(zak.telefon, smsText)
-            .then(() => logSms({
-              sluzba:  "stany",
-              typ:     "sms-upominka",
-              to_tel:  zak.telefon as string,
-              to_name: jmeno,
-              text:    smsText,
-            }))
-            .catch(err => console.error("[SMS] platba-reminder:", err))
+          try {
+            await sendSms(zak.telefon, smsText)
+            await logSms({ sluzba: "stany", typ: "sms-upominka", to_tel: zak.telefon as string, to_name: jmeno, text: smsText })
+          } catch (smsErr) {
+            const smsMsg = smsErr instanceof Error ? smsErr.message : String(smsErr)
+            console.error("[SMS] platba-reminder:", smsMsg)
+            await logSms({ sluzba: "stany", typ: "sms-upominka", to_tel: zak.telefon as string, to_name: jmeno, text: smsText, status: "error", error: smsMsg })
+          }
         }
 
         // Zapsat do historie výpůjčky

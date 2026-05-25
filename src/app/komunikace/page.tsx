@@ -229,10 +229,12 @@ function KomunikaceInner() {
                         <span style={{
                           display: "inline-flex", alignItems: "center", gap: 4,
                           padding: "2px 8px", borderRadius: 6, fontSize: 11.5, fontWeight: 600,
-                          background: isSms ? "rgba(99,102,241,.1)" : "rgba(16,185,129,.1)",
-                          color:      isSms ? "#4f46e5"            : "#059669",
+                          background: email.status === "error" ? "rgba(239,68,68,.1)"
+                                    : isSms ? "rgba(99,102,241,.1)" : "rgba(16,185,129,.1)",
+                          color:      email.status === "error" ? "#dc2626"
+                                    : isSms ? "#4f46e5"            : "#059669",
                         }}>
-                          {isSms ? "💬 SMS" : "✉️ Email"}
+                          {email.status === "error" ? "❌ Chyba" : isSms ? "💬 SMS" : "✉️ Email"}
                         </span>
                       </td>
 
