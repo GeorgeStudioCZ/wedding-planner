@@ -7,9 +7,10 @@ import { textZmenaLogistiky } from "@/lib/sms-templates"
 
 export interface ZmenaLogistikyPayload {
   zakaznik: {
-    jmeno:    string
-    email:    string
-    telefon?: string
+    jmeno:     string
+    prijmeni?: string
+    email:     string
+    telefon?:  string
   }
   polozka: string
   datumVyzvednuti: string   // ISO "2026-06-10"
@@ -87,6 +88,8 @@ export async function POST(req: NextRequest) {
     // SMS o změně logistiky
     if (data.zakaznik.telefon) {
       const smsText = await textZmenaLogistiky({
+        jmeno:           data.zakaznik.jmeno,
+        prijmeni:        data.zakaznik.prijmeni,
         polozka:         data.polozka,
         datumVyzvednuti: data.datumVyzvednuti,
         casVyzvednuti:   data.casVyzvednuti,

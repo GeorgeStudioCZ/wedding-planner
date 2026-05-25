@@ -160,7 +160,8 @@ export async function GET(req: NextRequest) {
         : "")
 
       if (telefonSms) {
-        const smsText = await textPlatbaPrijata({ jmeno: jmenoTo.split(" ")[0], invoice_no: faktura.invoice_no })
+        const [jmeno, ...rest] = jmenoTo.split(" ")
+        const smsText = await textPlatbaPrijata({ jmeno, prijmeni: rest.join(" "), invoice_no: faktura.invoice_no })
         try {
           await sendSms(telefonSms, smsText)
           await logSms({ sluzba: "stany", typ: "sms-platba", to_tel: telefonSms, to_name: jmenoTo, text: smsText })

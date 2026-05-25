@@ -28,30 +28,36 @@ export const SMS_IKONY: Record<SmsTyp, string> = {
 
 // Dostupné proměnné pro každý typ
 export const SMS_PROMENNE: Record<SmsTyp, string[]> = {
-  "nova-rezervace":  ["{jmeno}", "{polozka}", "{vs}", "{castka}", "{cislo_uctu}"],
-  "upominka-platby": ["{polozka}", "{vs}"],
-  "platba-prijata":  ["{jmeno}", "{invoice_no}"],
-  "zmena-logistiky": ["{polozka}", "{datum_vyzvednuti}", "{cas_vyzvednuti}", "{datum_vraceni}", "{cas_vraceni}"],
+  "nova-rezervace":  ["{jmeno}", "{prijmeni}", "{polozka}", "{vs}", "{castka}", "{cislo_uctu}"],
+  "upominka-platby": ["{jmeno}", "{prijmeni}", "{polozka}", "{vs}"],
+  "platba-prijata":  ["{jmeno}", "{prijmeni}", "{invoice_no}"],
+  "zmena-logistiky": ["{jmeno}", "{prijmeni}", "{polozka}", "{datum_vyzvednuti}", "{cas_vyzvednuti}", "{datum_vraceni}", "{cas_vraceni}"],
 }
 
 // Ukázková data pro živý náhled v editoru
 export const SMS_PREVIEW_VARS: Record<SmsTyp, Record<string, string>> = {
   "nova-rezervace": {
     jmeno:      "Petr",
+    prijmeni:   "Novák",
     polozka:    "Alaska M",
     vs:         "26000510",
     castka:     "3675",
     cislo_uctu: "1234567890/0800",
   },
   "upominka-platby": {
-    polozka: "Alaska M",
-    vs:      "26000510",
+    jmeno:    "Petr",
+    prijmeni: "Novák",
+    polozka:  "Alaska M",
+    vs:       "26000510",
   },
   "platba-prijata": {
     jmeno:      "Petr",
+    prijmeni:   "Novák",
     invoice_no: "AS260013",
   },
   "zmena-logistiky": {
+    jmeno:             "Petr",
+    prijmeni:          "Novák",
     polozka:           "Alaska M",
     datum_vyzvednuti:  "12. 6.",
     cas_vyzvednuti:    " 9:00 hod",
@@ -113,6 +119,7 @@ async function getSablona(typ: SmsTyp): Promise<string> {
 
 export async function textNovaRezervace(d: {
   jmeno:      string
+  prijmeni?:  string
   polozka:    string
   vs:         string
   castka:     number
@@ -121,6 +128,7 @@ export async function textNovaRezervace(d: {
   const tpl = await getSablona("nova-rezervace")
   return renderTemplate(tpl, {
     jmeno:      d.jmeno,
+    prijmeni:   d.prijmeni ?? "",
     polozka:    d.polozka,
     vs:         d.vs,
     castka:     d.castka ? String(Math.round(d.castka)) : "",
@@ -129,23 +137,37 @@ export async function textNovaRezervace(d: {
 }
 
 export async function textUpominkaPlatby(d: {
-  vs:      string
-  polozka: string
+  vs:        string
+  polozka:   string
+  jmeno?:    string
+  prijmeni?: string
 }): Promise<string> {
   const tpl = await getSablona("upominka-platby")
-  return renderTemplate(tpl, { vs: d.vs, polozka: d.polozka })
+  return renderTemplate(tpl, {
+    vs:       d.vs,
+    polozka:  d.polozka,
+    jmeno:    d.jmeno ?? "",
+    prijmeni: d.prijmeni ?? "",
+  })
 }
 
 export async function textPlatbaPrijata(d: {
   jmeno:      string
+  prijmeni?:  string
   invoice_no: string
 }): Promise<string> {
   const tpl = await getSablona("platba-prijata")
-  return renderTemplate(tpl, { jmeno: d.jmeno, invoice_no: d.invoice_no })
+  return renderTemplate(tpl, {
+    jmeno:      d.jmeno,
+    prijmeni:   d.prijmeni ?? "",
+    invoice_no: d.invoice_no,
+  })
 }
 
 export async function textZmenaLogistiky(d: {
   polozka:         string
+  jmeno?:          string
+  prijmeni?:       string
   datumVyzvednuti: string   // ISO date
   casVyzvednuti:   string
   datumVraceni:    string   // ISO date
@@ -155,6 +177,8 @@ export async function textZmenaLogistiky(d: {
   const fmtD = (iso: string) =>
     new Date(iso).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" })
   return renderTemplate(tpl, {
+    jmeno:            d.jmeno ?? "",
+    prijmeni:         d.prijmeni ?? "",
     polozka:          d.polozka,
     datum_vyzvednuti: fmtD(d.datumVyzvednuti),
     cas_vyzvednuti:   d.casVyzvednuti ? ` ${d.casVyzvednuti} hod` : "",

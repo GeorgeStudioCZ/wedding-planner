@@ -166,7 +166,7 @@ export async function GET() {
 
         // SMS upomínka
         if (zak.telefon) {
-          const smsText = await textUpominkaPlatby({ vs: rez.sf_vs ?? "", polozka })
+          const smsText = await textUpominkaPlatby({ vs: rez.sf_vs ?? "", polozka, jmeno: zak.jmeno ?? "", prijmeni: zak.prijmeni ?? "" })
           try {
             await sendSms(zak.telefon, smsText)
             await logSms({ sluzba: "stany", typ: "sms-upominka", to_tel: zak.telefon as string, to_name: jmeno, text: smsText })

@@ -236,6 +236,7 @@ export async function POST(req: NextRequest) {
     if (data.zakaznik.telefon && data.platba?.vs) {
       const smsText = await textNovaRezervace({
         jmeno:      data.zakaznik.jmeno,
+        prijmeni:   data.zakaznik.prijmeni,
         polozka:    data.polozka,
         vs:         data.platba.vs,
         castka:     data.celkem,
