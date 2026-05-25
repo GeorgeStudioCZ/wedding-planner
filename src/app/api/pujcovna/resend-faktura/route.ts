@@ -4,12 +4,17 @@
 // POST /api/pujcovna/resend-faktura
 // Body: { "rezervaceId": 123 }
 
-import { NextRequest, NextResponse } from "next/server"
-import { createClient }              from "@supabase/supabase-js"
-import { getInvoice }                from "@/lib/superfaktura"
-import { sendMail }                  from "@/lib/mailer"
-import { logEmail }                  from "@/lib/email-log"
-import { htmlFaktura }               from "@/app/api/pujcovna/faktura-zaplaceno/route"
+import { NextRequest, NextResponse }                       from "next/server"
+import { createClient }                                    from "@supabase/supabase-js"
+import { getInvoice, vytvorFakturuZeZalohy, SFKlient, SFPolozka } from "@/lib/superfaktura"
+import { sendMail }                                        from "@/lib/mailer"
+import { logEmail }                                        from "@/lib/email-log"
+import { htmlFaktura }                                     from "@/app/api/pujcovna/faktura-zaplaceno/route"
+
+interface PlatbaData {
+  klient:  SFKlient & { jmeno_display: string }
+  polozky: SFPolozka[]
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,18 +26,18 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
 
-    // 1. Načti rezervaci
+    // 1. Načti rezervaci (sf_faktura_id může být null pokud dřív chyběl sloupec)
     const { data: rez, error } = await sb
       .from("pujcovna_rezervace")
-      .select("id, customer, zakaznik_id, sf_faktura_id, sf_platba_data, start_date, end_date")
+      .select("id, customer, zakaznik_id, sf_faktura_id, sf_proforma_id, sf_platba_data, start_date, end_date")
       .eq("id", rezervaceId)
       .single()
 
-    if (error || !rez) return NextResponse.json({ ok: false, error: "Rezervace nenalezena" }, { status: 404 })
-    if (!rez.sf_faktura_id) return NextResponse.json({ ok: false, error: "Rezervace nemá sf_faktura_id — faktura nebyla vytvořena" }, { status: 422 })
+    if (error || !rez) {
+      return NextResponse.json({ ok: false, error: `Rezervace nenalezena: ${error?.message ?? ""}` }, { status: 404 })
+    }
 
     // 2. Načti email zákazníka — záložně z zakaznici tabulky
-    type PlatbaData = { klient?: { email?: string; jmeno_display?: string }; polozky?: Array<{ nazev?: string }> }
     const platba = (rez.sf_platba_data ?? {}) as PlatbaData
     let emailTo = platba.klient?.email ?? ""
     let jmenoTo = platba.klient?.jmeno_display ?? rez.customer ?? ""
@@ -49,12 +54,30 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (!emailTo) return NextResponse.json({ ok: false, error: "Email zákazníka nenalezen (ani v sf_platba_data ani v zakaznici)" }, { status: 422 })
+    if (!emailTo) {
+      return NextResponse.json({ ok: false, error: "Email zákazníka nenalezen (ani v sf_platba_data ani v zakaznici)" }, { status: 422 })
+    }
 
-    // 3. Načti fakturu ze SuperFaktury (abychom měli aktuální PDF URL)
-    const faktura = await getInvoice(rez.sf_faktura_id)
+    // 3. Získej fakturu — buď existující nebo vytvoř novou ze zálohy
+    let faktura: { id: number; invoice_no: string; pdf_url: string }
 
-    // 4. Sestaví a odešli email
+    if (rez.sf_faktura_id) {
+      // Faktura existuje → načti aktuální data ze SF
+      faktura = await getInvoice(rez.sf_faktura_id)
+    } else if (rez.sf_proforma_id && platba.klient && platba.polozky?.length) {
+      // Faktura nebyla vytvořena (nebo se ID neuložilo) → vytvoř ze zálohy
+      faktura = await vytvorFakturuZeZalohy(
+        rez.sf_proforma_id,
+        platba.klient,
+        platba.polozky,
+      )
+      // Ulož ID faktury do DB
+      await sb.from("pujcovna_rezervace").update({ sf_faktura_id: faktura.id }).eq("id", rez.id)
+    } else {
+      return NextResponse.json({ ok: false, error: "Chybí sf_faktura_id i sf_proforma_id — nelze vytvořit fakturu" }, { status: 422 })
+    }
+
+    // 4. Odešli email
     const subj = `Platba přijata – rezervace potvrzena ✅`
     const html = htmlFaktura({
       jmeno:      jmenoTo,
