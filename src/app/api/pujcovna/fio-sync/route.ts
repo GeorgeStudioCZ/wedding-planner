@@ -77,13 +77,17 @@ export async function GET(req: NextRequest) {
     try {
       // 3. Najdi rezervaci čekající na platbu s tímto VS
       //    fio_id_pohybu IS NULL = ještě nebylo zpracováno (idempotency)
-      const { data: rez } = await sb
+      // Pozn: group může mít více řádků se stejným VS (stan + příslušenství)
+      // → limit(1) vezme libovolný z nich; stav + fio_id_pohybu se pak
+      //   aktualizuje pro celou skupinu pomocí group_id.
+      const { data: rows } = await sb
         .from("pujcovna_rezervace")
         .select("id, group_id, customer, zakaznik_id, sf_proforma_id, sf_platba_data, start_date, end_date")
         .eq("sf_vs", t.vs!)
         .eq("stav", "cekam-platbu")
         .is("fio_id_pohybu", null)
-        .maybeSingle()
+        .limit(1)
+      const rez = rows?.[0] ?? null
 
       if (!rez) {
         stats.preskoceno++
