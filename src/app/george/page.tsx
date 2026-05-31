@@ -461,8 +461,10 @@ export default function GeorgePage() {
     }
   }, [kategorieId])
 
-  const katAktivni = kategorie.find(k => k.id === kategorieId)
-  const lastTen    = zaznamy.filter(z => z.end_at).slice(0, 10)
+  const katAktivni  = kategorie.find(k => k.id === kategorieId)
+  // Kusová služba = služba účtovaná za kus (ne hodinově) → zobrazí pole jako materiál
+  const jeKusSluzba = modTyp === "sluzba" && katAktivni?.sazba_typ === "kus"
+  const lastTen     = zaznamy.filter(z => z.end_at).slice(0, 10)
 
   // ── Data load ──────────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -918,8 +920,8 @@ export default function GeorgePage() {
               )}
             </div>
 
-            {/* Množství + ceny — jen pro materiál */}
-            {!running && modTyp === "material" && (
+            {/* Množství + ceny — pro materiál i kusové služby */}
+            {!running && (modTyp === "material" || jeKusSluzba) && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: "flex", gap: 8 }}>
                   {/* Množství */}
@@ -1027,7 +1029,7 @@ export default function GeorgePage() {
                 <Ico d={IC.stop} size={15} />
                 Zastavit
               </button>
-            ) : modTyp === "material" ? (
+            ) : (modTyp === "material" || jeKusSluzba) ? (
               <button
                 onClick={handleAddMaterial}
                 disabled={!kategorieId || !pocet || parseFloat(pocet) <= 0}
@@ -1044,7 +1046,7 @@ export default function GeorgePage() {
                   transition: "all .15s",
                 }}>
                 <Ico d={["M12 5v14", "M5 12h14"]} size={15} />
-                Přidat materiál
+                {jeKusSluzba ? "Přidat službu" : "Přidat materiál"}
               </button>
             ) : manualMode ? (
               <div style={{ display: "flex", gap: 8 }}>
