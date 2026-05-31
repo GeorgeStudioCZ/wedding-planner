@@ -170,6 +170,23 @@ export default function TimerPopup() {
     setNazev("")
   }
 
+  async function handleContinue(z: Zaznam) {
+    if (running) return
+    setNazev(z.nazev)
+    setZakaznikId(z.zakaznik_id)
+    setKategorieId(z.kategorie_id)
+    setModTyp("sluzba")
+    const db = createClient()
+    const { data, error } = await db.from("george_zaznamy").insert({
+      nazev: z.nazev, zakaznik_id: z.zakaznik_id, kategorie_id: z.kategorie_id,
+      start_at: new Date().toISOString(),
+    }).select().single()
+    if (error || !data) return
+    pauseOffsetRef.current = 0; pausedAtRef.current = null
+    setPaused(false); setRunning(data); setElapsed(0)
+    setZaznamy(prev => [data, ...prev])
+  }
+
   function handlePause() {
     if (paused) {
       if (pausedAtRef.current !== null) { pauseOffsetRef.current += Date.now() - pausedAtRef.current; pausedAtRef.current = null }
@@ -628,6 +645,15 @@ export default function TimerPopup() {
                 <span style={{ fontSize: 11, color: "#5a5b66", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
                   {formatDuration(z.start_at, z.end_at)}
                 </span>
+                {/* Play — pokračovat jako nový záznam, jen pro hodinové */}
+                {z.pocet == null && !running && (
+                  <button onClick={() => handleContinue(z)} title="Pokračovat" style={{
+                    background: "none", border: "none", cursor: "pointer", padding: "2px 3px",
+                    color: "#6366f1", borderRadius: 4, flexShrink: 0, lineHeight: 1,
+                  }}>
+                    <Ico d={IC.play} size={11} />
+                  </button>
+                )}
                 <button onClick={() => handleDelete(z.id)} title="Smazat" style={{
                   background: "none", border: "none", cursor: "pointer", padding: "2px 3px",
                   color: "#3a3b44", borderRadius: 4, flexShrink: 0, lineHeight: 1,

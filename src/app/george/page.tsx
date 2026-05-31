@@ -107,9 +107,10 @@ const IC = {
 }
 
 // ── ZaznamRadek ───────────────────────────────────────────────────────────────
-function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit }: {
+function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit, onContinue, isRunning }: {
   z: Zaznam; kategorie: Kategorie[]; zakaznici: Zakaznik[]
   onDelete: (id: number) => void; onEdit: (z: Zaznam) => void
+  onContinue?: (z: Zaznam) => void; isRunning?: boolean
 }) {
   const kat      = kategorie.find(k => k.id === z.kategorie_id)
   const zak      = zakaznici.find(c => c.id === z.zakaznik_id)
@@ -157,6 +158,12 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit }: {
           </div>
         )}
       </div>
+      {/* Pokračovat — jen pro hodinové záznamy a když neběží timer */}
+      {!isMat && onContinue && !isRunning && (
+        <button onClick={() => onContinue(z)} style={{ ...iconBtn, color: "#6366f1" }} title="Pokračovat — spustí nový timer se stejnými daty">
+          <Ico d={IC.play} size={14} />
+        </button>
+      )}
       <button onClick={() => onEdit(z)} style={iconBtn} title="Upravit">
         <Ico d={IC.edit} size={14} />
       </button>
@@ -532,6 +539,28 @@ export default function GeorgePage() {
     setNazev("")
   }
 
+  async function handleContinue(z: Zaznam) {
+    if (running) return
+    // Předvyplň formulář daty z původního záznamu
+    setNazev(z.nazev)
+    setZakaznikId(z.zakaznik_id)
+    setKategorieId(z.kategorie_id)
+    setModTyp("sluzba")
+    // Spusť nový timer
+    const db = createClient()
+    const { data, error } = await db.from("george_zaznamy").insert({
+      nazev: z.nazev, zakaznik_id: z.zakaznik_id, kategorie_id: z.kategorie_id,
+      start_at: new Date().toISOString(),
+    }).select().single()
+    if (error || !data) return
+    pauseOffsetRef.current = 0
+    pausedAtRef.current    = null
+    setPaused(false)
+    setRunning(data)
+    setElapsed(0)
+    setZaznamy(prev => [data, ...prev])
+  }
+
   function handlePause() {
     if (paused) {
       if (pausedAtRef.current !== null) {
@@ -692,7 +721,8 @@ export default function GeorgePage() {
                   </div>
                   {g.items.map(z => (
                     <ZaznamRadek key={z.id} z={z} kategorie={kategorie} zakaznici={zakaznici}
-                      onDelete={handleDelete} onEdit={setEditingZaznam} />
+                      onDelete={handleDelete} onEdit={setEditingZaznam}
+                      onContinue={handleContinue} isRunning={!!running} />
                   ))}
                 </div>
               )
