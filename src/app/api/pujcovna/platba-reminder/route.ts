@@ -108,15 +108,14 @@ export async function GET() {
   try {
     const now = Date.now()
     const cutoff48h = new Date(now - 48 * 3600 * 1000).toISOString()
-    const cutoff72h = new Date(now - 72 * 3600 * 1000).toISOString()
 
-    // Najdi nezaplacené rezervace starší 48h ale ne starší 72h
+    // Najdi nezaplacené rezervace starší 48h, které ještě nedostaly upomínku
+    // Bez horního limitu — pripominacka_sent=true zabrání duplicitám
     const { data: rezervace, error } = await sb
       .from("pujcovna_rezervace")
       .select("*, pujcovna_polozky(name)")
       .in("stav", ["web-rezervace", "rezervace", "cekam-platbu"])
       .lt("created_at", cutoff48h)
-      .gt("created_at", cutoff72h)
       .or("pripominacka_sent.is.null,pripominacka_sent.eq.false")
 
     if (error) throw error
