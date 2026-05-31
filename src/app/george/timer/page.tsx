@@ -31,7 +31,7 @@ function formatClock(ms: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
 }
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })
+  return new Date(iso).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
 }
 function formatDuration(start: string, end: string | null) {
   const ms = (end ? new Date(end) : new Date()).getTime() - new Date(start).getTime()
@@ -44,7 +44,7 @@ function isoToDate(iso: string) {
 }
 function isoToTime(iso: string) {
   const d = new Date(iso); const p = (n: number) => String(n).padStart(2, "0")
-  return `${p(d.getHours())}:${p(d.getMinutes())}`
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 function localToIso(date: string, time: string) { return new Date(`${date}T${time}`).toISOString() }
 
@@ -520,7 +520,7 @@ export default function TimerPopup() {
             <div style={{ display: "flex", gap: 8 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 10, color: "#5a5b66", marginBottom: 4, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>Od</div>
-                <input type="time" value={manualFrom} onChange={e => setManualFrom(e.target.value)}
+                <input type="time" step="1" value={manualFrom} onChange={e => setManualFrom(e.target.value)}
                   style={{
                     width: "100%", padding: "8px 11px", borderRadius: 9,
                     border: "1px solid rgba(255,255,255,.12)", fontSize: 14,
@@ -531,7 +531,7 @@ export default function TimerPopup() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 10, color: "#5a5b66", marginBottom: 4, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>Do</div>
-                <input type="time" value={manualTo} onChange={e => setManualTo(e.target.value)}
+                <input type="time" step="1" value={manualTo} onChange={e => setManualTo(e.target.value)}
                   style={{
                     width: "100%", padding: "8px 11px", borderRadius: 9,
                     border: "1px solid rgba(255,255,255,.12)", fontSize: 14,

@@ -50,7 +50,7 @@ function formatDuration(start: string, end: string | null) {
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })
+  return new Date(iso).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
 }
 
 function isoDate(iso: string) { return iso.slice(0, 10) }
@@ -63,7 +63,8 @@ function isoToDate(iso: string) {
 function isoToTime(iso: string) {
   const d = new Date(iso)
   const pad = (n: number) => String(n).padStart(2, "0")
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  // Včetně sekund — aby se při editaci záznamu sekundy neztrácely
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 function localToIso(date: string, time: string) {
   return new Date(`${date}T${time}`).toISOString()
@@ -295,11 +296,11 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <label style={lbl}>Čas od</label>
-                  <input type="time" value={form.casOd} onChange={e => upd({ casOd: e.target.value })} style={inp} />
+                  <input type="time" step="1" value={form.casOd} onChange={e => upd({ casOd: e.target.value })} style={inp} />
                 </div>
                 <div>
                   <label style={lbl}>Čas do</label>
-                  <input type="time" value={form.casDo} onChange={e => upd({ casDo: e.target.value })}
+                  <input type="time" step="1" value={form.casDo} onChange={e => upd({ casDo: e.target.value })}
                     style={{ ...inp, borderColor: casDoInvalid ? "#ef4444" : "#e5e7eb" }} />
                   {casDoInvalid && (
                     <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "#ef4444" }}>
@@ -1025,7 +1026,7 @@ export default function GeorgePage() {
                 <div style={{ display: "flex", gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 10.5, color: "#5a5b66", marginBottom: 5, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>Od</div>
-                    <input type="time" value={manualFrom} onChange={e => setManualFrom(e.target.value)}
+                    <input type="time" step="1" value={manualFrom} onChange={e => setManualFrom(e.target.value)}
                       style={{
                         width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9,
                         border: "1px solid rgba(255,255,255,.12)", fontSize: 14,
@@ -1036,7 +1037,7 @@ export default function GeorgePage() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 10.5, color: "#5a5b66", marginBottom: 5, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>Do</div>
-                    <input type="time" value={manualTo} onChange={e => setManualTo(e.target.value)}
+                    <input type="time" step="1" value={manualTo} onChange={e => setManualTo(e.target.value)}
                       style={{
                         width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9,
                         border: "1px solid rgba(255,255,255,.12)", fontSize: 14,
