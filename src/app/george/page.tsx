@@ -1173,6 +1173,15 @@ export default function GeorgePage() {
                       }}>
                         {dur}
                       </span>
+                      {/* Play — pokračovat jako nový záznam, jen pro hodinové */}
+                      {z.pocet == null && !running && (
+                        <button onClick={() => handleContinue(z)} title="Pokračovat" style={{
+                          background: "none", border: "none", cursor: "pointer", padding: "2px 3px",
+                          color: "#6366f1", borderRadius: 4, flexShrink: 0, lineHeight: 1,
+                        }}>
+                          <Ico d={IC.play} size={12} />
+                        </button>
+                      )}
                       <button onClick={() => setEditingZaznam(z)} title="Upravit" style={{
                         background: "none", border: "none", cursor: "pointer", padding: "2px 3px",
                         color: "#3a3b44", borderRadius: 4, flexShrink: 0, lineHeight: 1,
