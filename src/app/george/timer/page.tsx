@@ -236,6 +236,8 @@ export default function TimerPopup() {
   const sluzbyKat       = kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba")
   const materialyKat    = kategorie.filter(k => k.typ === "material")
   const aktivniKat      = modTyp === "sluzba" ? sluzbyKat : materialyKat
+  // Kusová služba = služba účtovaná za kus (ne hodinově) → zobrazí pole jako materiál
+  const jeKusSluzba     = modTyp === "sluzba" && katAktivni?.sazba_typ === "kus"
   const ringProgress    = running ? Math.min((elapsed % 3_600_000) / 3_600_000, 1) : 0
   const ringOffset      = RING_CIRC * (1 - ringProgress)
   const lastTen         = zaznamy.filter(z => z.end_at && z.pocet == null).slice(0, 10)
@@ -426,8 +428,8 @@ export default function TimerPopup() {
           </div>
         </div>
 
-        {/* Množství + ceny — jen pro materiál */}
-        {!running && modTyp === "material" && (
+        {/* Množství + ceny — pro materiál i kusové služby */}
+        {!running && (modTyp === "material" || jeKusSluzba) && (
           <div style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", gap: 7 }}>
               {/* Množství */}
@@ -533,7 +535,7 @@ export default function TimerPopup() {
           }}>
             <Ico d={IC.stop} size={14} /> Zastavit
           </button>
-        ) : modTyp === "material" ? (
+        ) : (modTyp === "material" || jeKusSluzba) ? (
           <button onClick={handleAddMaterial}
             disabled={!kategorieId || !pocet || parseFloat(pocet) <= 0}
             style={{
@@ -547,7 +549,7 @@ export default function TimerPopup() {
               display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
               boxShadow: kategorieId && parseFloat(pocet) > 0 ? "0 4px 14px rgba(16,185,129,.3)" : "none",
             }}>
-            <Ico d="M12 5v14M5 12h14" size={14} /> Přidat materiál
+            <Ico d="M12 5v14M5 12h14" size={14} /> {jeKusSluzba ? "Přidat službu" : "Přidat materiál"}
           </button>
         ) : manualMode ? (
           <div style={{ display: "flex", gap: 8 }}>
