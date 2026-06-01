@@ -3,7 +3,9 @@
 
 import { google } from "googleapis"
 
-const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID!
+const CALENDAR_ID        = process.env.GOOGLE_CALENDAR_ID!          // Autostany / půjčovna
+const CALENDAR_ID_SVATBY = process.env.GOOGLE_CALENDAR_ID_SVATBY     // Svatby / schůzky
+  ?? process.env.GOOGLE_CALENDAR_ID!                                  // fallback na hlavní
 
 // Barva události podle stavu rezervace (Google Calendar colorId 1-11)
 const STAV_COLOR: Record<string, string> = {
@@ -275,7 +277,7 @@ function buildSchuzkaEvent(s: GCalSchuzka) {
 export async function gcalCreateSchuzka(s: GCalSchuzka): Promise<string | null> {
   try {
     const cal = getCalendar()
-    const res = await cal.events.insert({ calendarId: CALENDAR_ID, requestBody: buildSchuzkaEvent(s) })
+    const res = await cal.events.insert({ calendarId: CALENDAR_ID_SVATBY, requestBody: buildSchuzkaEvent(s) })
     return res.data.id ?? null
   } catch (err) {
     console.error("[gcal] create schuzka failed:", err)
@@ -286,7 +288,7 @@ export async function gcalCreateSchuzka(s: GCalSchuzka): Promise<string | null> 
 export async function gcalUpdateSchuzka(eventId: string, s: GCalSchuzka): Promise<void> {
   try {
     const cal = getCalendar()
-    await cal.events.patch({ calendarId: CALENDAR_ID, eventId, requestBody: buildSchuzkaEvent(s) })
+    await cal.events.patch({ calendarId: CALENDAR_ID_SVATBY, eventId, requestBody: buildSchuzkaEvent(s) })
   } catch (err) {
     console.error("[gcal] update schuzka failed:", err)
   }
@@ -295,7 +297,7 @@ export async function gcalUpdateSchuzka(eventId: string, s: GCalSchuzka): Promis
 export async function gcalDeleteSchuzka(eventId: string): Promise<void> {
   try {
     const cal = getCalendar()
-    await cal.events.delete({ calendarId: CALENDAR_ID, eventId })
+    await cal.events.delete({ calendarId: CALENDAR_ID_SVATBY, eventId })
   } catch (err) {
     console.error("[gcal] delete schuzka failed:", err)
   }
