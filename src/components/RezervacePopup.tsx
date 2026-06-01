@@ -6,6 +6,13 @@ import { createClient } from "@/lib/supabase-browser"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 import { dphRozpad, formatKc } from "@/lib/dph"
 
+// Normalizuje formát časového slotu na "H:00 – H:00" s en-dash
+// Řeší různé formáty uložené v DB (obyčejná pomlčka, různé mezery apod.)
+function normCas(s: string | null | undefined): string {
+  if (!s) return ""
+  return s.replace(/\s*[-–—]\s*/g, " – ")
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type Polozka = {
@@ -234,7 +241,7 @@ export default function RezervacePopup({
         item_id: r.item_id, unit_index: r.unit_index, customer: r.customer,
         start_date: r.start_date, end_date: r.end_date, color: r.color,
         notes: r.notes ?? "", vozidlo: r.vozidlo ?? "",
-        cas_vyzvednuti: r.cas_vyzvednuti ?? "", cas_vraceni: r.cas_vraceni ?? "",
+        cas_vyzvednuti: normCas(r.cas_vyzvednuti), cas_vraceni: normCas(r.cas_vraceni),
         pricniky: r.pricniky ?? "",
         datum_vyzvednuti: r.datum_vyzvednuti ?? r.start_date,
         datum_vraceni:    r.datum_vraceni    ?? r.end_date,
