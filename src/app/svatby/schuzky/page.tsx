@@ -332,6 +332,19 @@ function SchuzkaKarta({
               )}
             </>
           )}
+          {/* GCal sync — pro potvrzené schůzky */}
+          {s.stav === "potvrzena" && (
+            <button
+              onClick={() => fetch("/api/svatby/schuzka-gcal", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ schuzkaId: s.id, action: s.gcal_event_id ? "update" : "create" }),
+              }).then(r => r.json()).then(j => alert(j.ok ? "✅ Google Kalendář synchronizován" : "❌ " + j.error)).catch(String)}
+              title={s.gcal_event_id ? "Aktualizovat v Google Kalendáři" : "Přidat do Google Kalendáře"}
+              style={{ ...btnStyle, background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
+              📅 GCal
+            </button>
+          )}
           <div style={{ flex: 1 }} />
           <button onClick={() => onDelete(s.id)}
             title="Smazat schůzku"
