@@ -163,6 +163,26 @@ export default function PujcovnaDashboard() {
   const [openRezId, setOpenRezId] = useState<number | null>(null)
   const [fioSyncing,  setFioSyncing]  = useState(false)
   const [fioVysledek, setFioVysledek] = useState<string | null>(null)
+  const [gcalSyncing, setGcalSyncing] = useState(false)
+  const [gcalVysledek, setGcalVysledek] = useState<string | null>(null)
+
+  async function spustiGcalSync() {
+    setGcalSyncing(true)
+    setGcalVysledek(null)
+    try {
+      const res  = await fetch("/api/pujcovna/gcal-sync-all", { method: "POST" })
+      const json = await res.json() as { ok: boolean; synced?: number; errors?: number; total?: number; error?: string }
+      if (!json.ok) {
+        setGcalVysledek(`❌ Chyba: ${json.error}`)
+      } else {
+        setGcalVysledek(`✅ Synchronizováno ${json.synced ?? 0} z ${json.total ?? 0}${json.errors ? `, chyb: ${json.errors}` : ""}`)
+      }
+    } catch (e) {
+      setGcalVysledek(`❌ Síťová chyba: ${String(e)}`)
+    } finally {
+      setGcalSyncing(false)
+    }
+  }
 
   async function spustiFioSync() {
     setFioSyncing(true)
@@ -468,6 +488,22 @@ export default function PujcovnaDashboard() {
   const fioBtn = (
     <>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <button
+        onClick={spustiGcalSync}
+        disabled={gcalSyncing}
+        title={gcalVysledek ?? "Synchronizovat všechny zaplacené rezervace do Google Kalendáře"}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          background: gcalSyncing ? "#dcfce7" : "#fff",
+          color: gcalSyncing ? "#16a34a" : "#111827",
+          border: "1.5px solid #e5e7eb",
+          borderRadius: 9, padding: "7px 13px",
+          fontSize: 13, fontWeight: 500, cursor: gcalSyncing ? "default" : "pointer",
+          transition: "all .15s", whiteSpace: "nowrap",
+        }}
+      >
+        {gcalSyncing ? "Synchronizuji…" : "📅 GCal sync"}
+      </button>
       <button
         onClick={spustiFioSync}
         disabled={fioSyncing}

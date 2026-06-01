@@ -172,6 +172,7 @@ export default function RezervacePopup({
   const [posilamZnovu, setPosilamZnovu] = useState(false)
   const [posilamFakturu, setPosilamFakturu] = useState(false)
   const [posilamSms, setPosilamSms] = useState(false)
+  const [syncujeGcal, setSyncujeGcal] = useState(false)
 
   // Close on Escape
   useEffect(() => {
@@ -401,6 +402,28 @@ export default function RezervacePopup({
     }
   }
 
+  async function syncGcal() {
+    if (!rez) return
+    setSyncujeGcal(true)
+    try {
+      const res  = await fetch("/api/pujcovna/gcal-sync", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ rezervaceId: rez.id }),
+      })
+      const json = await res.json()
+      if (json.ok) {
+        alert("Google Calendar synchronizován ✓")
+      } else {
+        alert("Chyba: " + json.error)
+      }
+    } catch (err) {
+      alert("Chyba: " + String(err))
+    } finally {
+      setSyncujeGcal(false)
+    }
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const updated = { ...form, [e.target.name]: e.target.value }
     if (e.target.name === "item_id") {
@@ -626,6 +649,17 @@ export default function RezervacePopup({
             >
               📱 {posilamSms ? "Odesílám…" : "SMS"}
             </button>
+            {["zaplaceno", "vypujceno", "dokonceno"].includes(rez.stav) && (
+              <button
+                onClick={syncGcal}
+                disabled={syncujeGcal}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                style={{ background: syncujeGcal ? "#f3f4f6" : "#f0fdf4", color: syncujeGcal ? "#9ca3af" : "#16a34a" }}
+                title="Synchronizovat do Google Kalendáře"
+              >
+                📅 {syncujeGcal ? "Syncing…" : "GCal"}
+              </button>
+            )}
             <button
               onClick={() => setView("edit")}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
