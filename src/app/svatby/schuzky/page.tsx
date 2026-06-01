@@ -19,6 +19,7 @@ type Schuzka = {
   stav: "nova" | "potvrzena" | "zrusena"
   svatba_id: number | null
   created_at: string
+  gcal_event_id: string | null
 }
 
 type Zakazka = {
@@ -115,6 +116,14 @@ function SchuzkaKarta({
     await db.from("schuzky").update({ datum: editDatum, cas: editCas }).eq("id", s.id)
     onTermin(s.id, editDatum, editCas)
     setEditTermin(false)
+    // GCal update — pokud je schůzka potvrzena a má gcal_event_id
+    if (s.stav === "potvrzena" && s.gcal_event_id) {
+      fetch("/api/svatby/schuzka-gcal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ schuzkaId: s.id, action: "update" }),
+      }).catch(e => console.error("[schuzka-gcal] termin update:", e))
+    }
   }
 
   return (
@@ -406,6 +415,14 @@ export default function SchuzkyPage() {
     }
   }
 
+  function gcalSync(schuzkaId: number, action: "create" | "update" | "delete") {
+    fetch("/api/svatby/schuzka-gcal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ schuzkaId, action }),
+    }).catch(e => console.error("[schuzka-gcal]", e))
+  }
+
   async function handleStav(id: number, stav: Schuzka["stav"]) {
     const db = createClient()
     await db.from("schuzky").update({ stav }).eq("id", id)
@@ -413,6 +430,7 @@ export default function SchuzkyPage() {
 
     if (stav === "potvrzena") {
       const s = schuzky.find(x => x.id === id)
+      // Email zákazníkovi
       if (s?.email) {
         fetch("/api/mail/schuzka", {
           method: "POST",
@@ -424,6 +442,13 @@ export default function SchuzkyPage() {
           }),
         }).catch(e => console.error("Potvrzeni mail:", e))
       }
+      // GCal — vytvoř událost
+      gcalSync(id, "create")
+    }
+
+    if (stav === "zrusena") {
+      // GCal — smaž událost
+      gcalSync(id, "delete")
     }
   }
 

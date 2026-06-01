@@ -233,3 +233,70 @@ export async function gcalUpdateVraceni(eventId: string, rez: GCalRezervace): Pr
     console.error("[gcal] update vraceni failed:", err)
   }
 }
+
+// ── Schůzky (svatby) ──────────────────────────────────────────────────────────
+
+export interface GCalSchuzka {
+  jmeno:        string
+  datum:        string   // "2026-08-15"
+  cas:          string   // "10:00" nebo "10:00:00"
+  typ_kontaktu: string   // "whatsapp" | "facetime" | "osobne"
+  kontakt:      string
+  datum_svadby: string | null
+  otazky:       string | null
+}
+
+function buildSchuzkaEvent(s: GCalSchuzka) {
+  const [h, m] = s.cas.split(":").map(Number)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const startDt = `${s.datum}T${pad(h)}:${pad(m || 0)}:00`
+  const endDt   = `${s.datum}T${pad(h + 1)}:${pad(m || 0)}:00`
+
+  const kontaktLine =
+    s.typ_kontaktu === "whatsapp" ? `📱 WhatsApp: ${s.kontakt}` :
+    s.typ_kontaktu === "facetime" ? `📹 FaceTime: ${s.kontakt}` :
+    `🤝 Osobně: ${s.kontakt}`
+
+  const description = [
+    kontaktLine,
+    s.datum_svadby ? `💒 Datum svatby: ${s.datum_svadby}` : null,
+    s.otazky ? `\nOtázky klienta:\n${s.otazky}` : null,
+  ].filter(Boolean).join("\n")
+
+  return {
+    summary:     `📅 Schůzka – ${s.jmeno}`,
+    description,
+    colorId:     "11",   // Graphite — odlišení od půjčovny
+    start: { dateTime: startDt, timeZone: "Europe/Prague" },
+    end:   { dateTime: endDt,   timeZone: "Europe/Prague" },
+  }
+}
+
+export async function gcalCreateSchuzka(s: GCalSchuzka): Promise<string | null> {
+  try {
+    const cal = getCalendar()
+    const res = await cal.events.insert({ calendarId: CALENDAR_ID, requestBody: buildSchuzkaEvent(s) })
+    return res.data.id ?? null
+  } catch (err) {
+    console.error("[gcal] create schuzka failed:", err)
+    return null
+  }
+}
+
+export async function gcalUpdateSchuzka(eventId: string, s: GCalSchuzka): Promise<void> {
+  try {
+    const cal = getCalendar()
+    await cal.events.patch({ calendarId: CALENDAR_ID, eventId, requestBody: buildSchuzkaEvent(s) })
+  } catch (err) {
+    console.error("[gcal] update schuzka failed:", err)
+  }
+}
+
+export async function gcalDeleteSchuzka(eventId: string): Promise<void> {
+  try {
+    const cal = getCalendar()
+    await cal.events.delete({ calendarId: CALENDAR_ID, eventId })
+  } catch (err) {
+    console.error("[gcal] delete schuzka failed:", err)
+  }
+}
