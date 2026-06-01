@@ -324,7 +324,8 @@ export default function RezervacePage() {
           used[pid].push(slot)
           rows.push({ item_id:pid, unit_index:slot, customer, start_date:dateFrom, end_date:dateTo,
             color:barvaPolozky(selPolozka), notes:"", group_id:groupId,
-            zakaznik_id:zakaznikId, stav:"web-rezervace" })
+            zakaznik_id:zakaznikId, stav:"web-rezervace",
+            cas_vyzvednuti:form.cas_vyzvednuti, cas_vraceni:form.cas_vraceni })
         }
       }
       if (rows.length) await supabase.from("pujcovna_rezervace").insert(rows)
