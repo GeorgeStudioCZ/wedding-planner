@@ -13,7 +13,13 @@ const sb = createClient(
 
 const POTVRZENE_STAVY = ["zaplaceno", "vypujceno", "dokonceno"]
 
-export async function POST() {
+// GET — voláno Vercel cronem každý den v 7:00 UTC (hodinu po fio-sync)
+export async function GET() { return run() }
+
+// POST — voláno ručně z UI
+export async function POST() { return run() }
+
+async function run() {
   try {
     // Načti všechny potvrzené rezervace
     const { data: rezervace, error } = await sb
