@@ -16,6 +16,10 @@ const STAV_COLOR: Record<string, string> = {
   "storno":        "11",  // Graphite
 }
 
+// Kategorie které patří do Google Kalendáře (hlavní půjčované položky)
+// Příslušenství (Příčníky, atd.) se do kalendáře NEsynchronizuje
+export const GCAL_KATEGORIE = ["Stany", "Paddleboardy", "Držáky kol"]
+
 // Emoji podle kategorie
 const KAT_EMOJI: Record<string, string> = {
   "Stany":          "⛺",

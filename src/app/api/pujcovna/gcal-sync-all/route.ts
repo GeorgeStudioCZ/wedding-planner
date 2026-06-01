@@ -4,6 +4,7 @@ import {
   gcalCreate, gcalUpdate, gcalDelete, GCalRezervace,
   gcalCreateVyzvednuti, gcalUpdateVyzvednuti,
   gcalCreateVraceni,   gcalUpdateVraceni,
+  GCAL_KATEGORIE,
 } from "@/lib/google-calendar"
 
 const sb = createClient(
@@ -43,9 +44,29 @@ async function run() {
 
     const results: { id: number; action: string; error?: string }[] = []
 
+    // Odstraň příslušenství co se omylem dostalo do kalendáře
+    for (const rez of rezervace) {
+      const polozka = rez.pujcovna_polozky as { name: string; category: string } | null
+      if (polozka && !GCAL_KATEGORIE.includes(polozka.category)) {
+        const updates: Record<string, null> = {}
+        if (rez.gcal_event_id)      { try { await gcalDelete(rez.gcal_event_id) } catch { /* already deleted */ }; updates.gcal_event_id = null }
+        if (rez.gcal_vyzvednuti_id) { try { await gcalDelete(rez.gcal_vyzvednuti_id) } catch { /* already deleted */ }; updates.gcal_vyzvednuti_id = null }
+        if (rez.gcal_vraceni_id)    { try { await gcalDelete(rez.gcal_vraceni_id) } catch { /* already deleted */ }; updates.gcal_vraceni_id = null }
+        if (Object.keys(updates).length > 0) {
+          await sb.from("pujcovna_rezervace").update(updates).eq("id", rez.id)
+        }
+        results.push({ id: rez.id, action: "removed_accessory" })
+        continue
+      }
+    }
+
     for (const rez of rezervace) {
       try {
         const polozka = rez.pujcovna_polozky as { name: string; category: string } | null
+
+        // Přeskočit příslušenství (Příčníky, atd.) — do kalendáře patří jen hlavní položky
+        if (polozka && !GCAL_KATEGORIE.includes(polozka.category)) continue
+
         const zakaznik = rez.zakaznik_id ? zakaznikMap[rez.zakaznik_id] ?? null : null
 
         const gcalData: GCalRezervace = {

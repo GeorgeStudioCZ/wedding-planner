@@ -4,6 +4,7 @@ import {
   gcalCreate, gcalUpdate, gcalDelete, GCalRezervace,
   gcalCreateVyzvednuti, gcalUpdateVyzvednuti,
   gcalCreateVraceni,   gcalUpdateVraceni,
+  GCAL_KATEGORIE,
 } from "@/lib/google-calendar"
 
 const sb = createClient(
@@ -28,6 +29,18 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (!rez) return NextResponse.json({ ok: false, error: "Rezervace nenalezena" }, { status: 404 })
+
+    const polozkaKat = (rez.pujcovna_polozky as { name: string; category: string } | null)?.category ?? ""
+
+    // Příslušenství (Příčníky atd.) — smaž případné gcal záznamy a přeskoč
+    if (polozkaKat && !GCAL_KATEGORIE.includes(polozkaKat)) {
+      const updates: Record<string, null> = {}
+      if (rez.gcal_event_id)      { try { await gcalDelete(rez.gcal_event_id) } catch { /* ok */ }; updates.gcal_event_id = null }
+      if (rez.gcal_vyzvednuti_id) { try { await gcalDelete(rez.gcal_vyzvednuti_id) } catch { /* ok */ }; updates.gcal_vyzvednuti_id = null }
+      if (rez.gcal_vraceni_id)    { try { await gcalDelete(rez.gcal_vraceni_id) } catch { /* ok */ }; updates.gcal_vraceni_id = null }
+      if (Object.keys(updates).length > 0) await sb.from("pujcovna_rezervace").update(updates).eq("id", rezervaceId)
+      return NextResponse.json({ ok: true, action: "skipped_accessory" })
+    }
 
     // Nezaplacená nebo storno → smaž všechny události (pokud existují)
     if (!POTVRZENE_STAVY.includes(rez.stav)) {
