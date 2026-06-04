@@ -118,7 +118,7 @@ export async function GET() {
       .lt("created_at", cutoff48h)
       .or("pripominacka_sent.is.null,pripominacka_sent.eq.false")
 
-    if (error) throw error
+    if (error) throw new Error(error.message ?? JSON.stringify(error))
     if (!rezervace || rezervace.length === 0) {
       return NextResponse.json({ ok: true, sent: 0, message: "Žádné rezervace k upomínání" })
     }
