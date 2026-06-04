@@ -166,76 +166,87 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const results: { id: number; result: string }[] = []
-
+    // ── Deduplikace: 1 zákazník = 1 email + 1 SMS ────────────────────────────
+    // Seskup všechny řádky podle zakaznik_id — příslušenství patří ke stejné rezervaci
+    const skupiny = new Map<number, typeof rezervace>()
     for (const rez of rezervace) {
+      if (!rez.zakaznik_id) continue
+      if (!skupiny.has(rez.zakaznik_id)) skupiny.set(rez.zakaznik_id, [])
+      skupiny.get(rez.zakaznik_id)!.push(rez)
+    }
+
+    // Načti zákazníky najednou
+    const zakIds = [...skupiny.keys()]
+    const { data: zakaznici } = await sb
+      .from("zakaznici")
+      .select("id, jmeno, prijmeni, email, telefon")
+      .in("id", zakIds)
+    const zakMap = Object.fromEntries((zakaznici ?? []).map(z => [z.id, z]))
+
+    const results: { zakaznik_id: number; jmeno: string; result: string }[] = []
+
+    for (const [zakaznikId, rezy] of skupiny) {
       try {
-        if (!rez.zakaznik_id) { results.push({ id: rez.id, result: "skip_no_customer" }); continue }
+        const zak = zakMap[zakaznikId]
+        if (!zak?.email) {
+          results.push({ zakaznik_id: zakaznikId, jmeno: "", result: "skip_no_email" })
+          continue
+        }
 
-        const { data: zak } = await sb
-          .from("zakaznici")
-          .select("jmeno, prijmeni, email, telefon")
-          .eq("id", rez.zakaznik_id)
-          .single()
-
-        if (!zak?.email) { results.push({ id: rez.id, result: "skip_no_email" }); continue }
-
-        const polozka = (rez.pujcovna_polozky as { name: string } | null)?.name ?? "Výpůjčka"
+        // Použij hlavní rezervaci (první v seznamu — nejnižší ID = hlavní položka)
+        const hlavni  = rezy.reduce((a, b) => a.id < b.id ? a : b)
+        const polozka = (hlavni.pujcovna_polozky as { name: string } | null)?.name ?? "Výpůjčka"
         const jmeno   = `${zak.jmeno} ${zak.prijmeni}`.trim()
+        const vsHlavni = hlavni.sf_vs ?? ""
 
         const html = htmlReminder({
           jmeno,
           polozka,
-          dateFrom: rez.start_date,
-          dateTo:   rez.end_date,
-          vs:       rez.sf_vs ?? "",
-          castka:   "",  // bez částky — zákazník ji má v původním emailu
+          dateFrom: hlavni.start_date,
+          dateTo:   hlavni.end_date,
+          vs:       vsHlavni,
+          castka:   "",
         })
-
         const subj = `Připomínka platby – ${polozka}`
 
+        // 1 email
         await sendMail({ sluzba: "stany", to: zak.email, subject: subj, html })
-        await logEmail({
-          sluzba: "stany",
-          typ: "platba-reminder",
-          to_email: zak.email,
-          to_name: jmeno,
-          subject: subj,
-          html,
-        })
+        await logEmail({ sluzba: "stany", typ: "platba-reminder", to_email: zak.email, to_name: jmeno, subject: subj, html })
 
-        await sb.from("pujcovna_rezervace").update({ pripominacka_sent: true }).eq("id", rez.id)
+        // Označ VŠECHNY řádky zákazníka jako odeslané
+        const allIds = rezy.map(r => r.id)
+        await sb.from("pujcovna_rezervace").update({ pripominacka_sent: true }).in("id", allIds)
 
-        // SMS upomínka
+        // 1 SMS
         if (zak.telefon) {
-          const smsText = await textUpominkaPlatby({ vs: rez.sf_vs ?? "", polozka, jmeno: zak.jmeno ?? "", prijmeni: zak.prijmeni ?? "" })
+          const smsText = await textUpominkaPlatby({ vs: vsHlavni, polozka, jmeno: zak.jmeno ?? "", prijmeni: zak.prijmeni ?? "" })
           try {
             await sendSms(zak.telefon, smsText)
-            await logSms({ sluzba: "stany", typ: "sms-upominka", to_tel: zak.telefon as string, to_name: jmeno, text: smsText })
+            await logSms({ sluzba: "stany", typ: "sms-upominka", to_tel: zak.telefon, to_name: jmeno, text: smsText })
           } catch (smsErr) {
             const smsMsg = smsErr instanceof Error ? smsErr.message : String(smsErr)
             console.error("[SMS] platba-reminder:", smsMsg)
-            await logSms({ sluzba: "stany", typ: "sms-upominka", to_tel: zak.telefon as string, to_name: jmeno, text: smsText, status: "error", error: smsMsg })
+            await logSms({ sluzba: "stany", typ: "sms-upominka", to_tel: zak.telefon, to_name: jmeno, text: smsText, status: "error", error: smsMsg })
           }
         }
 
-        // Zapsat do historie výpůjčky
+        // Historie jen na hlavní rezervaci
         await sb.from("pujcovna_rezervace_historie").insert([{
-          rezervace_id: rez.id,
+          rezervace_id: hlavni.id,
           stav: "platba-reminder",
-          poznamka: "Odeslaná upomínka platby zákazníkovi",
+          poznamka: `Odeslaná upomínka platby zákazníkovi (${allIds.length} řádků označeno)`,
         }])
 
-        results.push({ id: rez.id, result: "sent" })
+        results.push({ zakaznik_id: zakaznikId, jmeno, result: "sent" })
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
-        console.error(`[platba-reminder] rez ${rez.id}:`, msg)
-        results.push({ id: rez.id, result: `error: ${msg}` })
+        console.error(`[platba-reminder] zakaznik ${zakaznikId}:`, msg)
+        results.push({ zakaznik_id: zakaznikId, jmeno: "", result: `error: ${msg}` })
       }
     }
 
     const sent = results.filter(r => r.result === "sent").length
-    return NextResponse.json({ ok: true, sent, total: rezervace.length, results })
+    return NextResponse.json({ ok: true, sent, total: skupiny.size, results })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error("[platba-reminder]", msg)
