@@ -8,7 +8,8 @@ import { logEmail }           from "@/lib/email-log"
 import { sendSms }            from "@/lib/bulkgate"
 import { logSms }             from "@/lib/email-log"
 
-const CHYBNE_IDS = [46, 24, 25, 51, 53, 54, 56, 57, 58, 59, 60, 61, 62, 63, 121]
+// ID 121 (Vlasák) vynecháno — jeho upomínka byla oprávněná
+const CHYBNE_IDS = [46, 24, 25, 51, 53, 54, 56, 57, 58, 59, 60, 61, 62, 63]
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
