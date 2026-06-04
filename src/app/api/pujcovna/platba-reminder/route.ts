@@ -110,12 +110,12 @@ export async function GET() {
     const cutoff48h = new Date(now - 48 * 3600 * 1000).toISOString()
 
     // Najdi nezaplacené rezervace starší 48h, které ještě nedostaly upomínku
-    // Bez horního limitu — pripominacka_sent=true zabrání duplicitám
+    // NULL created_at = stará rezervace bez timestampu → vždy zahrnout
     const { data: rezervace, error } = await sb
       .from("pujcovna_rezervace")
       .select("*, pujcovna_polozky(name)")
       .in("stav", ["web-rezervace", "rezervace", "cekam-platbu"])
-      .lt("created_at", cutoff48h)
+      .or(`created_at.is.null,created_at.lt.${cutoff48h}`)
       .or("pripominacka_sent.is.null,pripominacka_sent.eq.false")
 
     if (error) throw new Error(error.message ?? JSON.stringify(error))
