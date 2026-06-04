@@ -1,7 +1,7 @@
 // Vercel Cron: každý den v 7:00 UTC (hodinu po fio-sync)
 // Najde nezaplacené web-rezervace starší 48h a pošle připomínku platby
 
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
@@ -104,7 +104,9 @@ function htmlReminder(data: {
   </body></html>`
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const preview = req.nextUrl.searchParams.get("preview") === "1"
+
   try {
     const now = Date.now()
     const cutoff48h = new Date(now - 48 * 3600 * 1000).toISOString()
@@ -121,6 +123,47 @@ export async function GET() {
     if (error) throw new Error(error.message ?? JSON.stringify(error))
     if (!rezervace || rezervace.length === 0) {
       return NextResponse.json({ ok: true, sent: 0, message: "Žádné rezervace k upomínání" })
+    }
+
+    // ── PREVIEW MODE ─────────────────────────────────────────────────────────
+    if (preview) {
+      // Načti zákazníky a deduplikuj podle zakaznik_id
+      const zakaznikIds = [...new Set(rezervace.map(r => r.zakaznik_id).filter(Boolean))]
+      const { data: zakaznici } = await sb
+        .from("zakaznici")
+        .select("id, jmeno, prijmeni, email, telefon")
+        .in("id", zakaznikIds)
+      const zakMap = Object.fromEntries((zakaznici ?? []).map(z => [z.id, z]))
+
+      // Seskup rezervace podle zákazníka
+      const zakaznikGroups: Record<number, { jmeno: string; email: string; telefon: string; rezervace: { id: number; polozka: string; stav: string }[] }> = {}
+      for (const rez of rezervace) {
+        if (!rez.zakaznik_id) continue
+        const zak = zakMap[rez.zakaznik_id]
+        if (!zak?.email) continue
+        if (!zakaznikGroups[rez.zakaznik_id]) {
+          zakaznikGroups[rez.zakaznik_id] = {
+            jmeno:    `${zak.jmeno ?? ""} ${zak.prijmeni ?? ""}`.trim(),
+            email:    zak.email,
+            telefon:  zak.telefon ?? "",
+            rezervace: [],
+          }
+        }
+        zakaznikGroups[rez.zakaznik_id].rezervace.push({
+          id:      rez.id,
+          polozka: (rez.pujcovna_polozky as { name: string } | null)?.name ?? "?",
+          stav:    rez.stav,
+        })
+      }
+
+      const customers = Object.values(zakaznikGroups)
+      return NextResponse.json({
+        ok:      true,
+        preview: true,
+        count:   customers.length,
+        message: `Upomínka bude odeslána ${customers.length} zákazníkům (email + SMS). Spusťte bez ?preview=1 pro skutečné odeslání.`,
+        customers,
+      })
     }
 
     const results: { id: number; result: string }[] = []

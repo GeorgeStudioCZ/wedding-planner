@@ -165,6 +165,34 @@ export default function PujcovnaDashboard() {
   const [fioVysledek, setFioVysledek] = useState<string | null>(null)
   const [gcalSyncing, setGcalSyncing] = useState(false)
   const [gcalVysledek, setGcalVysledek] = useState<string | null>(null)
+  const [reminderPreview, setReminderPreview] = useState<null | {
+    count: number
+    message: string
+    customers: { jmeno: string; email: string; telefon: string; rezervace: { id: number; polozka: string; stav: string }[] }[]
+  }>(null)
+  const [reminderSending, setReminderSending] = useState(false)
+
+  async function nactiReminderPreview() {
+    const res  = await fetch("/api/pujcovna/platba-reminder?preview=1")
+    const json = await res.json()
+    if (json.ok && json.preview) setReminderPreview(json)
+    else if (json.message) alert(json.message)
+    else alert("Chyba: " + json.error)
+  }
+
+  async function spustiReminder() {
+    setReminderSending(true)
+    try {
+      const res  = await fetch("/api/pujcovna/platba-reminder")
+      const json = await res.json() as { ok: boolean; sent?: number; total?: number; error?: string; message?: string }
+      setReminderPreview(null)
+      if (json.message) alert(json.message)
+      else if (json.ok) alert(`✅ Odesláno ${json.sent ?? 0} z ${json.total ?? 0} upomínek`)
+      else alert("❌ Chyba: " + json.error)
+    } finally {
+      setReminderSending(false)
+    }
+  }
 
   async function spustiGcalSync() {
     setGcalSyncing(true)
@@ -489,6 +517,20 @@ export default function PujcovnaDashboard() {
     <>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <button
+        onClick={nactiReminderPreview}
+        title="Zobrazit náhled upomínek platby (preview před odesláním)"
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          background: "#fff", color: "#111827",
+          border: "1.5px solid #e5e7eb",
+          borderRadius: 9, padding: "7px 13px",
+          fontSize: 13, fontWeight: 500, cursor: "pointer",
+          transition: "all .15s", whiteSpace: "nowrap",
+        }}
+      >
+        ⏰ Upomínky
+      </button>
+      <button
         onClick={spustiGcalSync}
         disabled={gcalSyncing}
         title={gcalVysledek ?? "Synchronizovat všechny zaplacené rezervace do Google Kalendáře"}
@@ -692,6 +734,48 @@ export default function PujcovnaDashboard() {
         )}
 
       </div>
+
+      {/* ── Preview modál upomínek ─────────────────────────────────────────── */}
+      {reminderPreview && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "white", borderRadius: 16, padding: 28, width: "100%", maxWidth: 520, maxHeight: "80vh", display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>⏰ Náhled upomínek platby</div>
+                <div style={{ fontSize: 13, color: "#6b7280", marginTop: 3 }}>{reminderPreview.message}</div>
+              </div>
+              <button onClick={() => setReminderPreview(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9ca3af" }}>✕</button>
+            </div>
+
+            <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+              {reminderPreview.customers.map((c, i) => (
+                <div key={i} style={{ background: "#f9fafb", borderRadius: 10, padding: "10px 14px", border: "1px solid #e5e7eb" }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{c.jmeno}</div>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                    ✉️ {c.email} {c.telefon ? `· 📱 ${c.telefon}` : ""}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+                    {c.rezervace.map(r => `${r.polozka} (${r.stav})`).join(", ")}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setReminderPreview(null)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1.5px solid #e5e7eb", background: "white", cursor: "pointer", fontSize: 14 }}>
+                Zrušit
+              </button>
+              <button onClick={spustiReminder} disabled={reminderSending} style={{
+                flex: 2, padding: "10px", borderRadius: 10, border: "none", cursor: reminderSending ? "default" : "pointer",
+                background: reminderSending ? "#e5e7eb" : "#f97316", color: reminderSending ? "#9ca3af" : "white",
+                fontSize: 14, fontWeight: 600,
+              }}>
+                {reminderSending ? "Odesílám…" : `✅ Odeslat ${reminderPreview.count} upomínek`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {openRezId && (
         <RezervacePopup
