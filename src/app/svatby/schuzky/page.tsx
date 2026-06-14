@@ -89,7 +89,7 @@ const KONTAKT: Record<string, { emoji: string; label: string; bg: string; color:
 
 // ── Karta schůzky ─────────────────────────────────────────────────────────────
 function SchuzkaKarta({
-  s, zakazka, probehla, onStav, onDelete, onTermin, onProbehla,
+  s, zakazka, probehla, onStav, onDelete, onTermin, onProbehla, onGcalSync,
 }: {
   s: Schuzka
   zakazka: Zakazka | null
@@ -98,6 +98,7 @@ function SchuzkaKarta({
   onDelete:   (id: number) => void
   onTermin:   (id: number, datum: string, cas: string) => void
   onProbehla: (schuzkaId: number, zakazkaId: number) => void
+  onGcalSync: (id: number, action: "create" | "update" | "delete") => void
 }) {
   const [expanded,   setExpanded]   = useState(false)
   const [editTermin, setEditTermin] = useState(false)
@@ -332,17 +333,13 @@ function SchuzkaKarta({
               )}
             </>
           )}
-          {/* GCal sync — pro potvrzené schůzky */}
+              {/* GCal sync — pro potvrzené schůzky */}
           {s.stav === "potvrzena" && (
             <button
-              onClick={() => fetch("/api/svatby/schuzka-gcal", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ schuzkaId: s.id, action: s.gcal_event_id ? "update" : "create" }),
-              }).then(r => r.json()).then(j => alert(j.ok ? "✅ Google Kalendář synchronizován" : "❌ " + j.error)).catch(String)}
+              onClick={() => onGcalSync(s.id, s.gcal_event_id ? "update" : "create")}
               title={s.gcal_event_id ? "Aktualizovat v Google Kalendáři" : "Přidat do Google Kalendáře"}
-              style={{ ...btnStyle, background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
-              📅 GCal
+              style={{ ...btnStyle, background: s.gcal_event_id ? "#eff6ff" : "#f0fdf4", color: s.gcal_event_id ? "#1d4ed8" : "#16a34a", border: `1px solid ${s.gcal_event_id ? "#bfdbfe" : "#bbf7d0"}` }}>
+              {s.gcal_event_id ? "📅 GCal ✓" : "📅 GCal"}
             </button>
           )}
           <div style={{ flex: 1 }} />
@@ -428,12 +425,31 @@ export default function SchuzkyPage() {
     }
   }
 
-  function gcalSync(schuzkaId: number, action: "create" | "update" | "delete") {
-    fetch("/api/svatby/schuzka-gcal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ schuzkaId, action }),
-    }).catch(e => console.error("[schuzka-gcal]", e))
+  async function gcalSync(schuzkaId: number, action: "create" | "update" | "delete", showAlert = false) {
+    try {
+      const res = await fetch("/api/svatby/schuzka-gcal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ schuzkaId, action }),
+      })
+      const j = await res.json()
+      if (j.ok) {
+        // Aktualizuj gcal_event_id v lokálním stavu
+        if (j.gcal_event_id) {
+          setSchuzky(prev => prev.map(s => s.id === schuzkaId ? { ...s, gcal_event_id: j.gcal_event_id } : s))
+        } else if (action === "delete") {
+          setSchuzky(prev => prev.map(s => s.id === schuzkaId ? { ...s, gcal_event_id: null } : s))
+        }
+        if (showAlert) alert("✅ Google Kalendář synchronizován")
+      } else {
+        console.error("[schuzka-gcal]", j.error)
+        if (showAlert) alert("❌ GCal chyba: " + j.error)
+        else alert("⚠️ Schůzka uložena, ale GCal synchronizace selhala:\n" + j.error)
+      }
+    } catch (e) {
+      console.error("[schuzka-gcal]", e)
+      if (showAlert) alert("❌ GCal chyba: " + String(e))
+    }
   }
 
   async function handleStav(id: number, stav: Schuzka["stav"]) {
@@ -455,13 +471,13 @@ export default function SchuzkyPage() {
           }),
         }).catch(e => console.error("Potvrzeni mail:", e))
       }
-      // GCal — vytvoř událost
-      gcalSync(id, "create")
+      // GCal — vytvoř událost (zobraz chybu pokud selže)
+      gcalSync(id, "create", false)
     }
 
     if (stav === "zrusena") {
       // GCal — smaž událost
-      gcalSync(id, "delete")
+      gcalSync(id, "delete", false)
     }
   }
 
@@ -564,7 +580,7 @@ export default function SchuzkyPage() {
                   {budouci.map(s => (
                     <SchuzkaKarta key={s.id} s={s} zakazka={najdiSvatbu(s, zakazky)}
                       probehla={!!najdiSvatbu(s, zakazky)?.videohovor_datum}
-                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} onProbehla={handleProbehla} />
+                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} onProbehla={handleProbehla} onGcalSync={gcalSync} />
                   ))}
                 </div>
               </section>
@@ -577,7 +593,7 @@ export default function SchuzkyPage() {
                   {minule.map(s => (
                     <SchuzkaKarta key={s.id} s={s} zakazka={najdiSvatbu(s, zakazky)}
                       probehla={!!najdiSvatbu(s, zakazky)?.videohovor_datum}
-                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} onProbehla={handleProbehla} />
+                      onStav={handleStav} onDelete={handleDelete} onTermin={handleTermin} onProbehla={handleProbehla} onGcalSync={gcalSync} />
                   ))}
                 </div>
               </section>
