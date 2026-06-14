@@ -268,7 +268,6 @@ function buildSchuzkaEvent(s: GCalSchuzka) {
   return {
     summary:     `📅 Schůzka – ${s.jmeno}`,
     description,
-    colorId:     "11",   // Graphite — odlišení od půjčovny
     start: { dateTime: startDt, timeZone: "Europe/Prague" },
     end:   { dateTime: endDt,   timeZone: "Europe/Prague" },
   }
