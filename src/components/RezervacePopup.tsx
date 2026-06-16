@@ -440,14 +440,18 @@ export default function RezervacePopup({
     setForm(updated)
   }
 
-  function jeKonflikt(): boolean {
+  function jeKonflikt(): string | null {
     const start = new Date(form.start_date)
     const end = new Date(form.end_date)
-    return vsechnyRezervace.some(r => {
+    const konflikt = vsechnyRezervace.find(r => {
       if (r.item_id !== Number(form.item_id) || r.unit_index !== form.unit_index) return false
       if (r.id === rezervaceId) return false
       return start <= new Date(r.end_date) && end >= new Date(r.start_date)
     })
+    if (!konflikt) return null
+    const od = new Date(konflikt.start_date).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" })
+    const do_ = new Date(konflikt.end_date).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" })
+    return `Konflikt: "${konflikt.customer}" má tuto položku rezervovanou ${od} – ${do_}`
   }
 
   function sestavPrisl(gid: string | null): object[] {
@@ -487,7 +491,8 @@ export default function RezervacePopup({
     setChyba(null)
     if (!editZakaznikId) { setChyba("Vyberte zákazníka z centrální databáze"); return }
     if (form.start_date > form.end_date) { setChyba("Datum konce musí být po datu začátku"); return }
-    if (jeKonflikt()) { setChyba("Konflikt: tato položka je již rezervována v tomto termínu"); return }
+    const konfliktMsg = jeKonflikt()
+    if (konfliktMsg) { setChyba(konfliktMsg); return }
     setUkladam(true)
 
     // Zachyt staré hodnoty logistiky pro porovnání
