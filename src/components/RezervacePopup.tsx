@@ -280,9 +280,9 @@ export default function RezervacePopup({
     if (!rez || novyStav === rez.stav) return
     const sb = createClient()
 
-    if (novyStav === "storno" && rez.group_id) {
-      // Stornuj celou skupinu (stan + příslušenství)
-      await sb.from("pujcovna_rezervace").update({ stav: "storno" }).eq("group_id", rez.group_id)
+    if (rez.group_id) {
+      // Změna stavu vždy aktualizuje celou skupinu (stan + příslušenství)
+      await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("group_id", rez.group_id)
     } else {
       await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("id", rez.id)
     }
