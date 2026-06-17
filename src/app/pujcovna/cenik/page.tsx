@@ -41,6 +41,7 @@ const KAT_COLOR: Record<string, string> = {
   "Stolky":         "#64748b",
   "Vařiče":         "#ef4444",
   "Reproduktory":   "#3b82f6",
+  "Držáky kol":     "#22c55e",
   "Ostatní":        "#94a3b8",
 }
 

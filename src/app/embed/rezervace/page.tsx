@@ -18,9 +18,9 @@ type RezRow  = { id: number; item_id: number; unit_index: number; start_date: st
 type Step    = "vybrat" | "overuji" | "formular" | "odesilam" | "hotovo"
 
 // PRISL_CATS = kategorie příslušenství zobrazené v sekci Příslušenství
-const PRISL_CATS = new Set(["Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
+const PRISL_CATS = new Set(["Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Držáky kol","Ostatní"])
 // PRISL_ORDER = požadované pořadí zobrazení kategorií příslušenství (Ostatní až na konec)
-const PRISL_ORDER = ["Markýzy","Napájení","Ledničky","Redukce","Camping sety","Stolky","Sedátka","Vařiče","Reproduktory","Ostatní"]
+const PRISL_ORDER = ["Markýzy","Napájení","Ledničky","Redukce","Camping sety","Stolky","Sedátka","Vařiče","Reproduktory","Držáky kol","Ostatní"]
 // NOT_MAIN_CATS = všechny kategorie které NEJSOU samostatně půjčitelné (příslušenství + příčníky)
 const NOT_MAIN_CATS = new Set([...PRISL_CATS, "Příčníky"])
 const BARVY_STANU: Record<string, string> = { "mal":"#F23753", "střed":"#3477F5", "velk":"#F3940E" }

@@ -44,7 +44,7 @@ type Rezervace = {
   zakaznik_id: number | null
 }
 
-const KATEGORIE = ["Vše", "Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Ostatní"]
+const KATEGORIE = ["Vše", "Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Držáky kol", "Ostatní"]
 
 const MESICE = [
   { label: "Celá sezóna", value: null as number | null },

@@ -85,7 +85,7 @@ const STAVY = [
   { value: "platba-reminder", label: "Upomínka platby", barva: "bg-orange-50 text-orange-600" },
 ]
 
-const KATEGORIE_ORDER = ["Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Ostatní"]
+const KATEGORIE_ORDER = ["Stany", "Příčníky", "Paddleboardy", "Markýzy", "Sedátka", "Napájení", "Ledničky", "Redukce", "Camping sety", "Stolky", "Vařiče", "Reproduktory", "Držáky kol", "Ostatní"]
 
 const BARVY_STANU = [
   { klic: "mal",   barva: "#F23753" },
