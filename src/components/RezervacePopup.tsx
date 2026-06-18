@@ -144,11 +144,13 @@ export default function RezervacePopup({
   initialMode = "detail",
   onClose,
   onSave,
+  onDuplicate,
 }: {
   rezervaceId: number
   initialMode?: "detail" | "edit"
   onClose: () => void
-  onSave: () => void
+  onSave: () => void | Promise<void>
+  onDuplicate?: (novaRezervaceId: number) => void
 }) {
   const [view, setView] = useState<"detail" | "edit">(initialMode)
 
@@ -180,6 +182,7 @@ export default function RezervacePopup({
   const [posilamFakturu, setPosilamFakturu] = useState(false)
   const [posilamSms, setPosilamSms] = useState(false)
   const [syncujeGcal, setSyncujeGcal] = useState(false)
+  const [duplikuji, setDuplikuji] = useState(false)
 
   // Close on Escape
   useEffect(() => {
@@ -431,6 +434,43 @@ export default function RezervacePopup({
     }
   }
 
+  async function duplikovatRezervaci() {
+    if (!rez) return
+    setDuplikuji(true)
+    const sb = createClient()
+    try {
+      // Načti celou skupinu (stan + příslušenství) nebo jen tento řádek
+      const { data: radky, error: chybaNacteni } = rez.group_id
+        ? await sb.from("pujcovna_rezervace").select("*").eq("group_id", rez.group_id)
+        : await sb.from("pujcovna_rezervace").select("*").eq("id", rez.id)
+      if (chybaNacteni || !radky?.length) { alert("Chyba: " + (chybaNacteni?.message ?? "rezervace nenalezena")); return }
+
+      const novyGroupId = rez.group_id ? crypto.randomUUID() : null
+      const noveRadky = radky.map(r => {
+        const {
+          id, created_at, sf_proforma_id, sf_vs, sf_platba_data, fio_id_pohybu,
+          gcal_event_id, gcal_vyzvednuti_id, gcal_vraceni_id, pripominacka_sent, sf_faktura_id,
+          ...zbytek
+        } = r as Record<string, unknown>
+        return { ...zbytek, stav: "rezervace", group_id: novyGroupId }
+      })
+
+      const { data: vlozeno, error: chybaInsert } = await sb
+        .from("pujcovna_rezervace")
+        .insert(noveRadky)
+        .select("id, item_id")
+      if (chybaInsert || !vlozeno?.length) { alert("Chyba: " + (chybaInsert?.message ?? "vložení selhalo")); return }
+
+      const hlavni = vlozeno.find(v => v.item_id === rez.item_id) ?? vlozeno[0]
+      await onSave()
+      onDuplicate?.(hlavni.id)
+    } catch (err) {
+      alert("Chyba: " + String(err))
+    } finally {
+      setDuplikuji(false)
+    }
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const updated = { ...form, [e.target.name]: e.target.value }
     if (e.target.name === "item_id") {
@@ -672,6 +712,15 @@ export default function RezervacePopup({
                 📅 {syncujeGcal ? "Syncing…" : "GCal"}
               </button>
             )}
+            <button
+              onClick={duplikovatRezervaci}
+              disabled={duplikuji}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: duplikuji ? "#f3f4f6" : "#fff7ed", color: duplikuji ? "#9ca3af" : "#c2410c" }}
+              title="Vytvořit kopii této rezervace s novými termíny"
+            >
+              {duplikuji ? "Duplikuji…" : "📋 Duplikovat"}
+            </button>
             <button
               onClick={() => setView("edit")}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"

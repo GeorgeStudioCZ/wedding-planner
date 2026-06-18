@@ -74,6 +74,7 @@ export default function SeznamRezervaci() {
   const [hledani, setHledani] = useState("")
   const [aktivniStav, setAktivniStav] = useState<string | null>(null)
   const [openRezId, setOpenRezId] = useState<number | null>(null)
+  const [openRezMode, setOpenRezMode] = useState<"detail" | "edit">("detail")
 
   useEffect(() => {
     async function nacti() {
@@ -355,7 +356,7 @@ export default function SeznamRezervaci() {
           </div>
         ) : (
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-            {filtrovane.map(r => <RezervaceRadek key={r.id} r={r} onOpen={() => setOpenRezId(r.id)} />)}
+            {filtrovane.map(r => <RezervaceRadek key={r.id} r={r} onOpen={() => { setOpenRezMode("detail"); setOpenRezId(r.id) }} />)}
           </div>
         )}
 
@@ -370,14 +371,17 @@ export default function SeznamRezervaci() {
       {openRezId && (
         <RezervacePopup
           rezervaceId={openRezId}
-          onClose={() => setOpenRezId(null)}
+          initialMode={openRezMode}
+          onClose={() => { setOpenRezId(null); setOpenRezMode("detail") }}
           onSave={async () => {
             const [{ data: rez }] = await Promise.all([
               supabase.from("pujcovna_rezervace").select("*").order("start_date", { ascending: false }),
             ])
             setRezervace(rez ?? [])
             setOpenRezId(null)
+            setOpenRezMode("detail")
           }}
+          onDuplicate={(novaId) => { setOpenRezMode("edit"); setOpenRezId(novaId) }}
         />
       )}
     </AppShell>

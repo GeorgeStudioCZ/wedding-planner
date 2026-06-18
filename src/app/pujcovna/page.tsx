@@ -161,6 +161,7 @@ export default function PujcovnaDashboard() {
   const [loading, setLoading] = useState(true)
   const [statRozsireno, setStatRozsireno] = useState(false)
   const [openRezId, setOpenRezId] = useState<number | null>(null)
+  const [openRezMode, setOpenRezMode] = useState<"detail" | "edit">("detail")
   const [fioSyncing,  setFioSyncing]  = useState(false)
   const [fioVysledek, setFioVysledek] = useState<string | null>(null)
   const [gcalSyncing, setGcalSyncing] = useState(false)
@@ -395,7 +396,7 @@ export default function PujcovnaDashboard() {
     const startDate = new Date(r.start_date)
 
     return (
-      <div onClick={() => setOpenRezId(r.id)} className="block hover:bg-gray-50 transition-colors cursor-pointer">
+      <div onClick={() => { setOpenRezMode("detail"); setOpenRezId(r.id) }} className="block hover:bg-gray-50 transition-colors cursor-pointer">
 
         {/* Mobile card */}
         <div className="flex flex-col pl-4 pr-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor: r.color }}>
@@ -780,7 +781,8 @@ export default function PujcovnaDashboard() {
       {openRezId && (
         <RezervacePopup
           rezervaceId={openRezId}
-          onClose={() => setOpenRezId(null)}
+          initialMode={openRezMode}
+          onClose={() => { setOpenRezId(null); setOpenRezMode("detail") }}
           onSave={async () => {
             const [{ data: rez }, { data: st }] = await Promise.all([
               supabase.from("pujcovna_rezervace").select("*").neq("stav", "storno"),
@@ -789,7 +791,9 @@ export default function PujcovnaDashboard() {
             setRezervace(rez ?? [])
             setStornoRez(st ?? [])
             setOpenRezId(null)
+            setOpenRezMode("detail")
           }}
+          onDuplicate={(novaId) => { setOpenRezMode("edit"); setOpenRezId(novaId) }}
         />
       )}
     </AppShell>

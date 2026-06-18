@@ -455,6 +455,7 @@ function Pujcovna() {
             setDetailPopup(null)
             router.replace("/pujcovna/kalendar")
           }}
+          onDuplicate={(novaId) => setDetailPopup({ id: novaId, mode: "edit" })}
         />
       )}
 
