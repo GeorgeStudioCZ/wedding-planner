@@ -92,19 +92,38 @@ export async function POST(req: NextRequest) {
       if (eventId) dbUpdates.gcal_event_id = eventId
     }
 
-    // Události vyzvednutí a vrácení
-    if (rez.gcal_vyzvednuti_id) {
-      await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
-    } else {
-      const vId = await gcalCreateVyzvednuti(gcalData)
-      if (vId) dbUpdates.gcal_vyzvednuti_id = vId
+    // Hlavní řádek skupiny (nejnižší id) = jediný, kdo dostane Vyzvednutí/Vrácení
+    // — jinak by stan + paddleboardy ve stejné skupině vytvořily duplicitní pickup/return události
+    let jeHlavni = true
+    if (rez.group_id) {
+      const { data: skupina } = await sb
+        .from("pujcovna_rezervace")
+        .select("id")
+        .eq("group_id", rez.group_id)
+      const minId = Math.min(...(skupina ?? [{ id: rez.id }]).map(r => r.id))
+      jeHlavni = rez.id === minId
     }
 
-    if (rez.gcal_vraceni_id) {
-      await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+    if (jeHlavni) {
+      // Vyzvednutí
+      if (rez.gcal_vyzvednuti_id) {
+        await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
+      } else {
+        const vId = await gcalCreateVyzvednuti(gcalData)
+        if (vId) dbUpdates.gcal_vyzvednuti_id = vId
+      }
+
+      // Vrácení
+      if (rez.gcal_vraceni_id) {
+        await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+      } else {
+        const rId = await gcalCreateVraceni(gcalData)
+        if (rId) dbUpdates.gcal_vraceni_id = rId
+      }
     } else {
-      const rId = await gcalCreateVraceni(gcalData)
-      if (rId) dbUpdates.gcal_vraceni_id = rId
+      // Vedlejší položka skupiny — smaž případné starší duplicitní pickup/return
+      if (rez.gcal_vyzvednuti_id) { try { await gcalDelete(rez.gcal_vyzvednuti_id) } catch { /* already deleted */ }; dbUpdates.gcal_vyzvednuti_id = null }
+      if (rez.gcal_vraceni_id)    { try { await gcalDelete(rez.gcal_vraceni_id) } catch { /* already deleted */ }; dbUpdates.gcal_vraceni_id = null }
     }
 
     if (Object.keys(dbUpdates).length > 0) {

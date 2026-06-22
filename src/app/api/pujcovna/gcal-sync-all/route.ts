@@ -42,6 +42,17 @@ async function run() {
 
     const zakaznikMap = Object.fromEntries((zakaznici ?? []).map(z => [z.id, z]))
 
+    // Hlavní řádek skupiny (nejnižší id) = jediný, kdo dostane Vyzvednutí/Vrácení
+    // — jinak by stan + paddleboardy ve stejné skupině vytvořily duplicitní pickup/return události
+    const minIdSkupiny = new Map<string, number>()
+    for (const r of rezervace) {
+      if (!r.group_id) continue
+      const aktualni = minIdSkupiny.get(r.group_id)
+      if (aktualni === undefined || r.id < aktualni) minIdSkupiny.set(r.group_id, r.id)
+    }
+    const jeHlavniSkupiny = (r: { id: number; group_id: string | null }) =>
+      !r.group_id || r.id === minIdSkupiny.get(r.group_id)
+
     const results: { id: number; action: string; error?: string }[] = []
 
     // Odstraň příslušenství co se omylem dostalo do kalendáře
@@ -95,20 +106,26 @@ async function run() {
           if (eventId) dbUpdates.gcal_event_id = eventId
         }
 
-        // Vyzvednutí
-        if (rez.gcal_vyzvednuti_id) {
-          await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
-        } else {
-          const vId = await gcalCreateVyzvednuti(gcalData)
-          if (vId) dbUpdates.gcal_vyzvednuti_id = vId
-        }
+        if (jeHlavniSkupiny(rez)) {
+          // Vyzvednutí — jen pro hlavní položku skupiny
+          if (rez.gcal_vyzvednuti_id) {
+            await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
+          } else {
+            const vId = await gcalCreateVyzvednuti(gcalData)
+            if (vId) dbUpdates.gcal_vyzvednuti_id = vId
+          }
 
-        // Vrácení
-        if (rez.gcal_vraceni_id) {
-          await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+          // Vrácení — jen pro hlavní položku skupiny
+          if (rez.gcal_vraceni_id) {
+            await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+          } else {
+            const rId = await gcalCreateVraceni(gcalData)
+            if (rId) dbUpdates.gcal_vraceni_id = rId
+          }
         } else {
-          const rId = await gcalCreateVraceni(gcalData)
-          if (rId) dbUpdates.gcal_vraceni_id = rId
+          // Vedlejší položka skupiny — smaž případné starší duplicitní pickup/return
+          if (rez.gcal_vyzvednuti_id) { try { await gcalDelete(rez.gcal_vyzvednuti_id) } catch { /* already deleted */ }; dbUpdates.gcal_vyzvednuti_id = null }
+          if (rez.gcal_vraceni_id)    { try { await gcalDelete(rez.gcal_vraceni_id) } catch { /* already deleted */ }; dbUpdates.gcal_vraceni_id = null }
         }
 
         if (Object.keys(dbUpdates).length > 0) {
