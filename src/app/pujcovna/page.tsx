@@ -262,28 +262,28 @@ export default function PujcovnaDashboard() {
 
   const letosRez = rezStanu.filter(r => new Date(r.start_date).getFullYear() === ROK)
 
-  // Příslušenství = kategorie které nejsou samostatně půjčitelné
-  const PRISL_KAT = new Set(["Příčníky","Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
-  const jeHlavni = (r: { group_id: string | null; item_id: number }) => {
-    if (!r.group_id) return true
-    const pol = polozky.find(p => p.id === r.item_id)
-    if (!pol) return false
-    // Stany, Paddleboardy → hlavní kategorie
-    if (!PRISL_KAT.has(pol.category)) return true
-    // Thule je virtuální kategorie — v DB uložena jako "Ostatní"
-    if (pol.name === "Držák kol Thule") return true
-    return false
+  // Hlavní řádek skupiny = jeden řádek na celou rezervaci (stan + příslušenství).
+  // Ostatní řádky stejné group_id (paddleboardy, držáky kol, příslušenství)
+  // se v seznamu nezobrazují samostatně — jsou vidět v detailu jako příslušenství.
+  function jeHlavniSkupiny<T extends { id: number; group_id: string | null }>(seznam: T[]) {
+    const minId = new Map<string, number>()
+    for (const r of seznam) {
+      if (!r.group_id) continue
+      const aktualni = minId.get(r.group_id)
+      if (aktualni === undefined || r.id < aktualni) minId.set(r.group_id, r.id)
+    }
+    return (r: T) => !r.group_id || r.id === minId.get(r.group_id)
   }
 
-  // Hlavní rezervace pro seznam: autostany + paddleboardy + držáky kol
-  const hlavni = rezervace.filter(jeHlavni)
+  // Hlavní rezervace pro seznam
+  const hlavni = rezervace.filter(jeHlavniSkupiny(rezervace))
   const webRezervace = hlavni.filter(r => r.stav === "web-rezervace")
   const rezRezervace = hlavni.filter(r => r.stav === "rezervace")
   const cekamPlatbu  = hlavni.filter(r => r.stav === "cekam-platbu")
   const zaplaceno   = hlavni.filter(r => r.stav === "zaplaceno")
   const vypujceno   = hlavni.filter(r => r.stav === "vypujceno")
   const dokonceno   = hlavni.filter(r => r.stav === "dokonceno")
-  const storno      = stornoRez.filter(jeHlavni)
+  const storno      = stornoRez.filter(jeHlavniSkupiny(stornoRez))
 
   const celkemDni = letosRez.reduce((s, r) => s + pocetDni(r.start_date, r.end_date), 0)
   const prumDelka = letosRez.length > 0 ? Math.round(celkemDni / letosRez.length) : 0

@@ -92,16 +92,16 @@ export default function SeznamRezervaci() {
     nacti()
   }, [])
 
-  // Příslušenství = kategorie které nejsou samostatně půjčitelné
-  const PRISL_KAT = new Set(["Příčníky","Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Ostatní"])
-  const rezStanu = rezervace.filter(r => {
-    if (!r.group_id) return true
-    const pol = polozky.find(p => p.id === r.item_id)
-    if (!pol) return false
-    if (!PRISL_KAT.has(pol.category)) return true       // Stany, Paddleboardy → hlavní
-    if (pol.name === "Držák kol Thule") return true      // Thule = virtuální kategorie, fyzicky "Ostatní"
-    return false
-  })
+  // Hlavní řádek skupiny = jeden řádek na celou rezervaci (stan + příslušenství).
+  // Ostatní řádky stejné group_id (paddleboardy, držáky kol, příslušenství)
+  // se v seznamu nezobrazují samostatně — jsou vidět v detailu jako příslušenství.
+  const minIdSkupiny = new Map<string, number>()
+  for (const r of rezervace) {
+    if (!r.group_id) continue
+    const aktualni = minIdSkupiny.get(r.group_id)
+    if (aktualni === undefined || r.id < aktualni) minIdSkupiny.set(r.group_id, r.id)
+  }
+  const rezStanu = rezervace.filter(r => !r.group_id || r.id === minIdSkupiny.get(r.group_id))
 
   function stanLabel(itemId: number, unitIndex: number) {
     const p = polozky.find(x => x.id === itemId)
