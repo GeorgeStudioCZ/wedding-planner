@@ -486,12 +486,14 @@ export default function RezervacePopup({
     const konflikt = vsechnyRezervace.find(r => {
       if (r.item_id !== Number(form.item_id) || r.unit_index !== form.unit_index) return false
       if (r.id === rezervaceId) return false
+      if (r.stav === "storno") return false
       return start <= new Date(r.end_date) && end >= new Date(r.start_date)
     })
     if (!konflikt) return null
     const od = new Date(konflikt.start_date).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" })
     const do_ = new Date(konflikt.end_date).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" })
-    return `Konflikt: "${konflikt.customer}" má tuto položku rezervovanou ${od} – ${do_}`
+    const polNazev = vsechnyPolozky.find(p => p.id === Number(form.item_id))?.name ?? "Položka"
+    return `Konflikt: ${polNazev} — "${konflikt.customer}" má tuto položku rezervovanou ${od} – ${do_}`
   }
 
   function sestavPrisl(gid: string | null): object[] {
@@ -509,6 +511,7 @@ export default function RezervacePopup({
           if (usedSlots[itemId].includes(ui)) continue
           const konflikt = vsechnyRezervace.some(r => {
             if (r.item_id !== itemId || r.unit_index !== ui) return false
+            if (r.stav === "storno") return false
             if (rez?.group_id && r.group_id === rez.group_id) return false
             return new Date(form.start_date) <= new Date(r.end_date) &&
                    new Date(form.end_date) >= new Date(r.start_date)
