@@ -817,7 +817,12 @@ export default function RezervacePopup({
                     </span>
                   </div>
                 )}
-                {rez.pricniky && <div className="flex justify-between"><span className="text-xs text-gray-400">Příčníky</span><span className="text-sm font-medium text-gray-900">{rez.pricniky === "vlastni" ? "Má vlastní" : "Chce půjčit"}</span></div>}
+                {rez.pricniky && <div className="flex justify-between items-center"><span className="text-xs text-gray-400">Příčníky</span><span className="text-sm font-medium text-gray-900">{rez.pricniky === "vlastni" ? "Má vlastní" : "Chce půjčit"}</span></div>}
+                {rez.pricniky === "pujcit" && !prislData.some(({ polozka: p }) => p?.category === "Příčníky") && (
+                  <div className="mt-1 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs text-orange-700 font-medium">
+                    ⚠ Zákazník chce půjčit příčníky, ale žádné nejsou rezervované — doplňte v úpravě.
+                  </div>
+                )}
               </div>
             </div>
           )}

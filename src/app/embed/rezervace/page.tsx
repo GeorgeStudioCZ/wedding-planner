@@ -209,9 +209,10 @@ export default function RezervacePage() {
 
   const celkem     = (cenaStan ?? 0) + prislRadky.reduce((s,r) => s + (r.cena ?? 0) * r.cnt, 0) + montazPopl
   const thulePolozka = useMemo(() => polozky.find(p => p.name === DRZAK_THULE_NAME) ?? null, [polozky])
-  // Příčníky jsou povinné jen pro stany
+  // Příčníky jsou povinné jen pro stany; při "pujcit" musí být vybrán konkrétní typ
+  const maPricnikyVybrany = pricnikyItems.some(p => (prisl[p.id] ?? 0) > 0)
   const canSubmit  = !!(form.jmeno && form.prijmeni && form.email && form.telefon &&
-    (jeBezvozidla || form.vozidlo) && (jeStany ? form.pricniky : true) && form.cas_vyzvednuti && form.cas_vraceni && gdpr && pujcRad &&
+    (jeBezvozidla || form.vozidlo) && (jeStany ? (form.pricniky && (form.pricniky !== "pujcit" || maPricnikyVybrany)) : true) && form.cas_vyzvednuti && form.cas_vraceni && gdpr && pujcRad &&
     (kauceKc === null || kauce))
 
   function upd(k: string, v: string) { setForm(f => ({...f, [k]: v})) }
@@ -860,6 +861,11 @@ export default function RezervacePage() {
                 </div>
 
                 {/* Inline výběr příčníků — zobrazí se jen když chce půjčit */}
+                {form.pricniky === "pujcit" && !maPricnikyVybrany && (
+                  <div style={{marginTop:6,fontSize:12,color:"#ef4444",fontWeight:500}}>
+                    ⚠ Vyberte prosím konkrétní typ příčníků
+                  </div>
+                )}
                 {form.pricniky === "pujcit" && pricnikyItems.length > 0 && (
                   <div style={{marginTop:8,padding:"10px 12px",background:"#f9fafb",borderRadius:9,border:"1px solid #e5e7eb"}}>
                     <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:".12em",color:"#9ca3af",marginBottom:8}}>
