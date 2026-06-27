@@ -880,6 +880,9 @@ export default function RezervacePage() {
                           <div style={{flex:1}}>
                             <span style={{fontSize:13.5,fontWeight:500,color:"#111827"}}>{p.name}</span>
                             {c !== null && <span style={{fontSize:11.5,color:"#6b7280",marginLeft:8}}>{formatCena(c)}</span>}
+                            {({"Příčníky - klasické":"max. 120 cm","Příčníky - integrované":"max. 130 cm"} as Record<string,string>)[p.name] && (
+                              <span style={{fontSize:11,color:"#9ca3af",marginLeft:6}}>({({"Příčníky - klasické":"max. 120 cm","Příčníky - integrované":"max. 130 cm"} as Record<string,string>)[p.name]})</span>
+                            )}
                           </div>
                           <div style={{display:"flex",alignItems:"center",gap:4}}>
                             <span style={{fontSize:11,color:"#9ca3af",marginRight:4}}>{p.neomezene?"∞":`${vol} vol.`}</span>
