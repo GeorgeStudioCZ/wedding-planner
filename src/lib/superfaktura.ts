@@ -243,9 +243,11 @@ export interface SFKlientGeorge {
 }
 
 export interface SFPolozkaGeorge {
-  nazev:     string
-  cena_bezDPH: number      // cena BEZ DPH za celou položku (quantity=1)
-  popis?:    string        // datum + časy + poznámka
+  nazev:      string
+  unit_price: number   // cena bez DPH za jednotku (hodinová sazba nebo cena/ks)
+  quantity:   number   // počet hodin v decimálu nebo kusů
+  unit:       string   // "hod" nebo "ks" nebo jiná jednotka
+  popis?:     string
 }
 
 export interface GSFakturaVystup {
@@ -274,8 +276,9 @@ export async function searchSFClientByIco(ico: string): Promise<number | null> {
 }
 
 function buildClientGeorge(k: SFKlientGeorge, sfId?: number | null): Record<string, unknown> {
-  if (sfId) return { id: sfId, ...(k.email ? { email: k.email } : {}) }
+  // Vždy posíláme plná data — SF je použije na faktuře i při propojení dle id
   return {
+    ...(sfId ? { id: sfId } : {}),
     name:           k.jmeno,
     country_iso_id: "CZ",
     ...(k.ico     ? { ico:     k.ico     } : {}),
@@ -289,12 +292,12 @@ function buildClientGeorge(k: SFKlientGeorge, sfId?: number | null): Record<stri
 }
 
 function buildItemGeorge(p: SFPolozkaGeorge): Record<string, unknown> {
-  const bezDPH = Math.round(p.cena_bezDPH * 100) / 100
   return {
     name:       p.nazev,
-    unit_price: bezDPH,
+    unit_price: Math.round(p.unit_price * 100) / 100,
     tax:        21,
-    quantity:   1,
+    quantity:   Math.round(p.quantity * 100) / 100,
+    unit:       p.unit,
     ...(p.popis ? { description: p.popis } : {}),
   }
 }

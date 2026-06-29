@@ -65,39 +65,38 @@ export async function POST(req: NextRequest) {
       const jeMaterial = skupina[0].pocet != null
 
       if (jeMaterial) {
-        // Materiál / kusová služba — sečti kusy a ceny
-        let totalBezDPH = 0
+        // Materiál / kusová služba — quantity = kusy, unit_price = cena/ks bez DPH
         let totalPocet = 0
+        let kusCena = 0
         for (const z of skupina) {
-          const kusCena = z.cena_prodej_kus ?? kat?.sazba ?? 0
-          totalBezDPH += (z.pocet ?? 0) * kusCena
-          totalPocet  += z.pocet ?? 0
+          totalPocet += z.pocet ?? 0
+          if (!kusCena) kusCena = z.cena_prodej_kus ?? kat?.sazba ?? 0
         }
-        totalBezDPH = Math.round(totalBezDPH * 100) / 100
-        if (totalBezDPH <= 0) continue
+        if (totalPocet <= 0 || kusCena <= 0) continue
         polozky.push({
-          nazev:       kat?.name ?? "Materiál",
-          cena_bezDPH: totalBezDPH,
-          popis:       `${totalPocet} ${kat?.jednotka ?? "ks"}`,
+          nazev:      kat?.name ?? "Materiál",
+          unit_price: kusCena,
+          quantity:   totalPocet,
+          unit:       kat?.jednotka ?? "ks",
         })
       } else {
-        // Časová služba — sečti hodiny, žádné od-do (to je jen v reportu)
+        // Časová služba — quantity = decimal hodiny, unit_price = hodinová sazba bez DPH
         let totalMs = 0
-        let totalBezDPH = 0
         for (const z of skupina) {
           if (!z.end_at) continue
-          const ms = new Date(z.end_at).getTime() - new Date(z.start_at).getTime()
-          totalMs    += ms
-          totalBezDPH += (ms / 3_600_000) * (kat?.sazba ?? 0)
+          totalMs += new Date(z.end_at).getTime() - new Date(z.start_at).getTime()
         }
-        totalBezDPH = Math.round(totalBezDPH * 100) / 100
-        if (totalBezDPH <= 0) continue
-        const h = Math.floor(totalMs / 3_600_000)
-        const m = Math.round(((totalMs / 3_600_000) - h) * 60)
+        const totalHours = totalMs / 3_600_000
+        const sazba = kat?.sazba ?? 0
+        if (totalHours <= 0 || sazba <= 0) continue
+        const h = Math.floor(totalHours)
+        const m = Math.round((totalHours - h) * 60)
         polozky.push({
-          nazev:       kat?.name ?? "Práce",
-          cena_bezDPH: totalBezDPH,
-          popis:       `${h}:${String(m).padStart(2, "0")} hod`,
+          nazev:      kat?.name ?? "Práce",
+          unit_price: sazba,
+          quantity:   Math.round(totalHours * 100) / 100,
+          unit:       "hod",
+          popis:      `${h}:${String(m).padStart(2, "0")} hod`,
         })
       }
     }
