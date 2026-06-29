@@ -166,7 +166,7 @@ function PrintPageInner() {
         {/* Hlavička */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, paddingBottom: 20, borderBottom: "2px solid #0e0f14" }}>
           <div>
-            <img src="https://www.georgestudio.cz/gs-logo-georgestudio.png" alt="George Studio" style={{ height: 48, display: "block" }} />
+            <img src="/gs-logo.png" alt="George Studio" style={{ height: 48, display: "block" }} />
             <div style={{ fontSize: 11, color: "#6b7280", marginTop: 6, letterSpacing: ".1em" }}>VÝKAZ PRÁCE</div>
           </div>
           <div style={{ textAlign: "right" }}>
