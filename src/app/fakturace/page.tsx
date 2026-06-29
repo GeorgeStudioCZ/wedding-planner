@@ -67,14 +67,24 @@ function FakturaPageInner() {
   const load = useCallback(async () => {
     const [{ data: gs }, { data: stany }] = await Promise.all([
       supabase.from("george_faktury")
-        .select("*, zakaznici(jmeno, prijmeni, firma)")
+        .select("*")
         .order("created_at", { ascending: false }),
       supabase.from("pujcovna_rezervace_historie")
         .select("id, created_at, invoice_no, pdf_url, castka, vs, pujcovna_rezervace(customer)")
         .not("invoice_no", "is", null)
         .order("created_at", { ascending: false }),
     ])
-    setGsData((gs ?? []) as GSFaktura[])
+    // Zákazníky načteme zvlášť — nezávisí na FK constraint
+    const zakIds = [...new Set((gs ?? []).map(f => f.zakaznik_id).filter(Boolean))]
+    const { data: zaksList } = zakIds.length
+      ? await supabase.from("zakaznici").select("id, jmeno, prijmeni, firma").in("id", zakIds)
+      : { data: [] }
+    const zakMap = Object.fromEntries((zaksList ?? []).map(z => [z.id, z]))
+    const gsWithZak = (gs ?? []).map(f => ({
+      ...f,
+      zakaznici: f.zakaznik_id ? (zakMap[f.zakaznik_id] ?? null) : null,
+    }))
+    setGsData(gsWithZak as GSFaktura[])
     setStanyData((stany ?? []) as unknown as StanyFaktura[])
     setLoading(false)
   }, [])
