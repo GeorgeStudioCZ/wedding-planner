@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
 import { bezDPH, castDPH } from "@/lib/dph"
 
-type Zakaznik  = { id: number; jmeno: string; prijmeni: string; firma?: string | null }
+type Zakaznik  = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
 type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null }
 type Zaznam    = {
   id: number
@@ -98,7 +98,7 @@ export default function ReportyPage() {
 
   const loadData = useCallback(async () => {
     const [{ data: zak }, { data: kat }, { data: zzn }] = await Promise.all([
-      supabase.from("zakaznici").select("id, jmeno, prijmeni, firma").order("prijmeni"),
+      supabase.from("zakaznici").select("id, jmeno, prijmeni, firma, projekty").order("prijmeni"),
       supabase.from("george_kategorie").select("*").order("sort_order"),
       supabase.from("george_zaznamy").select("*").order("start_at", { ascending: false }),
     ])
@@ -157,7 +157,7 @@ export default function ReportyPage() {
   }
 
   const studioZak = useMemo(
-    () => zakaznici.filter(z => true), // všichni zákazníci
+    () => zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio")),
     [zakaznici]
   )
 
