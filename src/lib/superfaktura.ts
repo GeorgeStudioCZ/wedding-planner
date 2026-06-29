@@ -43,6 +43,18 @@ async function sfPost(endpoint: string, payload: object): Promise<Record<string,
   return json
 }
 
+async function sfDelete(endpoint: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${SF_BASE}${endpoint}`, {
+    method: "DELETE",
+    headers: { "Authorization": authHeader() },
+    cache: "no-store",
+  })
+  if (!res.ok) throw new Error(`SF HTTP ${res.status}: ${await res.text()}`)
+  const json = await res.json() as Record<string, unknown>
+  if (json.error && json.error !== 0) throw new Error(`SF: ${JSON.stringify(json)}`)
+  return json
+}
+
 // ── Typy ───────────────────────────────────────────────────────────────────────
 
 export interface SFKlient {
@@ -276,9 +288,10 @@ export async function searchSFClientByIco(ico: string): Promise<number | null> {
 }
 
 function buildClientGeorge(k: SFKlientGeorge, sfId?: number | null): Record<string, unknown> {
-  // Vždy posíláme plná data — SF je použije na faktuře i při propojení dle id
+  // Pokud je klient nalezen v SF adresáři dle IČO, odkazujeme pouze na id
+  // — SF na faktuře použije data přímo z adresáře (source of truth)
+  if (sfId) return { id: sfId }
   return {
-    ...(sfId ? { id: sfId } : {}),
     name:           k.jmeno,
     country_iso_id: "CZ",
     ...(k.ico     ? { ico:     k.ico     } : {}),
@@ -289,6 +302,10 @@ function buildClientGeorge(k: SFKlientGeorge, sfId?: number | null): Record<stri
     ...(k.mesto   ? { city:    k.mesto   } : {}),
     ...(k.psc     ? { zip:     k.psc     } : {}),
   }
+}
+
+export async function deleteSFInvoice(sfId: number): Promise<void> {
+  await sfDelete(`/invoices/delete/${sfId}`)
 }
 
 function buildItemGeorge(p: SFPolozkaGeorge): Record<string, unknown> {

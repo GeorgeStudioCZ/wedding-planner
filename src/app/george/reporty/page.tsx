@@ -20,6 +20,8 @@ type Zaznam    = {
   cena_prodej_kus: number | null
   cena_nakup_kus: number | null
   fakturovano: boolean
+  sf_faktura_id: number | null
+  sf_faktura_no: string | null
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -89,8 +91,10 @@ export default function ReportyPage() {
   const [loading,   setLoading]   = useState(true)
   const [toggling,  setToggling]  = useState<number | null>(null)
   const [fakturaLoading, setFakturaLoading] = useState(false)
-  const [fakturaResult,  setFakturaResult]  = useState<{ invoice_no: string; pdf_url: string; sf_klient_linked: boolean } | null>(null)
+  const [fakturaResult,  setFakturaResult]  = useState<{ sf_id: number; invoice_no: string; pdf_url: string; sf_klient_linked: boolean } | null>(null)
   const [fakturaError,   setFakturaError]   = useState<string | null>(null)
+  const [stornoLoading,  setStornoLoading]  = useState(false)
+  const [stornoError,    setStornoError]    = useState<string | null>(null)
 
   // ── Filtry ────────────────────────────────────────────────────────────────
   const def = defaultDateRange()
@@ -107,7 +111,7 @@ export default function ReportyPage() {
     ])
     setZakaznici(zak ?? [])
     setKategorie(kat ?? [])
-    setZaznamy((zzn ?? []).map(z => ({ ...z, fakturovano: z.fakturovano ?? false })))
+    setZaznamy((zzn ?? []).map(z => ({ ...z, fakturovano: z.fakturovano ?? false, sf_faktura_id: z.sf_faktura_id ?? null, sf_faktura_no: z.sf_faktura_no ?? null })))
     setLoading(false)
   }, [])
 
@@ -159,16 +163,42 @@ export default function ReportyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ zaznamyIds: filtered.map(z => z.id), zakaznikId: filterZakaznik }),
       })
-      const json = await res.json() as { ok: boolean; invoice_no?: string; pdf_url?: string; sf_klient_linked?: boolean; error?: string }
+      const json = await res.json() as { ok: boolean; sf_id?: number; invoice_no?: string; pdf_url?: string; sf_klient_linked?: boolean; error?: string }
       if (!json.ok) throw new Error(json.error ?? "Neznámá chyba")
-      setFakturaResult({ invoice_no: json.invoice_no!, pdf_url: json.pdf_url!, sf_klient_linked: json.sf_klient_linked ?? false })
+      setFakturaResult({ sf_id: json.sf_id!, invoice_no: json.invoice_no!, pdf_url: json.pdf_url!, sf_klient_linked: json.sf_klient_linked ?? false })
       // Aktualizuj lokální stav — vše označeno jako vyfakturované
       const ids = new Set(filtered.map(z => z.id))
-      setZaznamy(prev => prev.map(z => ids.has(z.id) ? { ...z, fakturovano: true } : z))
+      setZaznamy(prev => prev.map(z => ids.has(z.id) ? { ...z, fakturovano: true, sf_faktura_id: json.sf_id!, sf_faktura_no: json.invoice_no! } : z))
     } catch (e) {
       setFakturaError(e instanceof Error ? e.message : String(e))
     }
     setFakturaLoading(false)
+  }
+
+  // sf_faktura_id pokud jsou všechny viditelné záznamy ze stejné faktury
+  const jednotnaFaktura = useMemo(() => {
+    const ids = [...new Set(filtered.map(z => z.sf_faktura_id).filter(Boolean))]
+    return ids.length === 1 ? { sfId: ids[0]!, invoiceNo: filtered.find(z => z.sf_faktura_id === ids[0])?.sf_faktura_no ?? null } : null
+  }, [filtered])
+
+  async function zrusFakturu(sfId: number) {
+    if (!confirm("Opravdu smazat fakturu v SuperFaktura a vrátit záznamy na nevyfakturované?")) return
+    setStornoLoading(true); setStornoError(null)
+    try {
+      const res = await fetch("/api/george/zrus-fakturu", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sfId }),
+      })
+      const json = await res.json() as { ok: boolean; resetIds?: number[]; error?: string }
+      if (!json.ok) throw new Error(json.error ?? "Neznámá chyba")
+      const resetIds = new Set(json.resetIds ?? [])
+      setZaznamy(prev => prev.map(z => resetIds.has(z.id) ? { ...z, fakturovano: false, sf_faktura_id: null, sf_faktura_no: null } : z))
+      setFakturaResult(null)
+    } catch (e) {
+      setStornoError(e instanceof Error ? e.message : String(e))
+    }
+    setStornoLoading(false)
   }
 
   function otevritReport(invoiceNo?: string) {
@@ -336,6 +366,24 @@ export default function ReportyPage() {
           {filterZakaznik === "" && filtered.length > 0 && (
             <span style={{ fontSize: 12, color: "var(--muted)" }}>Vyberte zákazníka pro vystavení faktury</span>
           )}
+
+          {/* Storno — zobrazí se když jsou viditelné záznamy jen z jedné faktury */}
+          {jednotnaFaktura && (
+            <button
+              onClick={() => zrusFakturu(jednotnaFaktura.sfId)}
+              disabled={stornoLoading}
+              style={{
+                marginLeft: "auto", padding: "9px 16px", borderRadius: 9,
+                border: "1.5px solid #fca5a5", background: "white",
+                color: "#dc2626", fontSize: 13, fontWeight: 600,
+                cursor: stornoLoading ? "default" : "pointer", opacity: stornoLoading ? .5 : 1,
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+              {stornoLoading ? "Ruším…" : `Storno faktury${jednotnaFaktura.invoiceNo ? ` ${jednotnaFaktura.invoiceNo}` : ""}`}
+            </button>
+          )}
         </div>
 
         {/* Výsledek faktury */}
@@ -353,7 +401,7 @@ export default function ReportyPage() {
                 {fakturaResult.sf_klient_linked ? "✓ Propojeno s existujícím kontaktem v SF dle IČO" : "Vytvořen nový kontakt v SF"}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
               <a href={fakturaResult.pdf_url} target="_blank" rel="noopener noreferrer" style={{
                 padding: "6px 12px", borderRadius: 7, background: "#16a34a", color: "white",
                 fontSize: 12, fontWeight: 600, textDecoration: "none",
@@ -362,6 +410,12 @@ export default function ReportyPage() {
                 padding: "6px 12px", borderRadius: 7, border: "1px solid #86efac", background: "white",
                 color: "#15803d", fontSize: 12, fontWeight: 600, cursor: "pointer",
               }}>PDF report</button>
+              <button onClick={() => zrusFakturu(fakturaResult.sf_id)} disabled={stornoLoading} style={{
+                padding: "6px 12px", borderRadius: 7, border: "1px solid #fca5a5", background: "white",
+                color: "#dc2626", fontSize: 12, fontWeight: 600, cursor: "pointer", opacity: stornoLoading ? .5 : 1,
+              }}>
+                {stornoLoading ? "Ruším…" : "Vzít zpět"}
+              </button>
             </div>
           </div>
         )}
@@ -370,6 +424,13 @@ export default function ReportyPage() {
         {fakturaError && (
           <div style={{ marginBottom: 20, padding: "12px 16px", borderRadius: "var(--radius-md)", background: "#fef2f2", border: "1px solid #fca5a5", fontSize: 13, color: "#dc2626" }}>
             ⚠ Chyba při vystavování faktury: {fakturaError}
+          </div>
+        )}
+
+        {/* Chyba storna */}
+        {stornoError && (
+          <div style={{ marginBottom: 20, padding: "12px 16px", borderRadius: "var(--radius-md)", background: "#fef2f2", border: "1px solid #fca5a5", fontSize: 13, color: "#dc2626" }}>
+            ⚠ Chyba při rušení faktury: {stornoError}
           </div>
         )}
 
@@ -449,6 +510,17 @@ export default function ReportyPage() {
                           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{zformatCena(cena)}</div>
                           <div style={{ fontSize: 10.5, color: "var(--muted)" }}>bez DPH {zformatCena(bezDPH(cena))}</div>
                         </div>
+                      )}
+
+                      {/* Badge faktury */}
+                      {z.sf_faktura_no && (
+                        <span style={{
+                          flexShrink: 0, padding: "3px 7px", borderRadius: 20,
+                          background: "rgba(99,102,241,.08)", border: "1px solid rgba(99,102,241,.2)",
+                          fontSize: 10.5, fontWeight: 600, color: "#6366f1", whiteSpace: "nowrap",
+                        }}>
+                          {z.sf_faktura_no}
+                        </span>
                       )}
 
                       {/* Fakturovano toggle */}

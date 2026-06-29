@@ -7,6 +7,10 @@ import {
   SFPolozkaGeorge,
 } from "@/lib/superfaktura"
 
+// Vyžaduje sloupce v george_zaznamy:
+//   ALTER TABLE george_zaznamy ADD COLUMN IF NOT EXISTS sf_faktura_id integer;
+//   ALTER TABLE george_zaznamy ADD COLUMN IF NOT EXISTS sf_faktura_no text;
+
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -123,14 +127,18 @@ export async function POST(req: NextRequest) {
     // Vytvoř fakturu
     const faktura = await vytvorFakturuGeorge(klient, polozky, sfKlientId, poznamka)
 
-    // Označ záznamy jako vyfakturované
-    await sb.from("george_zaznamy").update({ fakturovano: true }).in("id", zaznamyIds)
+    // Označ záznamy jako vyfakturované a ulož odkaz na fakturu
+    await sb.from("george_zaznamy").update({
+      fakturovano:   true,
+      sf_faktura_id: faktura.id,
+      sf_faktura_no: faktura.invoice_no,
+    }).in("id", zaznamyIds)
 
     return NextResponse.json({
-      ok:         true,
-      sf_id:      faktura.id,
-      invoice_no: faktura.invoice_no,
-      pdf_url:    faktura.pdf_url,
+      ok:               true,
+      sf_id:            faktura.id,
+      invoice_no:       faktura.invoice_no,
+      pdf_url:          faktura.pdf_url,
       sf_klient_linked: sfKlientId !== null,
     })
   } catch (err) {
