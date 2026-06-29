@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import AppShell from "@/components/AppShell"
-import { bezDPH } from "@/lib/dph"
+const sDPH = (x: number) => Math.round(x * 1.21 * 100) / 100
 
 type Zakaznik  = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
 type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null }
@@ -277,8 +277,8 @@ export default function ReportyPage() {
         <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
           {[
             { label: "Celkem odpracováno", value: formatElapsed(kpi.ms) },
-            { label: "Celkem s DPH",       value: zformatCena(kpi.celkemKc) },
-            { label: "Bez DPH",            value: zformatCena(bezDPH(kpi.celkemKc)) },
+            { label: "Celkem s DPH",       value: zformatCena(sDPH(kpi.celkemKc)) },
+            { label: "Bez DPH",            value: zformatCena(kpi.celkemKc) },
             { label: "Počet záznamů",      value: String(kpi.pocet) },
           ].map(k => (
             <div key={k.label} style={{
@@ -369,8 +369,8 @@ export default function ReportyPage() {
                 <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{dateLabel(den + "T12:00:00")}</span>
                 <span style={{ fontSize: 12, color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
                   {denMs > 0 && <>{formatElapsed(denMs)} · </>}
-                  <strong style={{ color: "var(--ink)" }}>{zformatCena(denKc)}</strong>
-                  <span style={{ color: "var(--muted)" }}> (bez DPH {zformatCena(bezDPH(denKc))})</span>
+                  <strong style={{ color: "var(--ink)" }}>{zformatCena(sDPH(denKc))}</strong>
+                  <span style={{ color: "var(--muted)" }}> (bez DPH {zformatCena(denKc)})</span>
                 </span>
               </div>
 
@@ -427,8 +427,8 @@ export default function ReportyPage() {
                       {/* Cena */}
                       {cena > 0 && (
                         <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{zformatCena(cena)}</div>
-                          <div style={{ fontSize: 10.5, color: "var(--muted)" }}>bez DPH {zformatCena(bezDPH(cena))}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{zformatCena(sDPH(cena))}</div>
+                          <div style={{ fontSize: 10.5, color: "var(--muted)" }}>bez DPH {zformatCena(cena)}</div>
                         </div>
                       )}
 
