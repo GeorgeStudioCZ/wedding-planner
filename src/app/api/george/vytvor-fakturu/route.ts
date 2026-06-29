@@ -12,12 +12,6 @@ const sb = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })
-}
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" })
-}
 
 // POST /api/george/vytvor-fakturu
 // Body: { zaznamyIds: number[], zakaznikId: number, poznamka?: string }
@@ -57,42 +51,55 @@ export async function POST(req: NextRequest) {
       : { data: [] }
     const katMap = Object.fromEntries((kategorie ?? []).map(k => [k.id, k]))
 
-    // Sestav SF položky
-    const polozky: SFPolozkaGeorge[] = []
+    // Seskup záznamy dle kategorie — každá kategorie = jedna položka na faktuře
+    type KatSkupina = { kat: { id: number; name: string; sazba: number; typ: string | null; jednotka: string | null } | null; zaznamy: typeof zaznamy }
+    const skupiny = new Map<number | null, KatSkupina>()
     for (const z of zaznamy) {
-      const kat = z.kategorie_id ? katMap[z.kategorie_id] : null
-      const jeMatrial = z.pocet != null
+      const key = z.kategorie_id ?? null
+      if (!skupiny.has(key)) skupiny.set(key, { kat: key ? katMap[key] ?? null : null, zaznamy: [] })
+      skupiny.get(key)!.zaznamy.push(z)
+    }
 
-      let cena_bezDPH = 0
-      let popis = ""
+    const polozky: SFPolozkaGeorge[] = []
+    for (const { kat, zaznamy: skupina } of skupiny.values()) {
+      const jeMaterial = skupina[0].pocet != null
 
-      if (jeMatrial) {
-        // Materiál nebo kusová služba — cena_prodej_kus je bezDPH
-        const kusCena = z.cena_prodej_kus ?? kat?.sazba ?? 0
-        cena_bezDPH = Math.round(z.pocet * kusCena * 100) / 100
-        const datumStr = formatDate(z.start_at)
-        popis = datumStr
-        if (z.poznamka) popis += ` · ${z.poznamka}`
-      } else if (z.end_at) {
-        // Časová služba — sazba je bezDPH
-        const hours = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
-        const sazba = kat?.sazba ?? 0
-        cena_bezDPH = Math.round(hours * sazba * 100) / 100
-
-        const datumStr = formatDate(z.start_at)
-        const odStr = formatTime(z.start_at)
-        const doStr = formatTime(z.end_at)
-        popis = `${datumStr} · ${odStr} – ${doStr}`
-        if (z.poznamka) popis += ` · ${z.poznamka}`
+      if (jeMaterial) {
+        // Materiál / kusová služba — sečti kusy a ceny
+        let totalBezDPH = 0
+        let totalPocet = 0
+        for (const z of skupina) {
+          const kusCena = z.cena_prodej_kus ?? kat?.sazba ?? 0
+          totalBezDPH += (z.pocet ?? 0) * kusCena
+          totalPocet  += z.pocet ?? 0
+        }
+        totalBezDPH = Math.round(totalBezDPH * 100) / 100
+        if (totalBezDPH <= 0) continue
+        polozky.push({
+          nazev:       kat?.name ?? "Materiál",
+          cena_bezDPH: totalBezDPH,
+          popis:       `${totalPocet} ${kat?.jednotka ?? "ks"}`,
+        })
+      } else {
+        // Časová služba — sečti hodiny, žádné od-do (to je jen v reportu)
+        let totalMs = 0
+        let totalBezDPH = 0
+        for (const z of skupina) {
+          if (!z.end_at) continue
+          const ms = new Date(z.end_at).getTime() - new Date(z.start_at).getTime()
+          totalMs    += ms
+          totalBezDPH += (ms / 3_600_000) * (kat?.sazba ?? 0)
+        }
+        totalBezDPH = Math.round(totalBezDPH * 100) / 100
+        if (totalBezDPH <= 0) continue
+        const h = Math.floor(totalMs / 3_600_000)
+        const m = Math.round(((totalMs / 3_600_000) - h) * 60)
+        polozky.push({
+          nazev:       kat?.name ?? "Práce",
+          cena_bezDPH: totalBezDPH,
+          popis:       `${h}:${String(m).padStart(2, "0")} hod`,
+        })
       }
-
-      if (cena_bezDPH <= 0) continue
-
-      polozky.push({
-        nazev:       z.nazev || (kat?.name ?? "Práce"),
-        cena_bezDPH,
-        popis:       popis || undefined,
-      })
     }
 
     if (!polozky.length) {
