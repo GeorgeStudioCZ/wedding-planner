@@ -224,6 +224,115 @@ function buildItem(p: SFPolozka): Record<string, unknown> {
   }
 }
 
+// ── George Studio — faktura ───────────────────────────────────────────────────
+
+const GS_SEQ_ID    = 365902   // číselná řada George Studio
+const GS_BANK_ID   = 33862    // bankovní účet
+const GS_LOGO_ID   = 386497   // logo
+const GS_SPLATNOST = 7        // dní
+
+export interface SFKlientGeorge {
+  jmeno: string             // jméno nebo firma
+  ico?: string
+  dic?: string
+  email?: string
+  telefon?: string
+  ulice?: string
+  mesto?: string
+  psc?: string
+}
+
+export interface SFPolozkaGeorge {
+  nazev:     string
+  cena_bezDPH: number      // cena BEZ DPH za celou položku (quantity=1)
+  popis?:    string        // datum + časy + poznámka
+}
+
+export interface GSFakturaVystup {
+  id:         number
+  invoice_no: string
+  pdf_url:    string
+}
+
+// Hledá zákazníka v SF adresáři dle IČO — vrátí id nebo null
+export async function searchSFClientByIco(ico: string): Promise<number | null> {
+  if (!ico?.trim()) return null
+  try {
+    const json = await sfGet(`/clients/index.json?search=${encodeURIComponent(ico.trim())}`)
+    const raw  = ((json.data ?? json) as Record<string, unknown>)
+    const list = Array.isArray(raw) ? raw
+      : Array.isArray((raw as Record<string,unknown>)?.items) ? (raw as Record<string,unknown[]>).items
+      : []
+    for (const item of list as Record<string,unknown>[]) {
+      const c = (item.Client ?? item) as Record<string,unknown>
+      if (String(c.ico ?? "").replace(/\s/g,"") === ico.replace(/\s/g,"") && c.id) {
+        return Number(c.id)
+      }
+    }
+    return null
+  } catch { return null }
+}
+
+function buildClientGeorge(k: SFKlientGeorge, sfId?: number | null): Record<string, unknown> {
+  if (sfId) return { id: sfId, ...(k.email ? { email: k.email } : {}) }
+  return {
+    name:           k.jmeno,
+    country_iso_id: "CZ",
+    ...(k.ico     ? { ico:     k.ico     } : {}),
+    ...(k.dic     ? { dic:     k.dic     } : {}),
+    ...(k.email   ? { email:   k.email   } : {}),
+    ...(k.telefon ? { phone:   k.telefon } : {}),
+    ...(k.ulice   ? { address: k.ulice   } : {}),
+    ...(k.mesto   ? { city:    k.mesto   } : {}),
+    ...(k.psc     ? { zip:     k.psc     } : {}),
+  }
+}
+
+function buildItemGeorge(p: SFPolozkaGeorge): Record<string, unknown> {
+  const bezDPH = Math.round(p.cena_bezDPH * 100) / 100
+  return {
+    name:       p.nazev,
+    unit_price: bezDPH,
+    tax:        21,
+    quantity:   1,
+    ...(p.popis ? { description: p.popis } : {}),
+  }
+}
+
+export async function vytvorFakturuGeorge(
+  klient:   SFKlientGeorge,
+  polozky:  SFPolozkaGeorge[],
+  sfKlientId?: number | null,
+  poznamka?: string,
+): Promise<GSFakturaVystup> {
+  const payload = {
+    Invoice: {
+      type:             "regular",
+      name:             "Faktura - George Studio",
+      sequence_id:      GS_SEQ_ID,
+      invoice_currency: "CZK",
+      logo_id:          GS_LOGO_ID,
+      bank_accounts:    [{ id: GS_BANK_ID }],
+      due:              GS_SPLATNOST,
+      send_email:       1,
+      ...(poznamka ? { comment: poznamka } : {}),
+    },
+    Client:      buildClientGeorge(klient, sfKlientId),
+    InvoiceItem: polozky.map(buildItemGeorge),
+  }
+
+  const json = await sfPost("/invoices/create", payload)
+  const wrapper = (json.data ?? json) as Record<string, unknown>
+  const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
+  if (!inv?.id) throw new Error(`SF: nepodařilo se vytvořit fakturu George: ${JSON.stringify(json).slice(0, 300)}`)
+
+  return {
+    id:         Number(inv.id),
+    invoice_no: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
+    pdf_url:    `${SF_BASE}/invoices/pdf/${inv.id}/token:${inv.token}`,
+  }
+}
+
 // ── QR platba (Czech SPD standard) ───────────────────────────────────────────
 
 export function qrPlatbaUrl(iban: string, vs: string, castka: number): string {

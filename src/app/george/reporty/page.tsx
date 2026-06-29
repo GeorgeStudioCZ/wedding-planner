@@ -88,6 +88,9 @@ export default function ReportyPage() {
   const [zaznamy,   setZaznamy]   = useState<Zaznam[]>([])
   const [loading,   setLoading]   = useState(true)
   const [toggling,  setToggling]  = useState<number | null>(null)
+  const [fakturaLoading, setFakturaLoading] = useState(false)
+  const [fakturaResult,  setFakturaResult]  = useState<{ invoice_no: string; pdf_url: string; sf_klient_linked: boolean } | null>(null)
+  const [fakturaError,   setFakturaError]   = useState<string | null>(null)
 
   // ── Filtry ────────────────────────────────────────────────────────────────
   const def = defaultDateRange()
@@ -145,6 +148,38 @@ export default function ReportyPage() {
     }
     return [...map.entries()].sort(([a], [b]) => b.localeCompare(a))
   }, [filtered])
+
+  // ── Vystavit fakturu ─────────────────────────────────────────────────────
+  async function vytvorFakturu() {
+    if (filterZakaznik === "" || filtered.length === 0) return
+    setFakturaLoading(true); setFakturaError(null); setFakturaResult(null)
+    try {
+      const res = await fetch("/api/george/vytvor-fakturu", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zaznamyIds: filtered.map(z => z.id), zakaznikId: filterZakaznik }),
+      })
+      const json = await res.json() as { ok: boolean; invoice_no?: string; pdf_url?: string; sf_klient_linked?: boolean; error?: string }
+      if (!json.ok) throw new Error(json.error ?? "Neznámá chyba")
+      setFakturaResult({ invoice_no: json.invoice_no!, pdf_url: json.pdf_url!, sf_klient_linked: json.sf_klient_linked ?? false })
+      // Aktualizuj lokální stav — vše označeno jako vyfakturované
+      const ids = new Set(filtered.map(z => z.id))
+      setZaznamy(prev => prev.map(z => ids.has(z.id) ? { ...z, fakturovano: true } : z))
+    } catch (e) {
+      setFakturaError(e instanceof Error ? e.message : String(e))
+    }
+    setFakturaLoading(false)
+  }
+
+  function otevritReport(invoiceNo?: string) {
+    const params = new URLSearchParams()
+    if (filterZakaznik !== "") params.set("zakaznik", String(filterZakaznik))
+    if (filterOd) params.set("od", filterOd)
+    if (filterDo) params.set("do", filterDo)
+    params.set("faktura", filterFaktura)
+    if (invoiceNo) params.set("invoice", invoiceNo)
+    window.open(`/george/reporty/print?${params.toString()}`, "_blank")
+  }
 
   // ── Toggle fakturovano ────────────────────────────────────────────────────
   async function toggleFakturovano(z: Zaznam) {
@@ -261,6 +296,82 @@ export default function ReportyPage() {
             </div>
           ))}
         </div>
+
+        {/* ── Akce ── */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+          {/* PDF report */}
+          <button
+            onClick={() => otevritReport()}
+            disabled={filtered.length === 0 || filterZakaznik === ""}
+            style={{
+              padding: "9px 18px", borderRadius: 9, border: "1px solid var(--line)",
+              background: "white", color: "var(--ink)", fontSize: 13, fontWeight: 600,
+              cursor: filtered.length > 0 && filterZakaznik !== "" ? "pointer" : "default",
+              opacity: filtered.length === 0 || filterZakaznik === "" ? .4 : 1,
+              display: "flex", alignItems: "center", gap: 6,
+            }}
+          >
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+            PDF report
+          </button>
+
+          {/* Vystavit fakturu */}
+          <button
+            onClick={vytvorFakturu}
+            disabled={fakturaLoading || filtered.length === 0 || filterZakaznik === ""}
+            style={{
+              padding: "9px 18px", borderRadius: 9, border: "none",
+              background: filtered.length > 0 && filterZakaznik !== "" && !fakturaLoading
+                ? "linear-gradient(135deg, #6366f1, #f97316)" : "var(--line)",
+              color: filtered.length > 0 && filterZakaznik !== "" && !fakturaLoading ? "white" : "var(--muted)",
+              fontSize: 13, fontWeight: 600,
+              cursor: filtered.length > 0 && filterZakaznik !== "" && !fakturaLoading ? "pointer" : "default",
+              display: "flex", alignItems: "center", gap: 6,
+            }}
+          >
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15l3 3 3-3"/></svg>
+            {fakturaLoading ? "Vystavuji…" : `Vystavit fakturu SF (${filtered.length} pol.)`}
+          </button>
+
+          {filterZakaznik === "" && filtered.length > 0 && (
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>Vyberte zákazníka pro vystavení faktury</span>
+          )}
+        </div>
+
+        {/* Výsledek faktury */}
+        {fakturaResult && (
+          <div style={{
+            marginBottom: 20, padding: "14px 18px", borderRadius: "var(--radius-md)",
+            background: "#f0fdf4", border: "1px solid #86efac", display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap",
+          }}>
+            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#15803d" }}>
+                Faktura {fakturaResult.invoice_no} úspěšně vystavena a odeslána zákazníkovi
+              </div>
+              <div style={{ fontSize: 12, color: "#16a34a", marginTop: 2 }}>
+                {fakturaResult.sf_klient_linked ? "✓ Propojeno s existujícím kontaktem v SF dle IČO" : "Vytvořen nový kontakt v SF"}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <a href={fakturaResult.pdf_url} target="_blank" rel="noopener noreferrer" style={{
+                padding: "6px 12px", borderRadius: 7, background: "#16a34a", color: "white",
+                fontSize: 12, fontWeight: 600, textDecoration: "none",
+              }}>PDF faktury</a>
+              <button onClick={() => otevritReport(fakturaResult.invoice_no)} style={{
+                padding: "6px 12px", borderRadius: 7, border: "1px solid #86efac", background: "white",
+                color: "#15803d", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              }}>PDF report</button>
+            </div>
+          </div>
+        )}
+
+        {/* Chyba faktury */}
+        {fakturaError && (
+          <div style={{ marginBottom: 20, padding: "12px 16px", borderRadius: "var(--radius-md)", background: "#fef2f2", border: "1px solid #fca5a5", fontSize: 13, color: "#dc2626" }}>
+            ⚠ Chyba při vystavování faktury: {fakturaError}
+          </div>
+        )}
 
         {/* ── Záznamy ── */}
         {grouped.length === 0 ? (
