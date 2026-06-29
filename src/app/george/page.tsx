@@ -429,6 +429,8 @@ export default function GeorgePage() {
   const [prodejCena, setProdejCena] = useState("")
   const [nakupCena,  setNakupCena]  = useState("")
 
+  const [timerVisible, setTimerVisible] = useState(true)
+
   // ── Derived ────────────────────────────────────────────────────────────────
   const todayStr     = new Date().toISOString().slice(0, 10)
   const todayZaznamy = zaznamy.filter(z => z.end_at && isoDate(z.start_at) === todayStr)
@@ -652,6 +654,28 @@ export default function GeorgePage() {
         <div style={{ flex: 1, overflowY: "auto", minWidth: 0 }}>
           <div style={{ padding: "24px 24px 0" }}>
 
+            {/* Timer toggle — viditelné jen na ipad+ kde je pravý panel */}
+            <div className="hidden ipad:flex" style={{ justifyContent: "flex-end", marginBottom: 8 }}>
+              <button
+                onClick={() => setTimerVisible(v => !v)}
+                title={timerVisible ? "Skrýt timer panel" : "Zobrazit timer panel"}
+                style={{
+                  background: "none", border: "1px solid var(--line)",
+                  borderRadius: 7, padding: "5px 10px", cursor: "pointer",
+                  color: "var(--muted)", display: "flex", alignItems: "center", gap: 5,
+                  fontSize: 11, fontWeight: 500,
+                }}
+              >
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  {timerVisible
+                    ? <><path d="M3 8h18M3 12h18M3 16h18"/></>
+                    : <><path d="M3 8h18M3 12h18M3 16h18"/></>
+                  }
+                </svg>
+                {timerVisible ? "Skrýt timer" : "Zobrazit timer"}
+              </button>
+            </div>
+
             {/* KPI row */}
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
               {[
@@ -733,7 +757,7 @@ export default function GeorgePage() {
         </div>
 
         {/* ── Right panel — timer ───────────────────────────────────────── */}
-        <div className="hidden ipad:flex flex-col" style={{
+        {timerVisible && <div className="hidden ipad:flex flex-col" style={{
           width: 340, flexShrink: 0,
           borderLeft: "1px solid rgba(255,255,255,.05)",
           background: "#0e0f14",
@@ -1210,7 +1234,7 @@ export default function GeorgePage() {
             </div>
           )}
 
-        </div>{/* end right panel */}
+        </div>}{/* end right panel */}
       </div>
 
       {/* ── Edit popup ────────────────────────────────────────────────── */}
