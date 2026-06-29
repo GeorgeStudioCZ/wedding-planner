@@ -46,6 +46,7 @@ function PrintPageInner() {
   const [kategorie, setKategorie] = useState<Kategorie[]>([])
   const [zaznamy,   setZaznamy]   = useState<Zaznam[]>([])
   const [loading,   setLoading]   = useState(true)
+  const [pdfLoading, setPdfLoading] = useState(false)
 
   useEffect(() => {
     if (!zakaznikId) { setLoading(false); return }
@@ -100,6 +101,38 @@ function PrintPageInner() {
   const zakName = zakaznik.firma?.trim() || `${zakaznik.jmeno} ${zakaznik.prijmeni}`.trim()
   const rozsah  = od && do_ ? `${formatDate(od + "T00:00")} – ${formatDate(do_ + "T00:00")}` : "Celé období"
 
+  async function downloadPDF() {
+    setPdfLoading(true)
+    try {
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ])
+      const el = document.getElementById("gs-report-content")
+      if (!el) return
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff" })
+      const imgData = canvas.toDataURL("image/png")
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+      const pageW = pdf.internal.pageSize.getWidth()
+      const pageH = pdf.internal.pageSize.getHeight()
+      const imgH  = (canvas.height * pageW) / canvas.width
+      let remaining = imgH
+      let offset = 0
+      pdf.addImage(imgData, "PNG", 0, offset, pageW, imgH)
+      remaining -= pageH
+      while (remaining > 0) {
+        offset -= pageH
+        pdf.addPage()
+        pdf.addImage(imgData, "PNG", 0, offset, pageW, imgH)
+        remaining -= pageH
+      }
+      const fileName = `GS-report-${zakName.replace(/\s+/g, "-")}.pdf`
+      pdf.save(fileName)
+    } finally {
+      setPdfLoading(false)
+    }
+  }
+
   return (
     <>
       <style>{`
@@ -109,14 +142,15 @@ function PrintPageInner() {
         * { box-sizing: border-box; }
       `}</style>
 
-      {/* Tisk tlačítko */}
+      {/* Toolbar */}
       <div className="no-print" style={{ background: "#0e0f14", padding: "12px 24px", display: "flex", gap: 10, alignItems: "center", justifyContent: "flex-end" }}>
-        <span style={{ color: "#5a5b66", fontSize: 12, flex: 1 }}>Tisk / Uložit jako PDF — použijte Ctrl+P nebo tlačítko níže</span>
-        <button onClick={() => window.print()} style={{
+        <span style={{ color: "#5a5b66", fontSize: 12, flex: 1 }}>Výkaz práce — George Studio</span>
+        <button onClick={downloadPDF} disabled={pdfLoading} style={{
           background: "linear-gradient(135deg, #6366f1, #f97316)", border: "none", borderRadius: 8,
-          padding: "8px 18px", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer",
+          padding: "8px 18px", color: "white", fontSize: 13, fontWeight: 600,
+          cursor: pdfLoading ? "default" : "pointer", opacity: pdfLoading ? .6 : 1,
         }}>
-          Tisk / PDF
+          {pdfLoading ? "Generuji…" : "Stáhnout PDF"}
         </button>
         <button onClick={() => window.close()} style={{
           background: "none", border: "1px solid rgba(255,255,255,.15)", borderRadius: 8,
@@ -127,7 +161,7 @@ function PrintPageInner() {
       </div>
 
       {/* Stránka A4 */}
-      <div style={{ maxWidth: 794, margin: "24px auto 40px", background: "white", padding: "36px 40px", boxShadow: "0 2px 20px rgba(0,0,0,.12)" }}>
+      <div id="gs-report-content" style={{ maxWidth: 794, margin: "24px auto 40px", background: "white", padding: "36px 40px", boxShadow: "0 2px 20px rgba(0,0,0,.12)" }}>
 
         {/* Hlavička */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, paddingBottom: 20, borderBottom: "2px solid #0e0f14" }}>
