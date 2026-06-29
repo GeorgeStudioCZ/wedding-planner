@@ -110,20 +110,22 @@ function PrintPageInner() {
       ])
       const el = document.getElementById("gs-report-content")
       if (!el) return
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff" })
-      const imgData = canvas.toDataURL("image/png")
+      const canvas = await html2canvas(el, { scale: 1.5, useCORS: true, logging: false, backgroundColor: "#ffffff" })
+      const imgData = canvas.toDataURL("image/jpeg", 0.82)
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
       const pageW = pdf.internal.pageSize.getWidth()
       const pageH = pdf.internal.pageSize.getHeight()
-      const imgH  = (canvas.height * pageW) / canvas.width
+      // Šířka obsahu = 794px (CSS), škálovaná na 210mm A4
+      const mmPerPx = pageW / (el.offsetWidth * 1.5)
+      const imgH    = canvas.height * mmPerPx
       let remaining = imgH
       let offset = 0
-      pdf.addImage(imgData, "PNG", 0, offset, pageW, imgH)
+      pdf.addImage(imgData, "JPEG", 0, offset, pageW, imgH)
       remaining -= pageH
       while (remaining > 0) {
         offset -= pageH
         pdf.addPage()
-        pdf.addImage(imgData, "PNG", 0, offset, pageW, imgH)
+        pdf.addImage(imgData, "JPEG", 0, offset, pageW, imgH)
         remaining -= pageH
       }
       const fileName = `GS-report-${zakName.replace(/\s+/g, "-")}.pdf`
