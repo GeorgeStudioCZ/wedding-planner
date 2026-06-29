@@ -132,13 +132,17 @@ export async function POST(req: NextRequest) {
     const faktura = await vytvorFakturuGeorge(klient, polozky, sfKlientId, poznamka)
 
     // Ulož fakturu do george_faktury
-    await sb.from("george_faktury").insert({
+    const { error: insertErr } = await sb.from("george_faktury").insert({
       sf_id:       faktura.id,
       sf_no:       faktura.invoice_no,
       zakaznik_id: zakaznikId,
       pdf_url:     faktura.pdf_url,
       celkem_sdph: celkemSDPH,
     })
+    if (insertErr) {
+      console.error("[george/vytvor-fakturu] george_faktury insert failed:", insertErr)
+      // Fakturu v SF necháme — jen logujeme chybu, odpověď stále ok
+    }
 
     // Označ záznamy jako vyfakturované a ulož odkaz na fakturu
     await sb.from("george_zaznamy").update({
