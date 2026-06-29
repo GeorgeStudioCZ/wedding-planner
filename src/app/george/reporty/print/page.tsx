@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 
@@ -31,6 +31,10 @@ function calcBezDPH(z: Zaznam, kat: Kategorie | undefined): number {
 }
 
 export default function PrintPage() {
+  return <Suspense fallback={<div style={{ padding: 40, fontFamily: "system-ui" }}>Načítám…</div>}><PrintPageInner /></Suspense>
+}
+
+function PrintPageInner() {
   const params = useSearchParams()
   const zakaznikId = params.get("zakaznik") ? Number(params.get("zakaznik")) : null
   const od         = params.get("od") ?? ""
