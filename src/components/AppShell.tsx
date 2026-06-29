@@ -44,6 +44,7 @@ const NAV_WED = [
   { key: "kalendar",     label: "Kalendář",      href: "/svatby/kalendar",         ico: I.calendar },
   { key: "schuzky",      label: "Schůzky",       href: "/svatby/schuzky",          ico: I.video },
   { key: "klienti",      label: "Klienti",       href: "/zakaznici?from=wed",      ico: I.users },
+  { key: "fakturace",    label: "Fakturace",     href: "/fakturace?from=wed",      ico: I.receipt },
   { key: "komunikace",   label: "Komunikace",    href: "/komunikace?from=wed",     ico: I.mail },
   { key: "nastaveni",    label: "Nastavení",     href: "/svatby/nastaveni",        ico: I.settings },
 ]
@@ -54,13 +55,14 @@ const NAV_VAN = [
   { key: "kalendar",   label: "Kalendář",   href: "/pujcovna/kalendar",          ico: I.calendar },
   { key: "klienti",    label: "Zákazníci",  href: "/zakaznici?from=van",         ico: I.users },
   { key: "cenik",      label: "Ceník",      href: "/pujcovna/cenik",             ico: I.wallet },
-  { key: "komunikace", label: "Komunikace", href: "/komunikace?from=van",         ico: I.mail },
+  { key: "fakturace",  label: "Fakturace",  href: "/fakturace?from=van",         ico: I.receipt },
+  { key: "komunikace", label: "Komunikace", href: "/komunikace?from=van",        ico: I.mail },
 ]
 
 const NAV_STUDIO = [
   { key: "home",       label: "Přehled",      href: "/george",                    ico: I.home },
   { key: "reporty",    label: "Reporty",      href: "/george/reporty",            ico: I.barChart },
-  { key: "fakturace",  label: "Fakturace",    href: "/george/fakturace",          ico: I.receipt },
+  { key: "fakturace",  label: "Fakturace",    href: "/fakturace?from=studio",     ico: I.receipt },
   { key: "cenik",      label: "Ceník služeb", href: "/george/cenik",              ico: I.wallet },
   { key: "klienti",    label: "Zákazníci",    href: "/zakaznici?from=studio",     ico: I.users },
   { key: "komunikace", label: "Komunikace",   href: "/komunikace?from=studio",    ico: I.mail },

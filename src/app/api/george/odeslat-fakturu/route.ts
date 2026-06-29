@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { sendSFInvoiceEmail } from "@/lib/superfaktura"
+import { logEmail } from "@/lib/email-log"
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     // Načti fakturu + zákazníka
     const { data: faktura } = await sb
       .from("george_faktury")
-      .select("sf_id, zakaznik_id")
+      .select("sf_id, sf_no, zakaznik_id")
       .eq("sf_id", sfId)
       .single()
 
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const { data: zak } = await sb
       .from("zakaznici")
-      .select("email")
+      .select("email, jmeno, prijmeni, firma")
       .eq("id", faktura.zakaznik_id)
       .single()
 
@@ -38,6 +39,18 @@ export async function POST(req: NextRequest) {
     await sb.from("george_faktury")
       .update({ odeslano: true, odeslano_at: new Date().toISOString() })
       .eq("sf_id", sfId)
+
+    // Zaznamenej do komunikace
+    const zakName = zak.firma?.trim() || `${zak.jmeno} ${zak.prijmeni}`.trim()
+    await logEmail({
+      sluzba:   "george",
+      typ:      "faktura",
+      to_email: zak.email,
+      to_name:  zakName,
+      subject:  `Faktura ${faktura.sf_no} – George Studio`,
+      html:     `Faktura ${faktura.sf_no} odeslána zákazníkovi přes SuperFaktura.`,
+      status:   "sent",
+    })
 
     return NextResponse.json({ ok: true, email: zak.email })
   } catch (err) {
