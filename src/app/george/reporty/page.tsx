@@ -155,13 +155,13 @@ export default function ReportyPage() {
 
   // ── Vystavit fakturu ─────────────────────────────────────────────────────
   async function vytvorFakturu() {
-    if (filterZakaznik === "" || filtered.length === 0) return
+    if (filterZakaznik === "" || filteredNevyfakt.length === 0) return
     setFakturaLoading(true); setFakturaError(null); setFakturaResult(null)
     try {
       const res = await fetch("/api/george/vytvor-fakturu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ zaznamyIds: filtered.map(z => z.id), zakaznikId: filterZakaznik }),
+        body: JSON.stringify({ zaznamyIds: filteredNevyfakt.map(z => z.id), zakaznikId: filterZakaznik }),
       })
       const json = await res.json() as { ok: boolean; sf_id?: number; invoice_no?: string; pdf_url?: string; sf_klient_linked?: boolean; error?: string }
       if (!json.ok) throw new Error(json.error ?? "Neznámá chyba")
@@ -174,6 +174,9 @@ export default function ReportyPage() {
     }
     setFakturaLoading(false)
   }
+
+  // Jen nevyfakturované z filtru — tyto jdou do faktury
+  const filteredNevyfakt = useMemo(() => filtered.filter(z => !z.fakturovano), [filtered])
 
   // sf_faktura_id pokud jsou všechny viditelné záznamy ze stejné faktury
   const jednotnaFaktura = useMemo(() => {
@@ -345,22 +348,22 @@ export default function ReportyPage() {
             PDF report
           </button>
 
-          {/* Vystavit fakturu */}
+          {/* Vystavit fakturu — jen nevyfakturované záznamy */}
           <button
             onClick={vytvorFakturu}
-            disabled={fakturaLoading || filtered.length === 0 || filterZakaznik === ""}
+            disabled={fakturaLoading || filteredNevyfakt.length === 0 || filterZakaznik === ""}
             style={{
               padding: "9px 18px", borderRadius: 9, border: "none",
-              background: filtered.length > 0 && filterZakaznik !== "" && !fakturaLoading
+              background: filteredNevyfakt.length > 0 && filterZakaznik !== "" && !fakturaLoading
                 ? "linear-gradient(135deg, #6366f1, #f97316)" : "var(--line)",
-              color: filtered.length > 0 && filterZakaznik !== "" && !fakturaLoading ? "white" : "var(--muted)",
+              color: filteredNevyfakt.length > 0 && filterZakaznik !== "" && !fakturaLoading ? "white" : "var(--muted)",
               fontSize: 13, fontWeight: 600,
-              cursor: filtered.length > 0 && filterZakaznik !== "" && !fakturaLoading ? "pointer" : "default",
+              cursor: filteredNevyfakt.length > 0 && filterZakaznik !== "" && !fakturaLoading ? "pointer" : "default",
               display: "flex", alignItems: "center", gap: 6,
             }}
           >
             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15l3 3 3-3"/></svg>
-            {fakturaLoading ? "Vystavuji…" : `Vystavit fakturu SF (${filtered.length} pol.)`}
+            {fakturaLoading ? "Vystavuji…" : `Vystavit fakturu SF (${filteredNevyfakt.length} pol.)`}
           </button>
 
           {filterZakaznik === "" && filtered.length > 0 && (
