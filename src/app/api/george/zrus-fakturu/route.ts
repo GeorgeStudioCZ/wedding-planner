@@ -32,6 +32,9 @@ export async function POST(req: NextRequest) {
       .update({ fakturovano: false, sf_faktura_id: null, sf_faktura_no: null })
       .eq("sf_faktura_id", sfId)
 
+    // Smaž záznam faktury
+    await sb.from("george_faktury").delete().eq("sf_id", sfId)
+
     return NextResponse.json({ ok: true, resetIds: zaznamy.map(z => z.id) })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

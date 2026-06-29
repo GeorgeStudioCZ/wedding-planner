@@ -124,8 +124,21 @@ export async function POST(req: NextRequest) {
     // Ověř zákazníka v SF adresáři dle IČO
     const sfKlientId = zak.ico ? await searchSFClientByIco(zak.ico) : null
 
+    // Spočítej celkovou cenu s DPH pro uložení
+    const celkemBezDPH = polozky.reduce((a, p) => a + Math.round(p.unit_price * p.quantity * 100) / 100, 0)
+    const celkemSDPH   = Math.round(celkemBezDPH * 1.21 * 100) / 100
+
     // Vytvoř fakturu
     const faktura = await vytvorFakturuGeorge(klient, polozky, sfKlientId, poznamka)
+
+    // Ulož fakturu do george_faktury
+    await sb.from("george_faktury").insert({
+      sf_id:       faktura.id,
+      sf_no:       faktura.invoice_no,
+      zakaznik_id: zakaznikId,
+      pdf_url:     faktura.pdf_url,
+      celkem_sdph: celkemSDPH,
+    })
 
     // Označ záznamy jako vyfakturované a ulož odkaz na fakturu
     await sb.from("george_zaznamy").update({

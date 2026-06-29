@@ -308,6 +308,13 @@ export async function deleteSFInvoice(sfId: number): Promise<void> {
   await sfDelete(`/invoices/delete/${sfId}`)
 }
 
+export async function sendSFInvoiceEmail(sfId: number, toEmail: string): Promise<void> {
+  await sfPost("/invoices/send", {
+    Invoice: { id: sfId },
+    Email:   { invoice_id: sfId, to: toEmail },
+  })
+}
+
 function buildItemGeorge(p: SFPolozkaGeorge): Record<string, unknown> {
   return {
     name:       p.nazev,
@@ -338,7 +345,6 @@ export async function vytvorFakturuGeorge(
       logo_id:          GS_LOGO_ID,
       bank_accounts:    [{ id: GS_BANK_ID }],
       due:              dueStr,
-      send_email:       1,
       ...(poznamka ? { comment: poznamka } : {}),
     },
     Client:      buildClientGeorge(klient, sfKlientId),
