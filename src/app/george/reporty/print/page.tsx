@@ -103,7 +103,7 @@ function PrintPageInner() {
   return (
     <>
       <style>{`
-        @page { margin: 18mm 16mm; size: A4; }
+        @page { margin: 18mm 16mm; size: A4 portrait; }
         @media print { .no-print { display: none !important; } body { background: white; } }
         body { margin: 0; background: #f5f5f5; font-family: system-ui, -apple-system, sans-serif; }
         * { box-sizing: border-box; }
