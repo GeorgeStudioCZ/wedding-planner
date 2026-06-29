@@ -84,23 +84,26 @@ export async function POST(req: NextRequest) {
           unit:       kat?.jednotka ?? "ks",
         })
       } else {
-        // Časová služba — quantity = decimal hodiny, unit_price = hodinová sazba bez DPH
+        // Časová služba — stejný výpočet bezDPH jako v PDF reportu (per-záznam, pak suma)
+        // → faktura i report zobrazí shodnou částku
         let totalMs = 0
+        let totalBezDPH = 0
+        const sazba = kat?.sazba ?? 0
         for (const z of skupina) {
           if (!z.end_at) continue
-          totalMs += new Date(z.end_at).getTime() - new Date(z.start_at).getTime()
+          const ms = new Date(z.end_at).getTime() - new Date(z.start_at).getTime()
+          totalMs += ms
+          totalBezDPH += Math.round(ms / 3_600_000 * sazba * 100) / 100
         }
-        const totalHours = totalMs / 3_600_000
-        const sazba = kat?.sazba ?? 0
-        if (totalHours <= 0 || sazba <= 0) continue
-        const h = Math.floor(totalHours)
-        const m = Math.round((totalHours - h) * 60)
+        if (totalMs <= 0 || sazba <= 0) continue
+        const totalHoursDisplay = totalMs / 3_600_000
+        const h = Math.floor(totalHoursDisplay)
+        const m = Math.round((totalHoursDisplay - h) * 60)
         polozky.push({
           nazev:      kat?.name ?? "Práce",
-          unit_price: sazba,
-          quantity:   Math.round(totalHours * 100) / 100,
-          unit:       "hod",
-          popis:      `${h}:${String(m).padStart(2, "0")} hod`,
+          unit_price: Math.round(totalBezDPH * 100) / 100,
+          quantity:   1,
+          unit:       `${h}:${String(m).padStart(2, "0")} hod`,
         })
       }
     }
