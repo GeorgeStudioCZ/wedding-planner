@@ -132,11 +132,8 @@ function PrintPageInner() {
         {/* Hlavička */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, paddingBottom: 20, borderBottom: "2px solid #0e0f14" }}>
           <div>
-            {/* Logo jako text */}
-            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-.03em", color: "#0e0f14" }}>
-              GEORGE <span style={{ background: "linear-gradient(90deg,#6366f1,#f97316)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>STUDIO</span>
-            </div>
-            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, letterSpacing: ".1em" }}>VÝKAZ PRÁCE</div>
+            <img src="https://www.georgestudio.cz/gs-logo-georgestudio.png" alt="George Studio" style={{ height: 48, display: "block" }} />
+            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 6, letterSpacing: ".1em" }}>VÝKAZ PRÁCE</div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 13, color: "#374151" }}>Datum vystavení: <strong>{today}</strong></div>
