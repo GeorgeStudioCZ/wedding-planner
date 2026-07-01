@@ -668,74 +668,102 @@ export default function RezervacePopup({
     return (
       <Wrapper>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
-          <h2 className="font-bold text-gray-900">Detail výpůjčky</h2>
+        <div className="flex items-center justify-between px-5 py-4 shrink-0">
+          <h2 className="font-bold text-gray-900 text-base">Detail výpůjčky</h2>
           <div className="flex items-center gap-2">
-            {zakaznik?.email && (
-              <button
-                onClick={poslatZnovu}
-                disabled={posilamZnovu}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                style={{ background: posilamZnovu ? "#f3f4f6" : "#ecfdf5", color: posilamZnovu ? "#9ca3af" : "#059669" }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                {posilamZnovu ? "Odesílám…" : "Odeslat email"}
-              </button>
-            )}
-            {["zaplaceno", "vypujceno", "dokonceno"].includes(rez.stav) && (
-              <button
-                onClick={poslatFakturu}
-                disabled={posilamFakturu}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                style={{ background: posilamFakturu ? "#f3f4f6" : "#eff6ff", color: posilamFakturu ? "#9ca3af" : "#2563eb" }}
-                title="Znovu odeslat email s fakturou zákazníkovi"
-              >
-                📄 {posilamFakturu ? "Odesílám…" : "Faktura"}
-              </button>
-            )}
-            <button
-              onClick={poslatSms}
-              disabled={posilamSms}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-              style={{ background: posilamSms ? "#f3f4f6" : "#f5f3ff", color: posilamSms ? "#9ca3af" : "#7c3aed" }}
-              title="Znovu odeslat SMS zákazníkovi"
-            >
-              📱 {posilamSms ? "Odesílám…" : "SMS"}
-            </button>
-            {["zaplaceno", "vypujceno", "dokonceno"].includes(rez.stav) && (
-              <button
-                onClick={syncGcal}
-                disabled={syncujeGcal}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                style={{ background: syncujeGcal ? "#f3f4f6" : "#f0fdf4", color: syncujeGcal ? "#9ca3af" : "#16a34a" }}
-                title="Synchronizovat do Google Kalendáře"
-              >
-                📅 {syncujeGcal ? "Syncing…" : "GCal"}
-              </button>
-            )}
-            <button
-              onClick={duplikovatRezervaci}
-              disabled={duplikuji}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-              style={{ background: duplikuji ? "#f3f4f6" : "#fff7ed", color: duplikuji ? "#9ca3af" : "#c2410c" }}
-              title="Vytvořit kopii této rezervace s novými termíny"
-            >
-              {duplikuji ? "Duplikuji…" : "📋 Duplikovat"}
-            </button>
             <button
               onClick={() => setView("edit")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-gray-700 transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
               Upravit
             </button>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors text-lg leading-none">✕</button>
           </div>
         </div>
+
+        {/* Action toolbar */}
+        <div className="flex items-center gap-2 px-5 pb-4 shrink-0">
+          {zakaznik?.email && (
+            <button
+              onClick={poslatZnovu}
+              disabled={posilamZnovu}
+              title="Odeslat potvrzovací email zákazníkovi"
+              className="flex flex-col items-center gap-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border"
+              style={posilamZnovu
+                ? { background: "#f9fafb", color: "#9ca3af", borderColor: "#e5e7eb" }
+                : { background: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0" }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              {posilamZnovu ? "Odesílám…" : "Email"}
+            </button>
+          )}
+          {["zaplaceno", "vypujceno", "dokonceno"].includes(rez.stav) && (
+            <button
+              onClick={poslatFakturu}
+              disabled={posilamFakturu}
+              title="Odeslat fakturu zákazníkovi"
+              className="flex flex-col items-center gap-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border"
+              style={posilamFakturu
+                ? { background: "#f9fafb", color: "#9ca3af", borderColor: "#e5e7eb" }
+                : { background: "#eff6ff", color: "#2563eb", borderColor: "#bfdbfe" }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {posilamFakturu ? "Odesílám…" : "Faktura"}
+            </button>
+          )}
+          <button
+            onClick={poslatSms}
+            disabled={posilamSms}
+            title="Odeslat SMS zákazníkovi"
+            className="flex flex-col items-center gap-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border"
+            style={posilamSms
+              ? { background: "#f9fafb", color: "#9ca3af", borderColor: "#e5e7eb" }
+              : { background: "#f5f3ff", color: "#7c3aed", borderColor: "#ddd6fe" }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            {posilamSms ? "Odesílám…" : "SMS"}
+          </button>
+          {["zaplaceno", "vypujceno", "dokonceno"].includes(rez.stav) && (
+            <button
+              onClick={syncGcal}
+              disabled={syncujeGcal}
+              title="Synchronizovat do Google Kalendáře"
+              className="flex flex-col items-center gap-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border"
+              style={syncujeGcal
+                ? { background: "#f9fafb", color: "#9ca3af", borderColor: "#e5e7eb" }
+                : { background: "#f0fdf4", color: "#16a34a", borderColor: "#bbf7d0" }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {syncujeGcal ? "Syncing…" : "GCal"}
+            </button>
+          )}
+          <button
+            onClick={duplikovatRezervaci}
+            disabled={duplikuji}
+            title="Vytvořit kopii rezervace s novými termíny"
+            className="flex flex-col items-center gap-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border"
+            style={duplikuji
+              ? { background: "#f9fafb", color: "#9ca3af", borderColor: "#e5e7eb" }
+              : { background: "#fff7ed", color: "#c2410c", borderColor: "#fed7aa" }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            {duplikuji ? "Duplikuji…" : "Duplikovat"}
+          </button>
+        </div>
+        <div className="border-t border-gray-100 shrink-0" />
 
         <div className="overflow-y-auto flex-1 p-5 space-y-3">
 
