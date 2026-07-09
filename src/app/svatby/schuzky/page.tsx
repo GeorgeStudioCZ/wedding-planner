@@ -484,8 +484,8 @@ export default function SchuzkyPage() {
   const filtered = schuzky.filter(s => filtr === "vse" || s.stav === filtr)
   const dnes = new Date(); dnes.setHours(0,0,0,0)
   const jeProbehl = (s: Schuzka) => !!najdiSvatbu(s, zakazky)?.videohovor_datum || new Date(s.datum) < dnes
-  const budouci = filtered.filter(s => !jeProbehl(s))
-  const minule  = filtered.filter(s =>  jeProbehl(s))
+  const budouci = filtered.filter(s => !jeProbehl(s) && s.stav !== "zrusena")
+  const minule  = filtered.filter(s =>  jeProbehl(s) || s.stav === "zrusena")
 
   const counts = {
     vse:       schuzky.length,
