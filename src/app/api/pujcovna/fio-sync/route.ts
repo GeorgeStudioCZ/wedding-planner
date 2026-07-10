@@ -195,6 +195,25 @@ export async function GET(req: NextRequest) {
         console.warn(`[fio-sync] VS ${t.vs}: rezervace ${rez.id} – email nenalezen, faktura ${faktura.invoice_no} odeslána bez emailu zákazníkovi`)
       }
 
+      // GCal sync — pro každou položku skupiny která patří do kalendáře
+      try {
+        const { data: skupinaIds } = await sb
+          .from("pujcovna_rezervace")
+          .select("id")
+          .eq("group_id", rez.group_id)
+        const ids = (skupinaIds ?? [{ id: rez.id }]).map(r => r.id)
+        const origin = req.headers.get("origin") ?? req.nextUrl.origin
+        await Promise.allSettled(ids.map(id =>
+          fetch(`${origin}/api/pujcovna/gcal-sync`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rezervaceId: id }),
+          })
+        ))
+      } catch (gcalErr) {
+        console.error("[fio-sync] gcal-sync failed:", gcalErr)
+      }
+
       stats.sparovano++
       log.push(`VS ${t.vs}: ✅ spárováno – ${rez.customer} – ${t.objem} Kč – faktura ${faktura.invoice_no}`)
 
