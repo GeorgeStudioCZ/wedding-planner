@@ -103,13 +103,21 @@ function parseTimeRange(timeStr: string): { start: string; end: string } | null 
   return { start: pad(match[1]), end: pad(match[2]) }
 }
 
+function katLabel(kategorie: string): string {
+  if (kategorie === "Stany")        return "autostanu"
+  if (kategorie === "Paddleboardy") return "paddleboardu"
+  if (kategorie === "Držáky kol")   return "držáku kol"
+  return "výpůjčky"
+}
+
 function buildPickupEvent(rez: GCalRezervace) {
   const zakaznikJmeno = rez.zakaznik
     ? `${rez.zakaznik.jmeno} ${rez.zakaznik.prijmeni}`.trim()
     : "Zákazník"
+  const emoji = KAT_EMOJI[rez.kategorie] ?? "📦"
 
   const description = [
-    `Stan: ${rez.polozka}`,
+    `${rez.polozka}`,
     rez.vozidlo          ? `🚗 ${rez.vozidlo}`            : null,
     rez.zakaznik?.telefon ? `📞 ${rez.zakaznik.telefon}`  : null,
     rez.zakaznik?.email   ? `✉️ ${rez.zakaznik.email}`    : null,
@@ -119,9 +127,9 @@ function buildPickupEvent(rez: GCalRezervace) {
   const times = parseTimeRange(rez.cas_vyzvednuti)
   const den = rez.datum_vyzvednuti || rez.start_date
   return {
-    summary:     `⛺ Vyzvednutí autostanu – ${zakaznikJmeno}`,
+    summary:     `${emoji} Vyzvednutí ${katLabel(rez.kategorie)} – ${zakaznikJmeno}`,
     description,
-    colorId:     null,  // výchozí barva kalendáře
+    colorId:     null,
     start: times
       ? { dateTime: `${den}T${times.start}:00`, timeZone: "Europe/Prague" }
       : { date: den },
@@ -135,9 +143,10 @@ function buildReturnEvent(rez: GCalRezervace) {
   const zakaznikJmeno = rez.zakaznik
     ? `${rez.zakaznik.jmeno} ${rez.zakaznik.prijmeni}`.trim()
     : "Zákazník"
+  const emoji = KAT_EMOJI[rez.kategorie] ?? "📦"
 
   const description = [
-    `Stan: ${rez.polozka}`,
+    `${rez.polozka}`,
     rez.vozidlo          ? `🚗 ${rez.vozidlo}`            : null,
     rez.zakaznik?.telefon ? `📞 ${rez.zakaznik.telefon}`  : null,
     rez.zakaznik?.email   ? `✉️ ${rez.zakaznik.email}`    : null,
@@ -146,9 +155,9 @@ function buildReturnEvent(rez: GCalRezervace) {
   const times = parseTimeRange(rez.cas_vraceni)
   const den = rez.datum_vraceni || rez.end_date
   return {
-    summary:     `⛺ Vrácení autostanu – ${zakaznikJmeno}`,
+    summary:     `${emoji} Vrácení ${katLabel(rez.kategorie)} – ${zakaznikJmeno}`,
     description,
-    colorId:     null,  // výchozí barva kalendáře
+    colorId:     null,
     start: times
       ? { dateTime: `${den}T${times.start}:00`, timeZone: "Europe/Prague" }
       : { date: den },

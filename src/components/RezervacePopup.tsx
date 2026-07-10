@@ -50,6 +50,7 @@ type Rezervace = {
   pricniky: string
   stav: string
   sf_proforma_id: number | null
+  sf_faktura_id: number | null
   sf_vs: string | null
   datum_vyzvednuti: string | null
   datum_vraceni:    string | null
@@ -178,6 +179,9 @@ export default function RezervacePopup({
   const [chyba, setChyba] = useState<string | null>(null)
   const [ukladam, setUkladam] = useState(false)
   const [mazani, setMazani] = useState(false)
+  const [stornoModal, setStornoModal] = useState(false)
+  const [stornoPercent, setStornoPercent] = useState(100)
+  const [stornoLoading, setStornoLoading] = useState(false)
   const [posilamZnovu, setPosilamZnovu] = useState(false)
   const [posilamFakturu, setPosilamFakturu] = useState(false)
   const [posilamSms, setPosilamSms] = useState(false)
@@ -279,40 +283,65 @@ export default function RezervacePopup({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.start_date, form.end_date, form.item_id, jeStanVybran, vsechnyPolozky.length])
 
-  async function zmenStav(novyStav: string) {
-    if (!rez || novyStav === rez.stav) return
-    const sb = createClient()
+  async function provedStorno(percentVraceni: number) {
+    if (!rez) return
+    setStornoLoading(true)
+    try {
+      const res = await fetch("/api/pujcovna/storno-dobropis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rezervaceId: rez.id,
+          groupId: rez.group_id,
+          sfFakturaId: rez.sf_faktura_id,
+          percentVraceni,
+          castka: celkem,
+        }),
+      })
+      const json = await res.json() as { ok: boolean; error?: string; dobropis_no?: string; dobropis_pdf?: string }
+      if (!json.ok) throw new Error(json.error ?? "Chyba při vytváření dobropisu")
+      setStornoModal(false)
+      await zmenStavInterni("storno", `Dobropis ${json.dobropis_no ?? ""} (${percentVraceni}% vráceno)`)
+    } catch (e) {
+      alert("Chyba: " + (e instanceof Error ? e.message : String(e)))
+    }
+    setStornoLoading(false)
+  }
 
+  async function zmenStavInterni(novyStav: string, poznamka?: string) {
+    if (!rez) return
+    const sb = createClient()
     if (rez.group_id) {
-      // Změna stavu vždy aktualizuje celou skupinu (stan + příslušenství)
       await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("group_id", rez.group_id)
     } else {
       await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("id", rez.id)
     }
-    await sb.from("pujcovna_rezervace_historie").insert([{ rezervace_id: rez.id, stav: novyStav }])
+    await sb.from("pujcovna_rezervace_historie").insert([{ rezervace_id: rez.id, stav: novyStav, poznamka: poznamka ?? null }])
     setRez({ ...rez, stav: novyStav })
     nactiHistorii(rez.id)
-
-    // Google Calendar sync
     fetch("/api/pujcovna/gcal-sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ rezervaceId: rez.id }),
     }).catch(console.error)
-
-    // Storno → email zákazníkovi
     if (novyStav === "storno" && zakaznik?.email && polozka) {
       fetch("/api/mail/storno-pujcovna", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          zakaznik: { jmeno: zakaznik.jmeno, email: zakaznik.email },
-          polozka: polozka.name,
-          dateFrom: rez.start_date,
-          dateTo: rez.end_date,
-        }),
+        body: JSON.stringify({ email: zakaznik.email, jmeno: zakaznik.jmeno, polozka: polozka.name }),
       }).catch(console.error)
     }
+  }
+
+  async function zmenStav(novyStav: string) {
+    if (!rez || novyStav === rez.stav) return
+    // Storno zaplacené rezervace → dobropis dialog
+    if (novyStav === "storno" && ["zaplaceno", "vypujceno", "dokonceno"].includes(rez.stav)) {
+      setStornoPercent(100)
+      setStornoModal(true)
+      return
+    }
+    await zmenStavInterni(novyStav)
 
     // Zaplaceno → ostrá faktura ze zálohy + email zákazníkovi
     if (novyStav === "zaplaceno" && rez.sf_proforma_id && polozka && zakaznik) {
@@ -666,6 +695,7 @@ export default function RezervacePopup({
   // ── Detail view ─────────────────────────────────────────────────────────────
   if (view === "detail") {
     return (
+      <>
       <Wrapper>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 shrink-0">
@@ -956,6 +986,82 @@ export default function RezervacePopup({
 
         </div>
       </Wrapper>
+
+      {/* Storno / dobropis modal */}
+      {stornoModal && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
+          onClick={() => { if (!stornoLoading) setStornoModal(false) }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5"
+            onClick={e => e.stopPropagation()}
+          >
+            <div>
+              <h3 className="font-bold text-gray-900 text-base mb-1">Storno zaplacené rezervace</h3>
+              <p className="text-sm text-gray-500">Kolik % platby vracíte zákazníkovi?</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Procento vrácení</span>
+                <span className="text-lg font-bold text-emerald-700">{stornoPercent} %</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={stornoPercent}
+                onChange={e => setStornoPercent(Number(e.target.value))}
+                className="w-full accent-emerald-600"
+              />
+              <div className="flex justify-between text-xs text-gray-400">
+                <span>0 %</span>
+                <span>100 %</span>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex justify-between items-center">
+              <span className="text-sm text-emerald-800 font-medium">Vracíte zákazníkovi</span>
+              <span className="text-lg font-bold text-emerald-700">
+                {formatKc(Math.round(celkem * stornoPercent / 100))}
+              </span>
+            </div>
+
+            {stornoPercent === 0 && (
+              <p className="text-xs text-orange-600 bg-orange-50 rounded-lg px-3 py-2">
+                Bude vystaven dobropis na 0 Kč — zákazníkovi se nevrací žádná platba.
+              </p>
+            )}
+            {!rez.sf_faktura_id && (
+              <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                K rezervaci nebyla nalezena faktura v SF — dobropis nebude vytvořen, rezervace bude jen zrušena.
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setStornoModal(false)}
+                disabled={stornoLoading}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Zrušit
+              </button>
+              <button
+                type="button"
+                onClick={() => provedStorno(stornoPercent)}
+                disabled={stornoLoading}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {stornoLoading ? "Vystavuji…" : "Vystavit dobropis"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
     )
   }
 

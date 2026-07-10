@@ -363,6 +363,62 @@ export async function vytvorFakturuGeorge(
   }
 }
 
+// ── Dobropis (storno zálohy / faktury) ───────────────────────────────────────
+
+export interface SFDobropisVystup {
+  id:         number
+  invoice_no: string
+  pdf_url:    string
+}
+
+/**
+ * Vytvoří dobropis (credit note) k existující faktuře.
+ * @param cancelInvoiceId  SF ID původní faktury
+ * @param percentVraceni   0–100 — kolik % z částky se vrací zákazníkovi
+ * @param castka           celková částka s DPH původní faktury (pro výpočet vrácené částky)
+ * @param seqId            číselná řada (výchozí = SEQ_FAKTURA pro stany)
+ */
+export async function vytvorDobropis(
+  cancelInvoiceId: number,
+  percentVraceni:  number,
+  castka:          number,
+  seqId:           number = SEQ_FAKTURA,
+): Promise<SFDobropisVystup> {
+  const vracenaCastka = Math.round(castka * percentVraceni / 100 * 100) / 100
+  const bezDphCastka  = Math.round(vracenaCastka / 1.21 * 100) / 100
+
+  const payload = {
+    Invoice: {
+      type:             "cancel",
+      cancel_invoice_id: String(cancelInvoiceId),
+      sequence_id:      seqId,
+      invoice_currency: "CZK",
+      logo_id:          405873,
+      bank_accounts:    [{ id: BANK_ACC_ID }],
+      ...(percentVraceni < 100
+        ? { internal_comment: `Částečné storno — vráceno ${percentVraceni} % z celkové ceny` }
+        : {}),
+    },
+    InvoiceItem: [{
+      name:       percentVraceni < 100 ? `Storno ${percentVraceni} %` : "Storno",
+      unit_price: -bezDphCastka,
+      tax:        21,
+      quantity:   1,
+    }],
+  }
+
+  const json = await sfPost("/invoices/create", payload)
+  const wrapper = (json.data ?? json) as Record<string, unknown>
+  const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
+  if (!inv?.id) throw new Error(`SF dobropis: nepodařilo se načíst Invoice z odpovědi: ${JSON.stringify(json).slice(0, 300)}`)
+
+  return {
+    id:         Number(inv.id),
+    invoice_no: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
+    pdf_url:    `${SF_BASE}/invoices/pdf/${inv.id}/token:${inv.token}`,
+  }
+}
+
 // ── QR platba (Czech SPD standard) ───────────────────────────────────────────
 
 export function qrPlatbaUrl(iban: string, vs: string, castka: number): string {
