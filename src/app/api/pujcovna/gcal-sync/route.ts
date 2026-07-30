@@ -107,7 +107,13 @@ export async function POST(req: NextRequest) {
     if (jeHlavni) {
       // Vyzvednutí
       if (rez.gcal_vyzvednuti_id) {
-        await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
+        const ok = await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
+        if (!ok) {
+          // Událost zmizela z GCal — vymaž staré ID a vytvoř novou
+          dbUpdates.gcal_vyzvednuti_id = null
+          const vId = await gcalCreateVyzvednuti(gcalData)
+          if (vId) dbUpdates.gcal_vyzvednuti_id = vId
+        }
       } else {
         const vId = await gcalCreateVyzvednuti(gcalData)
         if (vId) dbUpdates.gcal_vyzvednuti_id = vId
@@ -115,7 +121,12 @@ export async function POST(req: NextRequest) {
 
       // Vrácení
       if (rez.gcal_vraceni_id) {
-        await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+        const ok = await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+        if (!ok) {
+          dbUpdates.gcal_vraceni_id = null
+          const rId = await gcalCreateVraceni(gcalData)
+          if (rId) dbUpdates.gcal_vraceni_id = rId
+        }
       } else {
         const rId = await gcalCreateVraceni(gcalData)
         if (rId) dbUpdates.gcal_vraceni_id = rId

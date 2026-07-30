@@ -576,6 +576,8 @@ function ModalRezervace({
     setChyba(null)
     if (!zakaznikId) { setChyba("Vyberte zákazníka z centrální databáze"); return }
     if (form.start_date > form.end_date) { setChyba("Datum konce musí být po datu začátku"); return }
+    if (!form.cas_vyzvednuti) { setChyba("Vyberte čas vyzvednutí"); return }
+    if (!form.cas_vraceni) { setChyba("Vyberte čas vrácení"); return }
     if (jeKonflikt()) { setChyba("Konflikt: tato položka je již rezervována v tomto termínu"); return }
     setUkladam(true)
 

@@ -216,12 +216,15 @@ export async function gcalCreateVyzvednuti(rez: GCalRezervace): Promise<string |
   }
 }
 
-export async function gcalUpdateVyzvednuti(eventId: string, rez: GCalRezervace): Promise<void> {
+// Vrací true = ok, false = událost nenalezena v GCal (sync by měl vytvořit novou)
+export async function gcalUpdateVyzvednuti(eventId: string, rez: GCalRezervace): Promise<boolean> {
   try {
     const cal = getCalendar()
     await cal.events.patch({ calendarId: CALENDAR_ID, eventId, requestBody: buildPickupEvent(rez) })
+    return true
   } catch (err) {
     console.error("[gcal] update vyzvednuti failed:", err)
+    return false
   }
 }
 
@@ -236,12 +239,15 @@ export async function gcalCreateVraceni(rez: GCalRezervace): Promise<string | nu
   }
 }
 
-export async function gcalUpdateVraceni(eventId: string, rez: GCalRezervace): Promise<void> {
+// Vrací true = ok, false = událost nenalezena v GCal (sync by měl vytvořit novou)
+export async function gcalUpdateVraceni(eventId: string, rez: GCalRezervace): Promise<boolean> {
   try {
     const cal = getCalendar()
     await cal.events.patch({ calendarId: CALENDAR_ID, eventId, requestBody: buildReturnEvent(rez) })
+    return true
   } catch (err) {
     console.error("[gcal] update vraceni failed:", err)
+    return false
   }
 }
 

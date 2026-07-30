@@ -109,7 +109,12 @@ async function run() {
         if (jeHlavniSkupiny(rez)) {
           // Vyzvednutí — jen pro hlavní položku skupiny
           if (rez.gcal_vyzvednuti_id) {
-            await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
+            const ok = await gcalUpdateVyzvednuti(rez.gcal_vyzvednuti_id, gcalData)
+            if (!ok) {
+              dbUpdates.gcal_vyzvednuti_id = null
+              const vId = await gcalCreateVyzvednuti(gcalData)
+              if (vId) dbUpdates.gcal_vyzvednuti_id = vId
+            }
           } else {
             const vId = await gcalCreateVyzvednuti(gcalData)
             if (vId) dbUpdates.gcal_vyzvednuti_id = vId
@@ -117,7 +122,12 @@ async function run() {
 
           // Vrácení — jen pro hlavní položku skupiny
           if (rez.gcal_vraceni_id) {
-            await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+            const ok = await gcalUpdateVraceni(rez.gcal_vraceni_id, gcalData)
+            if (!ok) {
+              dbUpdates.gcal_vraceni_id = null
+              const rId = await gcalCreateVraceni(gcalData)
+              if (rId) dbUpdates.gcal_vraceni_id = rId
+            }
           } else {
             const rId = await gcalCreateVraceni(gcalData)
             if (rId) dbUpdates.gcal_vraceni_id = rId
