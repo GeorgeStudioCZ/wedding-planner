@@ -639,6 +639,7 @@ function ModalRezervace({
             notes: "",
             group_id: gid,
             zakaznik_id: zakaznikId,
+            stav: editRezervace?.stav ?? "rezervace",
           })
         }
       }

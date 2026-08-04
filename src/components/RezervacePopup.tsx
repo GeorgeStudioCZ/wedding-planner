@@ -552,6 +552,7 @@ export default function RezervacePopup({
           item_id: itemId, unit_index: slot,
           customer: form.customer, start_date: form.start_date, end_date: form.end_date,
           color: form.color, notes: "", group_id: gid, zakaznik_id: editZakaznikId,
+          stav: rez?.stav ?? "rezervace",
         })
       }
     }
