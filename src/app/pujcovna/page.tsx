@@ -236,23 +236,39 @@ export default function PujcovnaDashboard() {
     }
   }
 
-  useEffect(() => {
-    async function nacti() {
-      const sb = createClient()
-      const [{ data: pol }, { data: rez }, { data: st }, { data: storno }] = await Promise.all([
-        supabase.from("pujcovna_polozky").select("*").order("sort_order"),
-        supabase.from("pujcovna_rezervace").select("*").neq("stav", "storno"),
-        sb.from("pujcovna_ceny_stupne").select("*"),
-        supabase.from("pujcovna_rezervace").select("*").eq("stav", "storno"),
-      ])
-      setPolozky(pol ?? [])
-      setRezervace(rez ?? [])
-      setStornoRez(storno ?? [])
-      setStupne(st ?? [])
-      setLoading(false)
+  async function nactiData() {
+    const sb = createClient()
+    const [{ data: pol }, { data: rez }, { data: st }, { data: storno }] = await Promise.all([
+      supabase.from("pujcovna_polozky").select("*").order("sort_order"),
+      supabase.from("pujcovna_rezervace").select("*").neq("stav", "storno"),
+      sb.from("pujcovna_ceny_stupne").select("*"),
+      supabase.from("pujcovna_rezervace").select("*").eq("stav", "storno"),
+    ])
+    setPolozky(pol ?? [])
+    setRezervace(rez ?? [])
+    setStornoRez(storno ?? [])
+    setStupne(st ?? [])
+    setLoading(false)
+  }
+
+  useEffect(() => { nactiData() }, [])
+
+  async function zmenStavInline(r: Rezervace, novyStav: string) {
+    if (novyStav === r.stav) return
+    const sb = createClient()
+    if (r.group_id) {
+      await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("group_id", r.group_id)
+    } else {
+      await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("id", r.id)
     }
-    nacti()
-  }, [])
+    await sb.from("pujcovna_rezervace_historie").insert([{ rezervace_id: r.id, stav: novyStav }])
+    fetch("/api/pujcovna/gcal-sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rezervaceId: r.id }),
+    }).catch(console.error)
+    await nactiData()
+  }
 
   const dnesStr = new Date().toISOString().slice(0, 10)
   const stany = polozky.filter(p => p.category === "Stany")
@@ -402,7 +418,14 @@ export default function PujcovnaDashboard() {
         <div className="flex flex-col pl-4 pr-4 py-3.5 gap-1.5 md:hidden border-l-4" style={{ borderColor: r.color }}>
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-900 flex-1 truncate text-sm">{r.customer}</p>
-            <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${info.barva}`}>{info.label}</span>
+            <select
+              value={r.stav}
+              onClick={e => e.stopPropagation()}
+              onChange={e => { e.stopPropagation(); zmenStavInline(r, e.target.value) }}
+              className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer focus:outline-none ${info.barva}`}
+            >
+              {STAVY.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
           </div>
           <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-xs text-gray-500">
             <span className="font-medium text-gray-700">{formatDatum(r.start_date)}</span>
@@ -439,16 +462,20 @@ export default function PujcovnaDashboard() {
             <div style={{ fontWeight: 600, color: "var(--ink)" }}>{r.customer}</div>
             <div style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 2 }}>{stanLabel(r.item_id, r.unit_index)}</div>
           </div>
-          {/* Status pill */}
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "3px 9px", borderRadius: 99, fontSize: 11.5, fontWeight: 500,
-            background: pillStyle.bg, color: pillStyle.color,
-            whiteSpace: "nowrap",
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: 99, background: "currentColor", opacity: .8 }} />
-            {info.label}
-          </span>
+          {/* Status select */}
+          <select
+            value={r.stav}
+            onClick={e => e.stopPropagation()}
+            onChange={e => { e.stopPropagation(); zmenStavInline(r, e.target.value) }}
+            style={{
+              padding: "3px 9px", borderRadius: 99, fontSize: 11.5, fontWeight: 500,
+              background: pillStyle.bg, color: pillStyle.color,
+              border: "none", cursor: "pointer", outline: "none",
+              whiteSpace: "nowrap", appearance: "none", WebkitAppearance: "none",
+            }}
+          >
+            {STAVY.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
           {/* Price */}
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, textAlign: "right" }}>
             {cena !== null
@@ -784,12 +811,7 @@ export default function PujcovnaDashboard() {
           initialMode={openRezMode}
           onClose={() => { setOpenRezId(null); setOpenRezMode("detail") }}
           onSave={async () => {
-            const [{ data: rez }, { data: st }] = await Promise.all([
-              supabase.from("pujcovna_rezervace").select("*").neq("stav", "storno"),
-              supabase.from("pujcovna_rezervace").select("*").eq("stav", "storno"),
-            ])
-            setRezervace(rez ?? [])
-            setStornoRez(st ?? [])
+            await nactiData()
             setOpenRezId(null)
             setOpenRezMode("detail")
           }}
