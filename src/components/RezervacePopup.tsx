@@ -182,6 +182,7 @@ export default function RezervacePopup({
   const [stornoModal, setStornoModal] = useState(false)
   const [stornoPercent, setStornoPercent] = useState(100)
   const [stornoLoading, setStornoLoading] = useState(false)
+  const [vytvarimZalohu, setVytvarimZalohu] = useState(false)
   const [posilamZnovu, setPosilamZnovu] = useState(false)
   const [posilamFakturu, setPosilamFakturu] = useState(false)
   const [posilamSms, setPosilamSms] = useState(false)
@@ -306,6 +307,75 @@ export default function RezervacePopup({
       alert("Chyba: " + (e instanceof Error ? e.message : String(e)))
     }
     setStornoLoading(false)
+  }
+
+  async function vytvorZalohu() {
+    if (!rez || !zakaznik || !polozka) return
+    setVytvarimZalohu(true)
+    try {
+      const sfPolozky: { nazev: string; cena_sdph: number; pocet: number; jednotka?: string }[] = []
+      if (cenaStan && dni > 0) {
+        sfPolozky.push({ nazev: polozka.name, cena_sdph: cenaStan.celkem / dni, pocet: dni, jednotka: "den" })
+      }
+      for (const { rez: pr, polozka: pp } of prislData) {
+        if (!pp) continue
+        const dniPr = pocetDni(pr.start_date, pr.end_date)
+        const cenaPr = vypocitejCenu(pp, stupne, dniPr)
+        if (cenaPr && dniPr > 0) {
+          sfPolozky.push({ nazev: pp.name, cena_sdph: cenaPr.celkem / dniPr, pocet: dniPr, jednotka: "den" })
+        }
+      }
+      if (montazPoplatek > 0) {
+        sfPolozky.push({ nazev: "Poplatek za montáž", cena_sdph: montazPoplatek, pocet: 1 })
+      }
+      if (!sfPolozky.length) { alert("Nelze sestavit položky pro fakturu"); return }
+
+      const klient = {
+        jmeno:   zakaznik.firma?.trim() || `${zakaznik.jmeno} ${zakaznik.prijmeni}`.trim(),
+        email:   zakaznik.email   || undefined,
+        telefon: zakaznik.telefon || undefined,
+      }
+
+      const sfRes = await fetch("/api/pujcovna/zaloh-faktura", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rezervaceId: rez.id,
+          groupId:     rez.group_id,
+          klient,
+          polozky:     sfPolozky,
+          celkem,
+        }),
+      })
+      const sfData = await sfRes.json() as { ok: boolean; vs?: string; pdf_url?: string; cislo_uctu?: string; qr_url?: string; error?: string }
+      if (!sfData.ok) throw new Error(sfData.error ?? "Chyba SF")
+
+      // Pošli zákazníkovi email s platebními údaji
+      await fetch("/api/mail/rezervace-pujcovna", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          zakaznik: { jmeno: zakaznik.jmeno, email: zakaznik.email, telefon: zakaznik.telefon },
+          polozka:  polozka.name,
+          dateFrom: rez.start_date,
+          dateTo:   rez.end_date,
+          celkem,
+          platba: {
+            vs:         sfData.vs ?? "",
+            pdf_url:    sfData.pdf_url ?? "",
+            cislo_uctu: sfData.cislo_uctu ?? "",
+            qr_url:     sfData.qr_url ?? "",
+          },
+        }),
+      }).catch(console.error)
+
+      // Aktualizuj lokální stav
+      setRez({ ...rez, stav: "cekam-platbu", sf_proforma_id: 1 })
+      alert(`✅ Záloha vytvořena (VS: ${sfData.vs}). Email s platebními údaji odeslán zákazníkovi.`)
+    } catch (e) {
+      alert("Chyba: " + (e instanceof Error ? e.message : String(e)))
+    }
+    setVytvarimZalohu(false)
   }
 
   async function zmenStavInterni(novyStav: string, poznamka?: string) {
@@ -754,6 +824,22 @@ export default function RezervacePopup({
             </svg>
             {posilamSms ? "Odesílám…" : "SMS"}
           </button>
+          {rez.stav === "web-rezervace" && !rez.sf_proforma_id && zakaznik && (
+            <button
+              onClick={vytvorZalohu}
+              disabled={vytvarimZalohu}
+              title="Vytvořit zálohovou fakturu a odeslat platební údaje zákazníkovi"
+              className="flex flex-col items-center gap-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all border"
+              style={vytvarimZalohu
+                ? { background: "#f9fafb", color: "#9ca3af", borderColor: "#e5e7eb" }
+                : { background: "#fefce8", color: "#a16207", borderColor: "#fde047" }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {vytvarimZalohu ? "Vytvářím…" : "Záloha"}
+            </button>
+          )}
           {["zaplaceno", "vypujceno", "dokonceno"].includes(rez.stav) && (
             <button
               onClick={syncGcal}
