@@ -347,24 +347,45 @@ export default function RezervacePopup({
           celkem,
         }),
       })
-      const sfData = await sfRes.json() as { ok: boolean; vs?: string; pdf_url?: string; cislo_uctu?: string; qr_url?: string; error?: string }
+      const sfData = await sfRes.json() as { ok: boolean; vs?: string; invoice_no?: string; pdf_url?: string; cislo_uctu?: string; qr_url?: string; error?: string }
       if (!sfData.ok) throw new Error(sfData.error ?? "Chyba SF")
 
       // Pošli zákazníkovi email s platebními údaji
+      const prislRadky = prislData.map(({ rez: r, polozka: pp }) => {
+        const dniPr = pocetDni(r.start_date, r.end_date)
+        const cenaPr = pp ? vypocitejCenu(pp, stupne, dniPr) : null
+        return { nazev: pp?.name ?? "?", cnt: 1, cena: cenaPr?.celkem ?? null }
+      })
       await fetch("/api/mail/rezervace-pujcovna", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          zakaznik: { jmeno: zakaznik.jmeno, email: zakaznik.email, telefon: zakaznik.telefon },
-          polozka:  polozka.name,
-          dateFrom: rez.start_date,
-          dateTo:   rez.end_date,
+          zakaznik: {
+            jmeno:    zakaznik.jmeno    ?? "",
+            prijmeni: zakaznik.prijmeni ?? "",
+            email:    zakaznik.email    ?? "",
+            telefon:  zakaznik.telefon  ?? "",
+          },
+          polozka:      polozka.name,
+          dateFrom:     rez.start_date,
+          dateTo:       rez.end_date,
+          dni,
+          vozidlo:      rez.vozidlo         ?? "",
+          casVyzvednuti: rez.cas_vyzvednuti ?? "",
+          casVraceni:   rez.cas_vraceni     ?? "",
+          pricniky:     rez.pricniky        ?? "",
+          poznamka:     rez.notes           ?? "",
+          drzakVariant: "",
+          prisl:        prislRadky,
+          cenaStan:     cenaStan?.celkem ?? null,
+          montazPopl:   montazPoplatek,
           celkem,
+          groupId:      rez.group_id ?? "",
           platba: {
-            vs:         sfData.vs ?? "",
-            pdf_url:    sfData.pdf_url ?? "",
+            vs:         sfData.vs         ?? "",
+            invoice_no: sfData.invoice_no ?? "",
             cislo_uctu: sfData.cislo_uctu ?? "",
-            qr_url:     sfData.qr_url ?? "",
+            qr_url:     sfData.qr_url     ?? "",
           },
         }),
       }).catch(console.error)
