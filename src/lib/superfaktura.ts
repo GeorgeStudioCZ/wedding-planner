@@ -1,7 +1,7 @@
 // SuperFaktura API — Czech Republic
 // Docs: https://github.com/superfaktura/docs
 
-import { bezDPH } from "@/lib/dph"
+import { bezDPH, DPH_KOEF } from "@/lib/dph"
 
 const SF_BASE       = "https://moje.superfaktura.cz"
 const SF_MODULE     = "SvatebniCRM"
@@ -221,7 +221,18 @@ function buildItem(p: SFPolozka): Record<string, unknown> {
   // Př. 7 dní × 500 Kč:
   //   ❌ bezDPH(500) = 413.22 → × 7 × 1.21 = 3499.97 Kč (chyba -0.03)
   //   ✅ bezDPH(3500) = 2892.56 → × 1 × 1.21 = 3500.00 Kč ✓
-  const totalBezDPH   = Math.round(bezDPH(p.cena_sdph * p.pocet) * 100) / 100
+  //
+  // Druhý fix — haléřový rozdíl:
+  // Základ zaokrouhlený na 2 des. místa nemusí po přičtení DPH vyjít přesně.
+  //   750 Kč → bezDPH = 619.83 → × 1.21 = 749.99 Kč (chyba -0.01)
+  // Žádný základ se 2 desetinnými místy 750.00 netrefí (619.84 → 750.01),
+  // proto v takovém případě pošleme základ s vyšší přesností.
+  const cilSdph = Math.round(p.cena_sdph * p.pocet * 100) / 100
+  let totalBezDPH = Math.round(bezDPH(cilSdph) * 100) / 100
+  if (Math.round(totalBezDPH * DPH_KOEF * 100) / 100 !== cilSdph) {
+    totalBezDPH = Math.round(bezDPH(cilSdph) * 1e6) / 1e6
+  }
+
   const jednotkaLabel = p.pocet > 1 && p.jednotka
     ? `${p.pocet} ${p.jednotka}`   // "7 dní", "3 ks" …
     : p.jednotka
@@ -384,10 +395,32 @@ export async function vytvorDobropis(
   castka:          number,
   seqId:           number = SEQ_FAKTURA,
 ): Promise<SFDobropisVystup> {
-  const vracenaCastka = Math.round(castka * percentVraceni / 100 * 100) / 100
-  const bezDphCastka  = Math.round(vracenaCastka / 1.21 * 100) / 100
+  // SF vyžaduje klienta i u dobropisu — bez něj vrací
+  // {"error":4,"data_bad_format":"Missing required client data."}
+  // Načteme původní fakturu a použijeme jejího klienta i její základ,
+  // aby dobropis přesně vyrušil to, co bylo skutečně fakturováno.
+  const orig     = await sfGet(`/invoices/view/${cancelInvoiceId}.json`)
+  const origInv  = (orig.Invoice ?? {}) as Record<string, unknown>
+  const origCl   = (orig.Client  ?? {}) as Record<string, unknown>
+  const clientId = origInv.client_id ?? origCl.id
+  if (!clientId && !origCl.name) {
+    throw new Error(`SF dobropis: u faktury ${cancelInvoiceId} se nepodařilo načíst klienta`)
+  }
+
+  const origBezDph = Number(origInv.amount)
+  const zaklad     = Number.isFinite(origBezDph) && origBezDph > 0 ? origBezDph : bezDPH(castka)
+  const bezDphCastka = Math.round(zaklad * percentVraceni) / 100
 
   const payload = {
+    Client: {
+      ...(clientId ? { id: Number(clientId) } : {}),
+      ...(origCl.name    ? { name:    origCl.name    } : {}),
+      ...(origCl.email   ? { email:   origCl.email   } : {}),
+      ...(origCl.address ? { address: origCl.address } : {}),
+      ...(origCl.city    ? { city:    origCl.city    } : {}),
+      ...(origCl.zip     ? { zip:     origCl.zip     } : {}),
+      country_iso_id: "CZ",
+    },
     Invoice: {
       type:             "cancel",
       cancel_invoice_id: String(cancelInvoiceId),
