@@ -47,6 +47,17 @@ const DRZAK_VARIANTY  = [
 ]
 const HODINY = Array.from({ length: 14 }, (_,i) => i + 8).map(h => `${h}:00 – ${h+1}:00`)
 
+// Smlouva o pronájmu + půjčovní řád + GDPR — jeden PDF dokument
+const DOKUMENT_URL = "https://stanujnaaute.cz/wp-content/uploads/dokumenty/smlouva-pronajem-a-rad.pdf"
+// Formulář běží v iframe → target _blank, jinak by se PDF otevřelo místo formuláře.
+// stopPropagation, aby klik na odkaz uvnitř <label> nepřepnul checkbox.
+const odkazProps = {
+  target: "_blank",
+  rel:    "noopener noreferrer",
+  style:  { color: "#10b981" },
+  onClick: (e: React.MouseEvent) => e.stopPropagation(),
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function pocetDni(a: string, b: string) { return Math.round((+new Date(b) - +new Date(a)) / 86400000) + 1 }
 function formatCena(c: number) { return c.toLocaleString("cs-CZ") + " Kč" }
@@ -1004,8 +1015,8 @@ export default function RezervacePage() {
           {/* ── GDPR + půjčovní řád + kauce ── */}
           <div style={{...card,marginBottom:12}}>
             {[
-              { s:gdpr,    set:setGdpr,    t:<>Souhlasím se <a href="#" style={{color:"#10b981"}}>zpracováním osobních údajů (GDPR)</a></> },
-              { s:pujcRad, set:setPujcRad, t:<>Souhlasím s <a href="#" style={{color:"#10b981"}}>půjčovním řádem</a> a obchodními podmínkami</> },
+              { s:gdpr,    set:setGdpr,    t:<>Souhlasím se <a href={DOKUMENT_URL} {...odkazProps}>zpracováním osobních údajů (GDPR)</a></> },
+              { s:pujcRad, set:setPujcRad, t:<>Souhlasím s <a href={DOKUMENT_URL} {...odkazProps}>půjčovním řádem</a> a obchodními podmínkami</> },
             ].map((item,i) => (
               <label key={i} style={{display:"flex",alignItems:"flex-start",gap:9,cursor:"pointer",marginBottom:10}}>
                 <input type="checkbox" checked={item.s} onChange={e=>item.set(e.target.checked)}
