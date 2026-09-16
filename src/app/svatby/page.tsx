@@ -699,10 +699,12 @@ export default function Home() {
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", flexShrink: 0 }} />
           <div style={{ width: 48, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {(() => {
-              const ds = z.datum_svatby || ""
-              const maSchuzku   = schuzkyMinuleDny.has(ds) || schuzkyBudouciDny.has(ds)
-              const maProbehlou = !!z.videohovor_datum
-              const maBudouci   = maSchuzku && !maProbehlou
+              // Schůzka, která už proběhla, se nesmí tvářit jako naplánovaná —
+              // rozhoduje datum schůzky, ne jen videohovor_datum na zakázce.
+              // Když existuje budoucí i proběhlá, vyhrává budoucí (je akční).
+              const ds = (z.datum_svatby || "").slice(0, 10)
+              const maBudouci   = schuzkyBudouciDny.has(ds)
+              const maProbehlou = !maBudouci && (!!z.videohovor_datum || schuzkyMinuleDny.has(ds))
               if (!maProbehlou && !maBudouci) return null
               return (
                 <span
