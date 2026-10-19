@@ -11,7 +11,7 @@ type Polozka = {
   name: string
   barva: string
   typ: "sluzba" | "material" | null
-  sazba: number            // prodejní cena bez DPH (služba = /hod, materiál = /jednotku)
+  sazba: number            // prodejní cena (služba = /hod, materiál = /jednotku)
   sazba_typ: string        // "hodina" | "kus" — zachováno kvůli timeru
   jednotka: string | null
   nakupni_cena: number | null
@@ -20,8 +20,6 @@ type Polozka = {
   odkaz: string | null
   sort_order: number
 }
-
-const DPH = 1.21
 
 // Pevné barvy podle typu — červená = služba, modrá = materiál
 const BARVA_SLUZBA   = "#ef4444"
@@ -56,19 +54,6 @@ const IC = {
   trash: ["M3 6h18", "M8 6V4h8v2", "M19 6l-1 14H6L5 6"],
   edit:  ["M12 20h9", "M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"],
   x:     ["M18 6L6 18", "M6 6l12 12"],
-}
-
-// ── DPH hint ──────────────────────────────────────────────────────────────────
-function DphHint({ bezDph, suffix }: { bezDph: number; suffix?: string }) {
-  if (!bezDph) return null
-  return (
-    <span style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>
-      s DPH:{" "}
-      <strong style={{ color: "#059669" }}>
-        {fKc(bezDph * DPH)}{suffix}
-      </strong>
-    </span>
-  )
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -208,13 +193,12 @@ function Modal({
 
             {sluzbaRezim === "hodina" ? (
               <div style={{ marginBottom: 20 }}>
-                <label style={lbl}>Hodinová sazba bez DPH</label>
+                <label style={lbl}>Hodinová sazba</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ position: "relative", width: 140 }}>
                     <input value={prodej} onChange={e => setProdej(e.target.value)} placeholder="0" inputMode="decimal" style={{ ...inp, paddingRight: 36 }} />
                     <span style={suffix}>Kč</span>
                   </div>
-                  <DphHint bezDph={prodejNum} suffix="/hod" />
                 </div>
               </div>
             ) : (
@@ -239,19 +223,18 @@ function Modal({
                 </div>
                 {/* Prodejní cena */}
                 <div style={{ marginBottom: 14 }}>
-                  <label style={lbl}>Prodejní cena bez DPH / {jednotka}</label>
+                  <label style={lbl}>Prodejní cena / {jednotka}</label>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ position: "relative", width: 140 }}>
                       <input value={prodej} onChange={e => setProdej(e.target.value)} placeholder="0" inputMode="decimal" style={{ ...inp, paddingRight: 36 }} />
                       <span style={suffix}>Kč</span>
                     </div>
-                    <DphHint bezDph={prodejNum} />
                   </div>
                 </div>
                 {/* Nákupní cena */}
                 <div style={{ marginBottom: 20 }}>
                   <label style={lbl}>
-                    Nákupní cena bez DPH / {jednotka}
+                    Nákupní cena / {jednotka}
                     <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>(volitelné)</span>
                   </label>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -299,20 +282,19 @@ function Modal({
 
             {/* Prodejní cena */}
             <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>Prodejní cena bez DPH / {jednotka}</label>
+              <label style={lbl}>Prodejní cena / {jednotka}</label>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ position: "relative", width: 140 }}>
                   <input value={prodej} onChange={e => setProdej(e.target.value)} placeholder="0" inputMode="decimal" style={{ ...inp, paddingRight: 36 }} />
                   <span style={suffix}>Kč</span>
                 </div>
-                <DphHint bezDph={prodejNum} />
               </div>
             </div>
 
             {/* Nákupní cena */}
             <div style={{ marginBottom: 16 }}>
               <label style={lbl}>
-                Nákupní cena bez DPH / {jednotka}
+                Nákupní cena / {jednotka}
                 <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>(volitelné)</span>
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -423,7 +405,6 @@ function PolozkaRadek({ p, onEdit, onDelete }: {
   onEdit: (p: Polozka) => void
   onDelete: (id: number) => void
 }) {
-  const cenaSdph = p.sazba * DPH
   const marze    = p.nakupni_cena != null ? p.sazba - p.nakupni_cena : null
   const marzePct = marze != null && p.sazba > 0 ? Math.round((marze / p.sazba) * 100) : null
   const typEff   = p.typ ?? "sluzba"
@@ -462,11 +443,10 @@ function PolozkaRadek({ p, onEdit, onDelete }: {
             p.sazba_typ === "kus" ? (
               <>
                 <Cell label="jednotka" value={p.jednotka ?? "—"} />
-                <Cell label="prodej bez DPH" value={fKc(p.sazba)} />
-                <Cell label="prodej s DPH" value={fKc(cenaSdph)} accent />
+                <Cell label="prodej" value={fKc(p.sazba)} accent />
                 {p.nakupni_cena != null && (
                   <>
-                    <Cell label="nákup bez DPH" value={fKc(p.nakupni_cena)} />
+                    <Cell label="nákup" value={fKc(p.nakupni_cena)} />
                     <Cell
                       label="marže"
                       value={`${fKc(marze!)}${marzePct != null ? ` (${marzePct} %)` : ""}`}
@@ -478,18 +458,16 @@ function PolozkaRadek({ p, onEdit, onDelete }: {
               </>
             ) : (
               <>
-                <Cell label="bez DPH" value={fKc(p.sazba) + "/hod"} />
-                <Cell label="s DPH" value={fKc(cenaSdph) + "/hod"} accent />
+                <Cell label="sazba" value={fKc(p.sazba) + "/hod"} accent />
               </>
             )
           ) : (
             <>
               <Cell label="jednotka" value={p.jednotka ?? "—"} />
-              <Cell label="prodej bez DPH" value={fKc(p.sazba)} />
-              <Cell label="prodej s DPH" value={fKc(cenaSdph)} accent />
+              <Cell label="prodej" value={fKc(p.sazba)} accent />
               {p.nakupni_cena != null && (
                 <>
-                  <Cell label="nákup bez DPH" value={fKc(p.nakupni_cena)} />
+                  <Cell label="nákup" value={fKc(p.nakupni_cena)} />
                   <Cell
                     label="marže"
                     value={`${fKc(marze!)}${marzePct != null ? ` (${marzePct} %)` : ""}`}

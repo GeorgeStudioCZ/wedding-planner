@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       const jeMaterial = skupina[0].pocet != null
 
       if (jeMaterial) {
-        // Materiál / kusová služba — quantity = kusy, unit_price = cena/ks bez DPH
+        // Materiál / kusová služba — quantity = kusy, unit_price = cena/ks
         let totalPocet = 0
         let kusCena = 0
         for (const z of skupina) {
@@ -84,16 +84,16 @@ export async function POST(req: NextRequest) {
           unit:       kat?.jednotka ?? "ks",
         })
       } else {
-        // Časová služba — stejný výpočet bezDPH jako v PDF reportu (per-záznam, pak suma)
+        // Časová služba — stejný výpočet jako v PDF reportu (per-záznam, pak suma)
         // → faktura i report zobrazí shodnou částku
         let totalMs = 0
-        let totalBezDPH = 0
+        let totalCena = 0
         const sazba = kat?.sazba ?? 0
         for (const z of skupina) {
           if (!z.end_at) continue
           const ms = new Date(z.end_at).getTime() - new Date(z.start_at).getTime()
           totalMs += ms
-          totalBezDPH += Math.round(ms / 3_600_000 * sazba * 100) / 100
+          totalCena += Math.round(ms / 3_600_000 * sazba * 100) / 100
         }
         if (totalMs <= 0 || sazba <= 0) continue
         const totalHoursDisplay = totalMs / 3_600_000
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
         const m = Math.round((totalHoursDisplay - h) * 60)
         polozky.push({
           nazev:      kat?.name ?? "Práce",
-          unit_price: Math.round(totalBezDPH * 100) / 100,
+          unit_price: Math.round(totalCena * 100) / 100,
           quantity:   1,
           unit:       `${h}:${String(m).padStart(2, "0")} hod`,
         })
@@ -127,9 +127,8 @@ export async function POST(req: NextRequest) {
     // Ověř zákazníka v SF adresáři dle IČO
     const sfKlientId = zak.ico ? await searchSFClientByIco(zak.ico) : null
 
-    // Spočítej celkovou cenu s DPH pro uložení
-    const celkemBezDPH = polozky.reduce((a, p) => a + Math.round(p.unit_price * p.quantity * 100) / 100, 0)
-    const celkemSDPH   = Math.round(celkemBezDPH * 1.21 * 100) / 100
+    // Spočítej celkovou cenu pro uložení (George Studio neúčtuje DPH)
+    const celkem = Math.round(polozky.reduce((a, p) => a + p.unit_price * p.quantity, 0) * 100) / 100
 
     // Vytvoř fakturu
     const faktura = await vytvorFakturuGeorge(klient, polozky, sfKlientId, poznamka)
@@ -140,7 +139,7 @@ export async function POST(req: NextRequest) {
       sf_no:       faktura.invoice_no,
       zakaznik_id: zakaznikId,
       pdf_url:     faktura.pdf_url,
-      celkem_sdph: celkemSDPH,
+      celkem_sdph: celkem,   // sloupec zůstal z doby plátcovství; drží koncovou cenu
     })
     if (insertErr) {
       console.error("[george/vytvor-fakturu] george_faktury insert failed:", insertErr)

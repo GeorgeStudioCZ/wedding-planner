@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
-import { bezDPH, castDPH } from "@/lib/dph"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
@@ -155,7 +154,6 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit, onContinue, is
         {earnings > 0 && (
           <div style={{ fontSize: 11, color: isMat ? "#059669" : "#4338ca", marginTop: 1 }}>
             {earnings.toLocaleString("cs-CZ")} Kč
-            {!isMat && <span style={{ color: "var(--muted)", marginLeft: 4 }}>· bez DPH {Math.round(bezDPH(earnings)).toLocaleString("cs-CZ")} Kč</span>}
           </div>
         )}
       </div>
@@ -680,7 +678,7 @@ export default function GeorgePage() {
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
               {[
                 { label: "Dnes odpracováno", value: formatElapsed(todaySeconds * 1000) },
-                { label: "Dnes výdělek (s DPH)", value: `${todayEarnings.toLocaleString("cs-CZ")} Kč` },
+                { label: "Dnes výdělek",      value: `${todayEarnings.toLocaleString("cs-CZ")} Kč` },
                 { label: "Záznamy dnes",     value: String(todayZaznamy.length) },
               ].map(kpi => (
                 <div key={kpi.label} style={{
@@ -739,7 +737,6 @@ export default function GeorgePage() {
                       {gEarnings > 0 && (
                         <>
                           {` · `}<span style={{ color: "#4338ca", fontWeight: 500 }}>{gEarnings.toLocaleString("cs-CZ")} Kč</span>
-                          <span style={{ fontSize: 10.5, marginLeft: 4 }}>(bez DPH {Math.round(bezDPH(gEarnings)).toLocaleString("cs-CZ")} Kč)</span>
                         </>
                       )}
                     </span>
@@ -1016,12 +1013,6 @@ export default function GeorgePage() {
                     <strong style={{ color: "#10b981" }}>
                       {(parseFloat(pocet.replace(",",".")) * parseFloat(prodejCena.replace(",","."))).toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč
                     </strong>
-                    <span>
-                      {" "}· s DPH{" "}
-                      <strong style={{ color: "#10b981" }}>
-                        {(parseFloat(pocet.replace(",",".")) * parseFloat(prodejCena.replace(",",".")) * 1.21).toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} Kč
-                      </strong>
-                    </span>
                     {parseFloat(nakupCena) > 0 && (
                       <span style={{ color: "#5a5b66" }}>
                         {" "}· marže{" "}

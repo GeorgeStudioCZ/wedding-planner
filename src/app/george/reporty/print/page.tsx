@@ -23,7 +23,7 @@ function formatTime(iso: string) {
 }
 function isoDate(iso: string) { return iso.slice(0, 10) }
 
-function calcBezDPH(z: Zaznam, kat: Kategorie | undefined): number {
+function calcCena(z: Zaznam, kat: Kategorie | undefined): number {
   if (z.pocet != null) return Math.round((z.pocet * (z.cena_prodej_kus ?? kat?.sazba ?? 0)) * 100) / 100
   if (!z.end_at || !kat) return 0
   const hours = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
@@ -90,8 +90,7 @@ function PrintPageInner() {
   const totalMs = filtered.filter(z => z.pocet == null && z.end_at).reduce(
     (a, z) => a + new Date(z.end_at!).getTime() - new Date(z.start_at).getTime(), 0
   )
-  const totalBezDPH = filtered.reduce((a, z) => a + calcBezDPH(z, z.kategorie_id ? katMap[z.kategorie_id] : undefined), 0)
-  const totalSDPH   = Math.round(totalBezDPH * 1.21 * 100) / 100
+  const totalKc = filtered.reduce((a, z) => a + calcCena(z, z.kategorie_id ? katMap[z.kategorie_id] : undefined), 0)
 
   const today = new Date().toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" })
 
@@ -189,7 +188,7 @@ function PrintPageInner() {
         {/* Záznamy po dnech */}
         {grouped.map(([den, zzn]) => {
           const denMs  = zzn.filter(z => z.pocet == null && z.end_at).reduce((a, z) => a + new Date(z.end_at!).getTime() - new Date(z.start_at).getTime(), 0)
-          const denBezDPH = zzn.reduce((a, z) => a + calcBezDPH(z, z.kategorie_id ? katMap[z.kategorie_id] : undefined), 0)
+          const denKc = zzn.reduce((a, z) => a + calcCena(z, z.kategorie_id ? katMap[z.kategorie_id] : undefined), 0)
           return (
             <div key={den} style={{ marginBottom: 18 }}>
               {/* Datum nadpis */}
@@ -197,7 +196,7 @@ function PrintPageInner() {
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>{formatDate(den + "T12:00")}</span>
                 <span style={{ fontSize: 11, color: "#6b7280", fontVariantNumeric: "tabular-nums" }}>
                   {denMs > 0 && <>{formatElapsed(denMs)} · </>}
-                  {denBezDPH.toLocaleString("cs-CZ")} Kč bez DPH
+                  {denKc.toLocaleString("cs-CZ")} Kč
                 </span>
               </div>
 
@@ -206,8 +205,7 @@ function PrintPageInner() {
                 <tbody>
                   {zzn.map((z, i) => {
                     const kat = z.kategorie_id ? katMap[z.kategorie_id] : undefined
-                    const bezDPH = calcBezDPH(z, kat)
-                    const sDPH = Math.round(bezDPH * 1.21 * 100) / 100
+                    const cena = calcCena(z, kat)
                     const jeMaterial = z.pocet != null
                     return (
                       <tr key={z.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
@@ -230,10 +228,9 @@ function PrintPageInner() {
                               {formatElapsed(new Date(z.end_at).getTime() - new Date(z.start_at).getTime())}
                             </div>
                           )}
-                          {bezDPH > 0 && <>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{sDPH.toLocaleString("cs-CZ")} Kč</div>
-                            <div style={{ fontSize: 10, color: "#9ca3af" }}>bez DPH {bezDPH.toLocaleString("cs-CZ")} Kč</div>
-                          </>}
+                          {cena > 0 && (
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{cena.toLocaleString("cs-CZ")} Kč</div>
+                          )}
                         </td>
                       </tr>
                     )
@@ -257,10 +254,7 @@ function PrintPageInner() {
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#9ca3af", marginBottom: 6 }}>Celková cena</div>
               <div style={{ fontSize: 24, fontWeight: 800, color: "#0e0f14", fontVariantNumeric: "tabular-nums" }}>
-                {totalSDPH.toLocaleString("cs-CZ")} Kč
-              </div>
-              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
-                bez DPH {totalBezDPH.toLocaleString("cs-CZ")} Kč · DPH 21 % {(totalSDPH - totalBezDPH).toLocaleString("cs-CZ", { maximumFractionDigits: 0 })} Kč
+                {totalKc.toLocaleString("cs-CZ")} Kč
               </div>
             </div>
           </div>

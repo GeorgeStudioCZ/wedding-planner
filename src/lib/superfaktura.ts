@@ -267,7 +267,7 @@ export interface SFKlientGeorge {
 
 export interface SFPolozkaGeorge {
   nazev:      string
-  unit_price: number   // cena bez DPH za jednotku (hodinová sazba nebo cena/ks)
+  unit_price: number   // koncová cena za jednotku (hodinová sazba nebo cena/ks)
   quantity:   number   // počet hodin v decimálu nebo kusů
   unit:       string   // "hod" nebo "ks" nebo jiná jednotka
   popis?:     string
@@ -330,7 +330,8 @@ function buildItemGeorge(p: SFPolozkaGeorge): Record<string, unknown> {
   return {
     name:       p.nazev,
     unit_price: Math.round(p.unit_price * 100) / 100,
-    tax:        21,
+    tax:        0,          // George Studio neúčtuje DPH
+
     quantity:   Math.round(p.quantity * 100) / 100,
     unit:       p.unit,
     ...(p.popis ? { description: p.popis } : {}),
