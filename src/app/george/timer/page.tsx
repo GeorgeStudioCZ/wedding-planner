@@ -167,7 +167,9 @@ export default function TimerPopup() {
     setZaznamy(prev => prev.map(z => z.id === running.id ? { ...z, end_at: end } : z))
     setRunning(null); setElapsed(0); setPaused(false)
     pauseOffsetRef.current = 0; pausedAtRef.current = null
-    setNazev("")
+    // Vyčisti formulář, ať je prázdný pro další měření.
+    // kategorieId = null zároveň vynuluje předvyplněné ceny (viz efekt níže).
+    setNazev(""); setZakaznikId(null); setKategorieId(null)
   }
 
   async function handleContinue(z: Zaznam) {
