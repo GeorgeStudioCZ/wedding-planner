@@ -109,24 +109,56 @@ function PrintPageInner() {
       ])
       const el = document.getElementById("gs-report-content")
       if (!el) return
-      const canvas = await html2canvas(el, { scale: 1.5, useCORS: true, logging: false, backgroundColor: "#ffffff" })
-      const imgData = canvas.toDataURL("image/jpeg", 0.82)
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
-      const pageW = pdf.internal.pageSize.getWidth()
-      const pageH = pdf.internal.pageSize.getHeight()
-      // Šířka obsahu = 794px (CSS), škálovaná na 210mm A4
-      const mmPerPx = pageW / (el.offsetWidth * 1.5)
-      const imgH    = canvas.height * mmPerPx
-      let remaining = imgH
-      let offset = 0
-      pdf.addImage(imgData, "JPEG", 0, offset, pageW, imgH)
-      remaining -= pageH
-      while (remaining > 0) {
-        offset -= pageH
-        pdf.addPage()
-        pdf.addImage(imgData, "JPEG", 0, offset, pageW, imgH)
-        remaining -= pageH
+      const SCALE  = 1.5
+      const canvas = await html2canvas(el, { scale: SCALE, useCORS: true, logging: false, backgroundColor: "#ffffff" })
+      const pdf    = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+      const pageW  = pdf.internal.pageSize.getWidth()
+      const pageH  = pdf.internal.pageSize.getHeight()
+
+      // Měřítko: CSS px -> mm a CSS px -> px na plátně
+      const elH       = el.offsetHeight
+      const mmPerPx   = pageW / el.offsetWidth
+      const pxPerCss  = canvas.height / elH
+      const pageHcss  = pageH / mmPerPx
+
+      // Místa, kde smí být zlom stránky: začátek každého řádku a každého dne
+      const elTop = el.getBoundingClientRect().top
+      const bounds = new Set<number>([0, elH])
+      el.querySelectorAll<HTMLElement>(".print-radek, .den-nadpis").forEach(n => {
+        bounds.add(Math.round(n.getBoundingClientRect().top - elTop))
+      })
+      const sorted = [...bounds].filter(b => b >= 0 && b <= elH).sort((a, b) => a - b)
+
+      // Rozřez: na každé stránce co nejvíc obsahu, ale vždy jen po celých řádcích
+      const useky: [number, number][] = []
+      let pos = 0
+      while (pos < elH - 0.5) {
+        const limit = pos + pageHcss
+        let konec: number
+        if (elH <= limit) {
+          konec = elH
+        } else {
+          const kandidati = sorted.filter(b => b > pos && b <= limit)
+          konec = kandidati.length ? kandidati[kandidati.length - 1] : limit  // řádek vyšší než stránka
+        }
+        useky.push([pos, konec])
+        pos = konec
       }
+
+      // Každou stránku vyřízneme z plátna jako samostatný obrázek
+      useky.forEach(([od, do_], i) => {
+        const vyska = Math.round((do_ - od) * pxPerCss)
+        const stranka = document.createElement("canvas")
+        stranka.width  = canvas.width
+        stranka.height = vyska
+        const ctx = stranka.getContext("2d")!
+        ctx.fillStyle = "#ffffff"
+        ctx.fillRect(0, 0, stranka.width, stranka.height)
+        ctx.drawImage(canvas, 0, Math.round(od * pxPerCss), canvas.width, vyska, 0, 0, canvas.width, vyska)
+        if (i > 0) pdf.addPage()
+        pdf.addImage(stranka.toDataURL("image/jpeg", 0.82), "JPEG", 0, 0, pageW, (do_ - od) * mmPerPx)
+      })
+
       const fileName = `GS-report-${zakName.replace(/\s+/g, "-")}.pdf`
       pdf.save(fileName)
     } finally {
@@ -210,7 +242,7 @@ function PrintPageInner() {
                     const cena = calcCena(z, kat)
                     const jeMaterial = z.pocet != null
                     return (
-                      <div key={z.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid #f3f4f6", breakInside: "avoid", pageBreakInside: "avoid" }}>
+                      <div key={z.id} className="print-radek" style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid #f3f4f6" }}>
                         <div style={{ padding: "7px 10px", flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 500, color: "#111827" }}>{z.nazev || "(bez názvu)"}</div>
                           {kat && <span style={{ fontSize: 11, color: kat.barva, fontWeight: 600 }}>{kat.name}</span>}
