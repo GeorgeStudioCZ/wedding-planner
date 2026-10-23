@@ -85,6 +85,11 @@ export default function TimerPopup() {
   // Manuální zadání
   const [manualMode, setManualMode] = useState(false)
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10))
+  // Datum a čas pro materiál / kusovou službu (výchozí = teď)
+  const nowHMS = () => new Date().toTimeString().slice(0, 8)
+  const [matDatum, setMatDatum] = useState(() => new Date().toISOString().slice(0, 10))
+  const [matOd,    setMatOd]    = useState(nowHMS)
+  const [matDo,    setMatDo]    = useState(nowHMS)
   const [manualFrom, setManualFrom] = useState("")
   const [manualTo,   setManualTo]   = useState("")
 
@@ -200,21 +205,25 @@ export default function TimerPopup() {
     if (!kategorieId) return
     const pocetNum = parseFloat(pocet.replace(",", "."))
     if (isNaN(pocetNum) || pocetNum <= 0) return
+    if (!matDatum || !matOd || !matDo) return
+    const start_at = localToIso(matDatum, matOd)
+    const end_at   = localToIso(matDatum, matDo)
+    if (new Date(end_at) < new Date(start_at)) return
     const db = createClient()
-    const now = new Date().toISOString()
     const kat = kategorie.find(k => k.id === kategorieId)
     const prodejNum = parseFloat(prodejCena.replace(",", "."))
     const nakupNum  = parseFloat(nakupCena.replace(",", "."))
     const { data, error } = await db.from("george_zaznamy").insert({
       nazev: nazev.trim() || (kat?.name ?? "Materiál"),
       zakaznik_id: zakaznikId, kategorie_id: kategorieId,
-      start_at: now, end_at: now, pocet: pocetNum,
+      start_at, end_at, pocet: pocetNum,
       cena_prodej_kus: !isNaN(prodejNum) && prodejNum > 0 ? prodejNum : null,
       cena_nakup_kus:  !isNaN(nakupNum)  && nakupNum  > 0 ? nakupNum  : null,
     }).select().single()
     if (error || !data) return
     setZaznamy(prev => [data, ...prev])
     setNazev(""); setPocet(""); setProdejCena(""); setNakupCena(""); setKategorieId(null)
+    setMatOd(nowHMS()); setMatDo(nowHMS())
   }
 
   async function handleAddManual() {
@@ -502,6 +511,35 @@ export default function TimerPopup() {
           </div>
         )}
 
+        {/* Datum a čas — materiál / kusová služba */}
+        {!running && (modTyp === "material" || jeKusSluzba) && (
+          <div style={{ marginBottom: 10 }}>
+            <input type="date" value={matDatum} onChange={e => setMatDatum(e.target.value)}
+              style={{
+                width: "100%", padding: "8px 11px", borderRadius: 9, marginBottom: 8,
+                border: "1px solid rgba(255,255,255,.12)", fontSize: 13,
+                color: "#eaeaf0", outline: "none", background: "rgba(255,255,255,.05)",
+                colorScheme: "dark",
+              }}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              {([["Od", matOd, setMatOd], ["Do", matDo, setMatDo]] as const).map(([lab, val, set]) => (
+                <div key={lab} style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: "#5a5b66", marginBottom: 4, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase" }}>{lab}</div>
+                  <input type="time" step="1" value={val} onChange={e => set(e.target.value)}
+                    style={{
+                      width: "100%", padding: "8px 11px", borderRadius: 9,
+                      border: "1px solid rgba(255,255,255,.12)", fontSize: 14,
+                      color: "#eaeaf0", outline: "none", background: "rgba(255,255,255,.05)",
+                      colorScheme: "dark", fontVariantNumeric: "tabular-nums",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Manuální zadání — datum + časy */}
         {!running && manualMode && (
           <div style={{ marginBottom: 10 }}>
@@ -639,7 +677,7 @@ export default function TimerPopup() {
                   {zakName && <div style={{ fontSize: 10.5, color: "#5a5b66" }}>{zakName}</div>}
                 </div>
                 <span style={{ fontSize: 11, color: "#5a5b66", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
-                  {formatDuration(z.start_at, z.end_at)}
+                  {z.pocet != null ? formatTime(z.start_at) : formatDuration(z.start_at, z.end_at)}
                 </span>
                 {/* Play — pokračovat jako nový záznam, jen pro hodinové */}
                 {z.pocet == null && !running && (

@@ -145,7 +145,7 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit, onContinue, is
         <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 1, display: "flex", gap: 8, flexWrap: "wrap" }}>
           {kat && <span>{kat.name}</span>}
           {zak && <span>· {zak.firma?.trim() || `${zak.jmeno} ${zak.prijmeni}`.trim()}</span>}
-          {!isMat && <span>· {formatTime(z.start_at)}{z.end_at ? ` – ${formatTime(z.end_at)}` : ""}</span>}
+          <span>· {formatTime(z.start_at)}{z.end_at && z.end_at !== z.start_at ? ` – ${formatTime(z.end_at)}` : ""}</span>
         </div>
       </div>
       <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -194,8 +194,8 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
   const [form, setForm] = useState<EditForm>({
     nazev:       zaznam.nazev,
     datum:       isoToDate(zaznam.start_at),
-    casOd:       !isMat ? isoToTime(zaznam.start_at) : "",
-    casDo:       !isMat && zaznam.end_at ? isoToTime(zaznam.end_at) : "",
+    casOd:       isoToTime(zaznam.start_at),
+    casDo:       zaznam.end_at ? isoToTime(zaznam.end_at) : "",
     zakaznikId:  zaznam.zakaznik_id  ? String(zaznam.zakaznik_id)  : "",
     kategorieId: zaznam.kategorie_id ? String(zaznam.kategorie_id) : "",
     poznamka:    zaznam.poznamka ?? "",
@@ -205,7 +205,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
   const [saving, setSaving] = useState(false)
 
   const studioZak    = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
-  const casDoInvalid = !isMat && !!form.casDo && !!form.casOd && form.casDo <= form.casOd
+  const casDoInvalid = !!form.casDo && !!form.casOd && (isMat ? form.casDo < form.casOd : form.casDo <= form.casOd)
   const pocetNum     = parseFloat(form.pocet.replace(",", "."))
   const cenaKusNum   = parseFloat(form.cenaKus.replace(",", "."))
   const katAkt       = kategorie.find(k => String(k.id) === form.kategorieId)
@@ -216,6 +216,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
   async function handleSave() {
     if (isMat) {
       if (isNaN(pocetNum) || pocetNum <= 0) return
+      if (!form.datum || !form.casOd || casDoInvalid) return
       setSaving(true)
       await onSave(zaznam.id, {
         nazev:        form.nazev.trim(),
@@ -223,6 +224,8 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
         kategorie_id: form.kategorieId ? Number(form.kategorieId) : null,
         poznamka:     form.poznamka,
         pocet:        pocetNum,
+        start_at:     localToIso(form.datum, form.casOd),
+        end_at:       localToIso(form.datum, form.casDo || form.casOd),
         cena_prodej_kus: !isNaN(cenaKusNum) && cenaKusNum > 0 && cenaKusNum !== katAkt?.sazba ? cenaKusNum : null,
       })
     } else {
@@ -250,7 +253,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
   }
 
   const canSave = isMat
-    ? !isNaN(pocetNum) && pocetNum > 0
+    ? !isNaN(pocetNum) && pocetNum > 0 && !!form.datum && !!form.casOd && !casDoInvalid
     : !!form.datum && !!form.casOd && !casDoInvalid
 
   return (
@@ -293,7 +296,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
           </div>
 
           {/* ── Služba: datum + čas od/do ── */}
-          {!isMat && (
+          {(
             <>
               <div>
                 <label style={lbl}>Datum</label>
