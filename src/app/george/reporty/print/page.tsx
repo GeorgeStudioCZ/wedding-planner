@@ -139,8 +139,6 @@ function PrintPageInner() {
       <style>{`
         @page { margin: 18mm 16mm; size: A4 portrait; }
         @media print { .no-print { display: none !important; } body { background: white; } }
-        /* Řádek záznamu se nesmí rozdělit mezi dvě stránky */
-        tr, td { break-inside: avoid; page-break-inside: avoid; }
         /* Nadpis dne nesmí zůstat osamocený na konci stránky */
         .den-nadpis { break-after: avoid; page-break-after: avoid; }
         body { margin: 0; background: #f5f5f5; font-family: system-ui, -apple-system, sans-serif; }
@@ -205,15 +203,15 @@ function PrintPageInner() {
               </div>
 
               {/* Řádky */}
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <tbody>
+              <div>
+                
                   {zzn.map((z, i) => {
                     const kat = z.kategorie_id ? katMap[z.kategorie_id] : undefined
                     const cena = calcCena(z, kat)
                     const jeMaterial = z.pocet != null
                     return (
-                      <tr key={z.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                        <td style={{ padding: "7px 10px", verticalAlign: "top" }}>
+                      <div key={z.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid #f3f4f6", breakInside: "avoid", pageBreakInside: "avoid" }}>
+                        <div style={{ padding: "7px 10px", flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 500, color: "#111827" }}>{z.nazev || "(bez názvu)"}</div>
                           {kat && <span style={{ fontSize: 11, color: kat.barva, fontWeight: 600 }}>{kat.name}</span>}
                           {!jeMaterial && z.end_at && (
@@ -225,8 +223,8 @@ function PrintPageInner() {
                             <span style={{ fontSize: 11, color: "#9ca3af", marginLeft: kat ? 6 : 0 }}>{z.pocet}×</span>
                           )}
                           {z.poznamka && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, fontStyle: "italic" }}>{z.poznamka}</div>}
-                        </td>
-                        <td style={{ padding: "7px 10px", verticalAlign: "top", textAlign: "right", whiteSpace: "nowrap" }}>
+                        </div>
+                        <div style={{ padding: "7px 10px", textAlign: "right", whiteSpace: "nowrap" }}>
                           {!jeMaterial && z.end_at && (
                             <div style={{ fontSize: 11, color: "#9ca3af", fontVariantNumeric: "tabular-nums" }}>
                               {formatElapsed(new Date(z.end_at).getTime() - new Date(z.start_at).getTime())}
@@ -235,12 +233,12 @@ function PrintPageInner() {
                           {cena > 0 && (
                             <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", fontVariantNumeric: "tabular-nums" }}>{cena.toLocaleString("cs-CZ")} Kč</div>
                           )}
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     )
                   })}
-                </tbody>
-              </table>
+                
+              </div>
             </div>
           )
         })}
