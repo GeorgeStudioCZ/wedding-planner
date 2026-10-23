@@ -139,6 +139,10 @@ function PrintPageInner() {
       <style>{`
         @page { margin: 18mm 16mm; size: A4 portrait; }
         @media print { .no-print { display: none !important; } body { background: white; } }
+        /* Řádek záznamu se nesmí rozdělit mezi dvě stránky */
+        tr, td { break-inside: avoid; page-break-inside: avoid; }
+        /* Nadpis dne nesmí zůstat osamocený na konci stránky */
+        .den-nadpis { break-after: avoid; page-break-after: avoid; }
         body { margin: 0; background: #f5f5f5; font-family: system-ui, -apple-system, sans-serif; }
         * { box-sizing: border-box; }
       `}</style>
@@ -192,7 +196,7 @@ function PrintPageInner() {
           return (
             <div key={den} style={{ marginBottom: 18 }}>
               {/* Datum nadpis */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", background: "#f3f4f6", padding: "5px 10px", borderRadius: 5, marginBottom: 0 }}>
+              <div className="den-nadpis" style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", background: "#f3f4f6", padding: "5px 10px", borderRadius: 5, marginBottom: 0 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>{formatDate(den + "T12:00")}</span>
                 <span style={{ fontSize: 11, color: "#6b7280", fontVariantNumeric: "tabular-nums" }}>
                   {denMs > 0 && <>{formatElapsed(denMs)} · </>}
