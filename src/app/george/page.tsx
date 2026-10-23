@@ -78,10 +78,15 @@ function dateLabel(iso: string) {
   return d.toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long" })
 }
 
+// Cena za kus: vlastní cena u záznamu má přednost před cenou v ceníku
+function cenaKusZaznamu(z: Zaznam, kat: Kategorie): number {
+  return z.cena_prodej_kus ?? kat.sazba
+}
+
 function calcEarnings(z: Zaznam, kategorie: Kategorie[]) {
   const kat = kategorie.find(k => k.id === z.kategorie_id)
   if (!kat) return 0
-  if (z.pocet != null) return Math.round(z.pocet * kat.sazba)   // materiál
+  if (z.pocet != null) return Math.round(z.pocet * cenaKusZaznamu(z, kat))   // materiál
   if (!z.end_at) return 0
   const hours = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
   return Math.round(hours * kat.sazba)
@@ -176,7 +181,7 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit, onContinue, is
 // ── EditPopup ─────────────────────────────────────────────────────────────────
 type EditForm = {
   nazev: string; datum: string; casOd: string; casDo: string
-  zakaznikId: string; kategorieId: string; poznamka: string; pocet: string
+  zakaznikId: string; kategorieId: string; poznamka: string; pocet: string; cenaKus: string
 }
 
 function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
@@ -195,12 +200,14 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
     kategorieId: zaznam.kategorie_id ? String(zaznam.kategorie_id) : "",
     poznamka:    zaznam.poznamka ?? "",
     pocet:       zaznam.pocet != null ? String(zaznam.pocet) : "",
+    cenaKus:     zaznam.pocet != null ? String(zaznam.cena_prodej_kus ?? kategorie.find(k => k.id === zaznam.kategorie_id)?.sazba ?? "") : "",
   })
   const [saving, setSaving] = useState(false)
 
   const studioZak    = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
   const casDoInvalid = !isMat && !!form.casDo && !!form.casOd && form.casDo <= form.casOd
   const pocetNum     = parseFloat(form.pocet.replace(",", "."))
+  const cenaKusNum   = parseFloat(form.cenaKus.replace(",", "."))
   const katAkt       = kategorie.find(k => String(k.id) === form.kategorieId)
   const katFilt      = isMat
     ? kategorie.filter(k => k.typ === "material")
@@ -216,6 +223,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
         kategorie_id: form.kategorieId ? Number(form.kategorieId) : null,
         poznamka:     form.poznamka,
         pocet:        pocetNum,
+        cena_prodej_kus: !isNaN(cenaKusNum) && cenaKusNum > 0 && cenaKusNum !== katAkt?.sazba ? cenaKusNum : null,
       })
     } else {
       if (!form.datum || !form.casOd || casDoInvalid) return
@@ -322,14 +330,22 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
                   placeholder="0" inputMode="decimal"
                   style={{ ...inp, width: 110 }}
                 />
-                {katAkt && !isNaN(pocetNum) && pocetNum > 0 && (
+                {katAkt && !isNaN(pocetNum) && pocetNum > 0 && !isNaN(cenaKusNum) && (
                   <span style={{ fontSize: 13, color: "#6b7280" }}>
-                    {pocetNum} {katAkt.jednotka ?? "×"} {katAkt.sazba.toLocaleString("cs-CZ")} ={" "}
+                    {pocetNum} {katAkt.jednotka ?? "×"} {cenaKusNum.toLocaleString("cs-CZ")} ={" "}
                     <strong style={{ color: "#059669" }}>
-                      {Math.round(pocetNum * katAkt.sazba).toLocaleString("cs-CZ")} Kč
+                      {Math.round(pocetNum * cenaKusNum).toLocaleString("cs-CZ")} Kč
                     </strong>
                   </span>
                 )}
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <label style={lbl}>Prodejní cena / {katAkt?.jednotka ?? "ks"}</label>
+                <input
+                  value={form.cenaKus} onChange={e => upd({ cenaKus: e.target.value })}
+                  placeholder="0" inputMode="decimal"
+                  style={{ ...inp, width: 110 }}
+                />
               </div>
             </div>
           )}
