@@ -28,7 +28,7 @@ function barvaTypu(typ: "sluzba" | "material") {
   return typ === "sluzba" ? BARVA_SLUZBA : BARVA_MATERIAL
 }
 
-const JEDNOTKY = ["ks", "sada", "m", "kg"]
+const JEDNOTKY = ["ks", "sada", "m", "km", "kg"]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fKc(n: number) {
