@@ -23,6 +23,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "percentVraceni musí být 0–100" }, { status: 400 })
     }
 
+    // Záznamy z předchozí firmy nesmí jít do nové SuperFaktury
+    const { data: legacy } = groupId
+      ? await sb.from("pujcovna_rezervace").select("id").eq("group_id", groupId).eq("sf_legacy", true).limit(1)
+      : await sb.from("pujcovna_rezervace").select("id").eq("id", rezervaceId).eq("sf_legacy", true).limit(1)
+    if (legacy?.length) {
+      return NextResponse.json({ ok: false, error: "Záznam je z předchozí firmy (doklad ve staré SuperFakturze) a nelze s ním pracovat." }, { status: 409 })
+    }
+
     // Vytvoř dobropis v SF — pouze pokud existuje sf_faktura_id
     let dobropis: { invoice_no: string; id: number; pdf_url: string } | null = null
     if (sfFakturaId) {

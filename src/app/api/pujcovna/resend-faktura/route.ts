@@ -29,12 +29,15 @@ export async function POST(req: NextRequest) {
     // 1. Načti rezervaci (sf_faktura_id může být null pokud dřív chyběl sloupec)
     const { data: rez, error } = await sb
       .from("pujcovna_rezervace")
-      .select("id, customer, zakaznik_id, sf_faktura_id, sf_proforma_id, sf_platba_data, start_date, end_date")
+      .select("id, customer, zakaznik_id, sf_faktura_id, sf_proforma_id, sf_platba_data, start_date, end_date, sf_legacy")
       .eq("id", rezervaceId)
       .single()
 
     if (error || !rez) {
       return NextResponse.json({ ok: false, error: `Rezervace nenalezena: ${error?.message ?? ""}` }, { status: 404 })
+    }
+    if (rez.sf_legacy) {
+      return NextResponse.json({ ok: false, error: "Záznam je z předchozí firmy (doklad ve staré SuperFakturze) a nelze s ním pracovat." }, { status: 409 })
     }
 
     // 2. Načti email zákazníka — záložně z zakaznici tabulky

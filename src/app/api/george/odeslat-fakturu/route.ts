@@ -18,11 +18,12 @@ export async function POST(req: NextRequest) {
     // Načti fakturu + zákazníka
     const { data: faktura } = await sb
       .from("george_faktury")
-      .select("sf_id, sf_no, zakaznik_id")
+      .select("sf_id, sf_no, zakaznik_id, sf_legacy")
       .eq("sf_id", sfId)
       .single()
 
     if (!faktura) return NextResponse.json({ ok: false, error: "Faktura nenalezena" }, { status: 404 })
+    if (faktura.sf_legacy) return NextResponse.json({ ok: false, error: "Záznam je z předchozí firmy (doklad ve staré SuperFakturze) a nelze s ním pracovat." }, { status: 409 })
 
     const { data: zak } = await sb
       .from("zakaznici")

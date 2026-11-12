@@ -32,6 +32,9 @@ export async function POST(req: NextRequest) {
 
     // Načti rezervaci, položku, zákazníka
     const { data: rez } = await sb.from("pujcovna_rezervace").select("*").eq("id", rezervaceId).single()
+    if (rez?.sf_legacy) {
+      return NextResponse.json({ ok: false, error: "Záznam je z předchozí firmy (doklad ve staré SuperFakturze) a nelze s ním pracovat." }, { status: 409 })
+    }
     if (!rez) return NextResponse.json({ ok: false, error: "Rezervace nenalezena" }, { status: 404 })
 
     if (!rez.zakaznik_id) return NextResponse.json({ ok: false, error: "Rezervace nemá zákazníka" }, { status: 400 })

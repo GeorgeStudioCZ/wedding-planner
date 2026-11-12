@@ -28,9 +28,12 @@ export async function POST(req: NextRequest) {
     // 1. Načti rezervaci
     const { data: rez, error } = await sb
       .from("pujcovna_rezervace")
-      .select("id, customer, zakaznik_id, stav, sf_vs, sf_faktura_id, sf_platba_data, pujcovna_polozky(name)")
+      .select("id, customer, zakaznik_id, stav, sf_vs, sf_faktura_id, sf_platba_data, pujcovna_polozky(name), sf_legacy")
       .eq("id", rezervaceId)
       .single()
+    if (rez?.sf_legacy) {
+      return NextResponse.json({ ok: false, error: "Záznam je z předchozí firmy (doklad ve staré SuperFakturze) a nelze s ním pracovat." }, { status: 409 })
+    }
 
     if (error || !rez) {
       return NextResponse.json({ ok: false, error: `Rezervace nenalezena: ${error?.message ?? ""}` }, { status: 404 })

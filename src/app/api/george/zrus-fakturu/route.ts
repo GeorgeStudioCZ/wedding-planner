@@ -14,6 +14,12 @@ export async function POST(req: NextRequest) {
     const { sfId } = await req.json() as { sfId: number }
     if (!sfId) return NextResponse.json({ ok: false, error: "Chybí sfId" }, { status: 400 })
 
+    // Faktury z předchozí firmy nesmí být zrušeny v nové SuperFakturze
+    const { data: legacyFa } = await sb.from("george_faktury").select("sf_id").eq("sf_id", sfId).eq("sf_legacy", true).limit(1)
+    if (legacyFa?.length) {
+      return NextResponse.json({ ok: false, error: "Záznam je z předchozí firmy (doklad ve staré SuperFakturze) a nelze s ním pracovat." }, { status: 409 })
+    }
+
     // Nejdřív zjisti které záznamy patří k faktuře
     const { data: zaznamy } = await sb
       .from("george_zaznamy")
