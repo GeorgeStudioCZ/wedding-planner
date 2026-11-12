@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
+import { zapisOk } from "@/lib/zapis"
 
 type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
 type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null; jednotka: string | null; nakupni_cena: number | null }
@@ -244,7 +245,8 @@ export default function TimerPopup() {
 
   async function handleDelete(id: number) {
     const db = createClient()
-    await db.from("george_zaznamy").delete().eq("id", id)
+    const { error: errSmaz } = await db.from("george_zaznamy").delete().eq("id", id)
+    if (!zapisOk(errSmaz)) return
     setZaznamy(prev => prev.filter(z => z.id !== id))
     if (running?.id === id) { setRunning(null); setElapsed(0); setPaused(false); pauseOffsetRef.current = 0; pausedAtRef.current = null }
   }

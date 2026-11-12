@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
+import { zapisOk } from "@/lib/zapis"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
@@ -18,6 +19,7 @@ type Zaznam = {
   poznamka: string
   pocet: number | null
   cena_prodej_kus: number | null
+  sazba_snapshot: number | null   // zmražená hodinová sazba (záznamy z předchozí firmy)
   cena_nakup_kus: number | null
 }
 
@@ -89,7 +91,8 @@ function calcEarnings(z: Zaznam, kategorie: Kategorie[]) {
   if (z.pocet != null) return Math.round(z.pocet * cenaKusZaznamu(z, kat))   // materiál
   if (!z.end_at) return 0
   const hours = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
-  return Math.round(hours * kat.sazba)
+  // Zmražená sazba má přednost: změna ceníku nesmí přepočítat starý záznam
+  return Math.round(hours * (z.sazba_snapshot ?? kat.sazba))
 }
 
 // ── Inline SVG icons ──────────────────────────────────────────────────────────
@@ -602,6 +605,7 @@ export default function GeorgePage() {
   async function handleSaveEdit(id: number, updates: Partial<Zaznam>) {
     const db = createClient()
     const { data, error } = await db.from("george_zaznamy").update(updates).eq("id", id).select().single()
+    if (!zapisOk(error)) return
     if (!error && data) {
       setZaznamy(prev => prev.map(z => z.id === data.id ? data : z))
       if (running?.id === data.id) setRunning(data)
@@ -654,7 +658,8 @@ export default function GeorgePage() {
 
   async function handleDelete(id: number) {
     const db = createClient()
-    await db.from("george_zaznamy").delete().eq("id", id)
+    const { error: errSmaz } = await db.from("george_zaznamy").delete().eq("id", id)
+    if (!zapisOk(errSmaz)) return
     setZaznamy(prev => prev.filter(z => z.id !== id))
     if (running?.id === id) {
       setRunning(null); setElapsed(0); setPaused(false)

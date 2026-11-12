@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
 import RezervacePopup from "@/components/RezervacePopup"
 import { bezDPH, castDPH, formatKc } from "@/lib/dph"
+import { zamrzleZaplaceni } from "@/lib/zamrzle"
 
 type Polozka = {
   id: number
@@ -333,6 +334,9 @@ export default function PujcovnaDashboard() {
   }
 
   function celkovaCenaRezervace(r: Rezervace): number | null {
+    // Záznam z předchozí firmy: cena z uložené faktury, celá skupina jen jednou (na hlavním řádku)
+    const zamrz = zamrzleZaplaceni(r, rezervace)
+    if (zamrz) return zamrz.jeHlavni ? zamrz.celkem : 0
     const pol = polozky.find(p => p.id === r.item_id)
     if (!pol) return null
     const dni = pocetDni(r.start_date, r.end_date)

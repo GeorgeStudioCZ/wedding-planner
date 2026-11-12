@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase-browser"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 import AppShell from "@/components/AppShell"
 import RezervacePopup from "@/components/RezervacePopup"
+import { zapisOk } from "@/lib/zapis"
 
 type Polozka = {
   id: number
@@ -670,12 +671,14 @@ function ModalRezervace({
         await supabase.from("pujcovna_rezervace").insert(prislRez)
       }
     } else if (editRezervace) {
-      await supabase.from("pujcovna_rezervace").update(hlavniData).eq("id", editRezervace.id)
+      const { error: errUpd } = await supabase.from("pujcovna_rezervace").update(hlavniData).eq("id", editRezervace.id)
+      if (!zapisOk(errUpd)) return
       if (groupId) {
-        await supabase.from("pujcovna_rezervace")
+        const { error: errDel } = await supabase.from("pujcovna_rezervace")
           .delete()
           .eq("group_id", groupId)
           .neq("id", editRezervace.id)
+        if (!zapisOk(errDel)) return
         const prislRez = sestavPrisl(groupId)
         if (prislRez.length > 0) {
           await supabase.from("pujcovna_rezervace").insert(prislRez)
@@ -689,9 +692,11 @@ function ModalRezervace({
     if (!editRezervace) return
     if (editRezervace.group_id) {
       // Smazat celou skupinu
-      await supabase.from("pujcovna_rezervace").delete().eq("group_id", editRezervace.group_id)
+      const { error: errSmaz } = await supabase.from("pujcovna_rezervace").delete().eq("group_id", editRezervace.group_id)
+      if (!zapisOk(errSmaz)) return
     } else {
-      await supabase.from("pujcovna_rezervace").delete().eq("id", editRezervace.id)
+      const { error: errSmaz } = await supabase.from("pujcovna_rezervace").delete().eq("id", editRezervace.id)
+      if (!zapisOk(errSmaz)) return
     }
     onSave()
   }

@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase"
 
 type Zakaznik  = { id: number; jmeno: string; prijmeni: string; firma?: string | null; ico?: string | null; dic?: string | null; email?: string | null; telefon?: string | null }
 type Kategorie = { id: number; name: string; barva: string; sazba: number; typ: string | null }
-type Zaznam    = { id: number; zakaznik_id: number | null; kategorie_id: number | null; nazev: string; start_at: string; end_at: string | null; poznamka: string; pocet: number | null; cena_prodej_kus: number | null }
+type Zaznam    = { id: number; zakaznik_id: number | null; kategorie_id: number | null; nazev: string; start_at: string; end_at: string | null; poznamka: string; pocet: number | null; cena_prodej_kus: number | null; sazba_snapshot?: number | null }
 
 function formatElapsed(ms: number) {
   const s = Math.floor(ms / 1000)
@@ -27,7 +27,7 @@ function calcCena(z: Zaznam, kat: Kategorie | undefined): number {
   if (z.pocet != null) return Math.round((z.pocet * (z.cena_prodej_kus ?? kat?.sazba ?? 0)) * 100) / 100
   if (!z.end_at || !kat) return 0
   const hours = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
-  return Math.round(hours * kat.sazba * 100) / 100
+  return Math.round(hours * (z.sazba_snapshot ?? kat.sazba) * 100) / 100
 }
 
 export default function PrintPage() {

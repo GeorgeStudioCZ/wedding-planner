@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { zamrzleZaplaceni } from "@/lib/zamrzle"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
@@ -122,6 +123,9 @@ export default function SeznamRezervaci() {
   }
 
   function celkovaCenaRezervace(r: Rezervace): number | null {
+    // Záznam z předchozí firmy: cena z uložené faktury, celá skupina jen jednou
+    const zamrz = zamrzleZaplaceni(r, rezervace)
+    if (zamrz) return zamrz.jeHlavni ? zamrz.celkem : 0
     const pol = polozky.find(p => p.id === r.item_id)
     if (!pol) return null
     const dni = pocetDni(r.start_date, r.end_date)

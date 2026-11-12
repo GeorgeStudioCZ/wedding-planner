@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 import { dphRozpad, formatKc } from "@/lib/dph"
+import { zamrzleZaplaceni } from "@/lib/zamrzle"
+import { zapisOk } from "@/lib/zapis"
 
 // Normalizuje formát časového slotu na "H:00 – H:00" s en-dash
 // Řeší různé formáty uložené v DB (obyčejná pomlčka, různé mezery apod.)
@@ -54,6 +56,8 @@ type Rezervace = {
   sf_vs: string | null
   datum_vyzvednuti: string | null
   datum_vraceni:    string | null
+  sf_legacy?:       boolean | null
+  sf_platba_data?:  { polozky?: { nazev: string; pocet: number; cena_sdph: number }[] } | null
 }
 
 type ZakaznikData = {
@@ -402,11 +406,10 @@ export default function RezervacePopup({
   async function zmenStavInterni(novyStav: string, poznamka?: string) {
     if (!rez) return
     const sb = createClient()
-    if (rez.group_id) {
-      await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("group_id", rez.group_id)
-    } else {
-      await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("id", rez.id)
-    }
+    const { error: errStav } = rez.group_id
+      ? await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("group_id", rez.group_id)
+      : await sb.from("pujcovna_rezervace").update({ stav: novyStav }).eq("id", rez.id)
+    if (!zapisOk(errStav)) return
     await sb.from("pujcovna_rezervace_historie").insert([{ rezervace_id: rez.id, stav: novyStav, poznamka: poznamka ?? null }])
     setRez({ ...rez, stav: novyStav })
     nactiHistorii(rez.id)
@@ -570,6 +573,7 @@ export default function RezervacePopup({
         const {
           id, created_at, sf_proforma_id, sf_vs, sf_platba_data, fio_id_pohybu,
           gcal_event_id, gcal_vyzvednuti_id, gcal_vraceni_id, pripominacka_sent, sf_faktura_id,
+          sf_legacy,
           ...zbytek
         } = r as Record<string, unknown>
         return { ...zbytek, stav: "rezervace", group_id: novyGroupId }
@@ -668,7 +672,7 @@ export default function RezervacePopup({
     const oldCasVraceni      = rez?.cas_vraceni      ?? ""
 
     const groupId = rez?.group_id ?? (jeStanVybran ? crypto.randomUUID() : null)
-    await supabase.from("pujcovna_rezervace").update({
+    const { error: errUpd } = await supabase.from("pujcovna_rezervace").update({
       ...form,
       item_id: Number(form.item_id),
       group_id: groupId,
@@ -676,9 +680,11 @@ export default function RezervacePopup({
       datum_vyzvednuti: form.datum_vyzvednuti || null,
       datum_vraceni:    form.datum_vraceni    || null,
     }).eq("id", rezervaceId)
+    if (!zapisOk(errUpd)) return
 
     if (groupId) {
-      await supabase.from("pujcovna_rezervace").delete().eq("group_id", groupId).neq("id", rezervaceId)
+      const { error: errDel } = await supabase.from("pujcovna_rezervace").delete().eq("group_id", groupId).neq("id", rezervaceId)
+      if (!zapisOk(errDel)) return
       const prislRows = sestavPrisl(groupId)
       if (prislRows.length > 0) await supabase.from("pujcovna_rezervace").insert(prislRows)
     }
@@ -730,11 +736,10 @@ export default function RezervacePopup({
 
   async function handleSmazat() {
     if (!rez) return
-    if (rez.group_id) {
-      await supabase.from("pujcovna_rezervace").delete().eq("group_id", rez.group_id)
-    } else {
-      await supabase.from("pujcovna_rezervace").delete().eq("id", rez.id)
-    }
+    const { error: errSmaz } = rez.group_id
+      ? await supabase.from("pujcovna_rezervace").delete().eq("group_id", rez.group_id)
+      : await supabase.from("pujcovna_rezervace").delete().eq("id", rez.id)
+    if (!zapisOk(errSmaz)) return
     onSave()
   }
 
@@ -784,7 +789,9 @@ export default function RezervacePopup({
     vypocet: p ? vypocitejCenu(p, stupne, pocetDni(r.start_date, r.end_date)) : null,
   }))
   const montazPoplatek = polozka.category === "Stany" && dni <= 4 ? 500 : 0
-  const celkem = (cenaStan?.celkem ?? 0) + cenyPrisl.reduce((s, c) => s + (c.vypocet?.celkem ?? 0), 0) + montazPoplatek
+  const celkemZiva = (cenaStan?.celkem ?? 0) + cenyPrisl.reduce((s, c) => s + (c.vypocet?.celkem ?? 0), 0) + montazPoplatek
+  const zamrzle = rez ? zamrzleZaplaceni(rez, vsechnyRezervace) : null
+  const celkem = zamrzle ? zamrzle.celkem : celkemZiva
 
   // ── Detail view ─────────────────────────────────────────────────────────────
   if (view === "detail") {
@@ -1011,23 +1018,36 @@ export default function RezervacePopup({
           )}
 
           {/* Cena */}
-          {(cenaStan || cenyPrisl.some(c => c.vypocet)) && (
+          {(zamrzle || cenaStan || cenyPrisl.some(c => c.vypocet)) && (
             <div className="rounded-xl border border-gray-100 p-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Cena</p>
               <div className="space-y-2">
-                {cenaStan && (
+                {zamrzle && (
+                  <>
+                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-2 py-1">
+                      Záznam z předchozí firmy — cena je zmražená podle faktury
+                    </p>
+                    {zamrzle.polozky.map((p, i) => (
+                      <div key={i} className="flex items-start justify-between gap-3">
+                        <div><p className="text-sm font-medium text-gray-900">{p.nazev}</p><p className="text-xs text-gray-400">{p.pocet} × {formatKc(p.cena_sdph)}</p></div>
+                        <p className="text-sm font-semibold text-gray-900 shrink-0">{formatKc(p.cena_sdph * p.pocet)}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {!zamrzle && cenaStan && (
                   <div className="flex items-start justify-between gap-3">
                     <div><p className="text-sm font-medium text-gray-900">{stanLabel}</p><p className="text-xs text-gray-400">{cenaStan.popis}</p></div>
                     <p className="text-sm font-semibold text-gray-900 shrink-0">{formatCena(cenaStan.celkem)}</p>
                   </div>
                 )}
-                {cenyPrisl.map((c, i) => c.vypocet && (
+                {!zamrzle && cenyPrisl.map((c, i) => c.vypocet && (
                   <div key={i} className="flex items-start justify-between gap-3">
                     <div><p className="text-sm font-medium text-gray-900">{c.name}</p><p className="text-xs text-gray-400">{c.vypocet.popis}</p></div>
                     <p className="text-sm font-semibold text-gray-900 shrink-0">{formatCena(c.vypocet.celkem)}</p>
                   </div>
                 ))}
-                {montazPoplatek > 0 && (
+                {!zamrzle && montazPoplatek > 0 && (
                   <div className="flex items-start justify-between gap-3">
                     <div><p className="text-sm font-medium text-gray-900">Poplatek za montáž</p><p className="text-xs text-gray-400">Zápůjčka ≤ 4 dny</p></div>
                     <p className="text-sm font-semibold text-gray-900 shrink-0">{formatCena(montazPoplatek)}</p>

@@ -17,6 +17,7 @@ type Zaznam    = {
   poznamka: string
   pocet: number | null
   cena_prodej_kus: number | null
+  sazba_snapshot: number | null   // zmražená hodinová sazba (záznamy z předchozí firmy)
   cena_nakup_kus: number | null
   fakturovano: boolean
   sf_faktura_id: number | null
@@ -59,7 +60,7 @@ function zaznamCena(z: Zaznam, kat: Kategorie | undefined): number {
   if (z.pocet != null && z.cena_prodej_kus != null) return z.pocet * z.cena_prodej_kus
   if (!z.end_at || !kat) return 0
   const hours = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
-  return Math.round(hours * kat.sazba * 100) / 100
+  return Math.round(hours * (z.sazba_snapshot ?? kat.sazba) * 100) / 100
 }
 
 // ── Výchozí rozsah — aktuální měsíc ───────────────────────────────────────────
