@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { vytvorZalohFakturu, qrPlatbaUrl, SFKlient, SFPolozka } from "@/lib/superfaktura"
 
 const SF_IBAN       = process.env.SF_IBAN ?? ""
-const SF_CISLO_UCTU = process.env.SF_CISLO_UCTU ?? "2302601281/2010"
+const SF_CISLO_UCTU = process.env.SF_CISLO_UCTU ?? ""
 
 export interface ZalohFakturaPayload {
   rezervaceId: number

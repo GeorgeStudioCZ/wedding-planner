@@ -4,7 +4,7 @@ import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
 import { qrPlatbaUrl } from "@/lib/superfaktura"
 
-const SF_CISLO_UCTU = process.env.SF_CISLO_UCTU ?? "2302601281/2010"
+const SF_CISLO_UCTU = process.env.SF_CISLO_UCTU ?? ""
 const SF_IBAN       = process.env.SF_IBAN ?? ""
 
 const sb = createClient(

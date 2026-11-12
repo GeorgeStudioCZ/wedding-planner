@@ -7,9 +7,9 @@ const SF_BASE       = "https://moje.superfaktura.cz"
 const SF_MODULE     = "SvatebniCRM"
 
 // Číselné řady půjčovny stanů
-const SEQ_ZALOHA    = 372113   // "Zálohová faktura - STANY"
-const SEQ_FAKTURA   = 372111   // "Faktura - STANY"
-const BANK_ACC_ID   = 34491    // Bankovní účet v SF
+const SEQ_ZALOHA    = 656581   // "SNA - Zálohová faktura" (Stanujnaaute.cz)
+const SEQ_FAKTURA   = 656580   // "SNA - Vystavená faktura" (Stanujnaaute.cz)
+const BANK_ACC_ID   = 50017    // Bankovní účet Stanujnaaute.cz
 
 function authHeader(): string {
   const email     = process.env.SF_EMAIL!
@@ -95,7 +95,7 @@ export async function vytvorZalohFakturu(
       name: "Zálohová faktura - STANY",
       sequence_id: SEQ_ZALOHA,
       invoice_currency: "CZK",
-      logo_id: 405873,
+      logo_id: 859658,
       bank_accounts: [{ id: BANK_ACC_ID }],
       ...(poznamka ? { internal_comment: poznamka } : {}),
     },
@@ -137,7 +137,7 @@ export async function vytvorFakturuZeZalohy(
       name: "Faktura - STANY",
       sequence_id: SEQ_FAKTURA,
       invoice_currency: "CZK",
-      logo_id: 405873,
+      logo_id: 859658,
       proforma_id: String(proformaId),
       bank_accounts: [{ id: BANK_ACC_ID }],
     },
@@ -249,9 +249,9 @@ function buildItem(p: SFPolozka): Record<string, unknown> {
 
 // ── George Studio — faktura ───────────────────────────────────────────────────
 
-const GS_SEQ_ID    = 365902   // číselná řada George Studio
-const GS_BANK_ID   = 33862    // bankovní účet
-const GS_LOGO_ID   = 386497   // logo
+const GS_SEQ_ID    = 654442   // "GS - Vystavená faktura" (GeorgeStudio.cz)
+const GS_BANK_ID   = 50015    // bankovní účet GeorgeStudio.cz
+const GS_LOGO_ID   = 859656   // logo GeorgeStudio.cz
 const GS_SPLATNOST = 7        // dní
 
 export interface SFKlientGeorge {
@@ -427,7 +427,7 @@ export async function vytvorDobropis(
       cancel_invoice_id: String(cancelInvoiceId),
       sequence_id:      seqId,
       invoice_currency: "CZK",
-      logo_id:          405873,
+      logo_id:          859658,
       bank_accounts:    [{ id: BANK_ACC_ID }],
       ...(percentVraceni < 100
         ? { internal_comment: `Částečné storno — vráceno ${percentVraceni} % z celkové ceny` }
