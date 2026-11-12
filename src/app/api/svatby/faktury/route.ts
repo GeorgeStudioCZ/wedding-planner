@@ -4,6 +4,47 @@ import { vytvorSvatebniZalohu, vytvorSvatebniFakturu, SFKlient, SFPolozka } from
 
 export const REZERVACNI_POPLATEK = 2900
 
+const BALICKY: Record<string, { nazev: string; hodiny: number }> = {
+  "pul-den-6": { nazev: "PŮL DEN (6 HOD)", hodiny: 6 },
+  "pul-den":   { nazev: "PŮL DEN (8 HOD)", hodiny: 8 },
+  "cely-den":  { nazev: "CELÝ DEN (10 HOD)", hodiny: 10 },
+  "do-vecera": { nazev: "DO VEČERA (12 HOD)", hodiny: 12 },
+}
+
+type ZakazkaFakturace = {
+  datum_svatby: string | null
+  balicek: string | null
+  cas_prijezdu: string | null
+  adresa_obradu: string | null
+}
+
+// Název a popis položky ve faktuře: pevný název + balíček, v popisu datum, čas natáčení a místo obřadu
+function polozkaSvatby(z: ZakazkaFakturace, nazevZaklad: string, cenaSdph: number): SFPolozka {
+  const balicek = z.balicek ? BALICKY[z.balicek] : undefined
+  if (!balicek) throw new Error("Zakázka nemá vyplněný balíček.")
+  if (!z.cas_prijezdu) throw new Error("Zakázka nemá vyplněný čas příjezdu (potřeba pro čas natáčení).")
+  if (!z.datum_svatby) throw new Error("Zakázka nemá vyplněné datum svatby.")
+
+  const [h, m] = z.cas_prijezdu.slice(0, 5).split(":").map(Number)
+  const konec = `${String((h + balicek.hodiny) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+  const start = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+  const [rok, mesic, den] = z.datum_svatby.split("-")
+
+  const popis = [
+    z.adresa_obradu ? `Místo konání svatby : ${z.adresa_obradu}` : null,
+    `Datum svatby : ${den}.${mesic}.${rok}`,
+    `Čas natáčení : ${start} - ${konec} hod`,
+  ].filter(Boolean).join("\n")
+
+  return {
+    nazev: `${nazevZaklad} | balíček : ${balicek.nazev}`,
+    cena_sdph: cenaSdph,
+    pocet: 1,
+    jednotka: "ks",
+    popis,
+  }
+}
+
 function sb() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     const { data: zakazka, error: zErr } = await db
       .from("zakazky")
-      .select("id, cena, datum_svatby, jmeno_nevesty, jmeno_zenicha, zakaznici(*)")
+      .select("id, cena, datum_svatby, balicek, cas_prijezdu, adresa_obradu, jmeno_nevesty, jmeno_zenicha, zakaznici(*)")
       .eq("id", zakazka_id)
       .single()
     if (zErr || !zakazka) return NextResponse.json({ ok: false, error: "Zakázka nenalezena" }, { status: 404 })
@@ -67,7 +108,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "Zálohová faktura už k zakázce existuje." }, { status: 409 })
       }
       const popis = "Rezervační poplatek"
-      const polozky: SFPolozka[] = [{ nazev: "Rezervační poplatek – svatební video/foto", cena_sdph: REZERVACNI_POPLATEK, pocet: 1, jednotka: "ks" }]
+      const polozky: SFPolozka[] = [polozkaSvatby(zakazka, "Rezervační poplatek za svatební focení/natáčení", REZERVACNI_POPLATEK)]
       const f = await vytvorSvatebniZalohu(klient, polozky, `Zakázka ${zakazka.jmeno_nevesty} & ${zakazka.jmeno_zenicha}`)
       const { data, error } = await db.from("svatby_faktury").insert({
         zakazka_id, typ: "zaloha", sf_id: f.id, cislo: f.invoice_no, vs: f.vs,
@@ -84,7 +125,7 @@ export async function POST(req: NextRequest) {
       if (seznam.some(f => f.typ === "ostra")) {
         return NextResponse.json({ ok: false, error: "Ostrá faktura ze zálohy už existuje." }, { status: 409 })
       }
-      const polozky: SFPolozka[] = [{ nazev: "Rezervační poplatek – svatební video/foto", cena_sdph: zaloha.castka, pocet: 1, jednotka: "ks" }]
+      const polozky: SFPolozka[] = [polozkaSvatby(zakazka, "Rezervační poplatek za svatební focení/natáčení", Number(zaloha.castka))]
       const f = await vytvorSvatebniFakturu(klient, polozky, zaloha.sf_id, `Úhrada zálohy ${zaloha.cislo}`)
       const { data, error } = await db.from("svatby_faktury").insert({
         zakazka_id, typ: "ostra", parent_id: zaloha.id, sf_id: f.id, cislo: f.invoice_no,
@@ -108,7 +149,7 @@ export async function POST(req: NextRequest) {
       if (seznam.some(f => f.typ === "doplatek")) {
         return NextResponse.json({ ok: false, error: "Faktura na doplatek už existuje." }, { status: 409 })
       }
-      const polozky: SFPolozka[] = [{ nazev: "Doplatek za svatební video/foto", cena_sdph: castka, pocet: 1, jednotka: "ks" }]
+      const polozky: SFPolozka[] = [polozkaSvatby(zakazka, "Doplatek za svatební focení/natáčení", castka)]
       const f = await vytvorSvatebniFakturu(klient, polozky, null, `Cena zakázky ${cena} Kč − rezervační poplatek ${REZERVACNI_POPLATEK} Kč`)
       const { data, error } = await db.from("svatby_faktury").insert({
         zakazka_id, typ: "doplatek", sf_id: f.id, cislo: f.invoice_no,
