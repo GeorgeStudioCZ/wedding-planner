@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
-import { dphRozpad, formatKc } from "@/lib/dph"
+import { formatKc } from "@/lib/dph"
 import { zamrzleZaplaceni } from "@/lib/zamrzle"
 import { zapisOk } from "@/lib/zapis"
 
@@ -1053,25 +1053,10 @@ export default function RezervacePopup({
                     <p className="text-sm font-semibold text-gray-900 shrink-0">{formatCena(montazPoplatek)}</p>
                   </div>
                 )}
-                {(() => {
-                  const r = dphRozpad(celkem)
-                  return (
-                    <div className="pt-2 border-t border-gray-100 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-bold text-gray-700">Celkem s DPH</p>
-                        <p className="text-base font-bold text-emerald-700">{formatKc(r.sdph)}</p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-400">z toho DPH 21 %</p>
-                        <p className="text-xs font-medium text-gray-500">{formatKc(r.dph)}</p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-400">Základ bez DPH</p>
-                        <p className="text-xs font-medium text-gray-500">{formatKc(r.bezdph)}</p>
-                      </div>
-                    </div>
-                  )
-                })()}
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+  <p className="text-sm font-bold text-gray-700">Celkem</p>
+  <p className="text-base font-bold text-emerald-700">{formatKc(celkem)}</p>
+</div>
               </div>
             </div>
           )}
@@ -1343,25 +1328,10 @@ export default function RezervacePopup({
                       <span className="font-medium text-gray-900">500 Kč</span>
                     </div>
                   )}
-                  {(() => {
-                    const r = dphRozpad(celkemEdit)
-                    return (
-                      <div className="pt-2 border-t border-emerald-200 mt-1 space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-bold text-gray-700">Celkem s DPH</span>
-                          <span className="text-base font-bold text-emerald-700">{formatKc(r.sdph)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-xs text-gray-400">z toho DPH 21 %</span>
-                          <span className="text-xs text-gray-500">{formatKc(r.dph)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-xs text-gray-400">Základ bez DPH</span>
-                          <span className="text-xs text-gray-500">{formatKc(r.bezdph)}</span>
-                        </div>
-                      </div>
-                    )
-                  })()}
+                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+  <p className="text-sm font-bold text-gray-700">Celkem</p>
+  <p className="text-base font-bold text-emerald-700">{formatKc(celkemEdit)}</p>
+</div>
                 </div>
               </div>
             )

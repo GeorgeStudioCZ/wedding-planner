@@ -1065,7 +1065,7 @@ export default function DetailZakazky() {
                   fontFamily: "var(--font-mono)", fontSize: 9.5, letterSpacing: ".12em",
                   textTransform: "uppercase", color: "var(--muted)", marginBottom: 4,
                 }}>
-                  Cena s DPH
+                  Cena
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-mono)", color: "var(--ink)" }}>
                   {formatCena(zakazka.cena)}

@@ -118,7 +118,7 @@ function htmlZakaznik(d: RezervaceMailPayload): string {
           ${d.montazPopl > 0 ? `<tr><td style="padding:3px 0;color:#065f46;font-size:13px">Poplatek za montáž</td>
               <td style="padding:3px 0;color:#065f46;text-align:right">${formatKc(d.montazPopl)}</td></tr>` : ""}
           <tr><td colspan="2" style="padding-top:8px;border-top:1px solid #a7f3d0"></td></tr>
-          <tr><td style="padding:4px 0;color:#065f46;font-weight:700">Celkem s DPH</td>
+          <tr><td style="padding:4px 0;color:#065f46;font-weight:700">Celkem</td>
               <td style="padding:4px 0;color:#065f46;font-weight:700;text-align:right;font-size:16px">${formatKc(d.celkem)}</td></tr>
         </table>
       </div>
@@ -195,7 +195,7 @@ function htmlNotifikace(d: RezervaceMailPayload): string {
             <td style="padding:8px 12px;color:#10b981;font-weight:600">Půjčit</td></tr>` : ""}
         ${d.drzakVariant ? `<tr style="background:#f9fafb"><td style="padding:8px 12px;color:#6b7280">Varianta držáku</td>
             <td style="padding:8px 12px;color:#111827">${d.drzakVariant}</td></tr>` : ""}
-        <tr><td style="padding:8px 12px;color:#6b7280;font-weight:700">Celkem s DPH</td>
+        <tr><td style="padding:8px 12px;color:#6b7280;font-weight:700">Celkem</td>
             <td style="padding:8px 12px;color:#111827;font-weight:700;font-size:16px">${formatKc(d.celkem)}</td></tr>
         ${d.poznamka ? `<tr style="background:#fef9c3"><td style="padding:8px 12px;color:#6b7280">Poznámka</td>
             <td style="padding:8px 12px;color:#713f12">${d.poznamka}</td></tr>` : ""}

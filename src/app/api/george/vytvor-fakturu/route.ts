@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     // Ověř zákazníka v SF adresáři dle IČO
     const sfKlientId = zak.ico ? await searchSFClientByIco(zak.ico) : null
 
-    // Spočítej celkovou cenu pro uložení (George Studio neúčtuje DPH)
+    // Spočítej celkovou cenu pro uložení (konečné ceny)
     const celkem = Math.round(polozky.reduce((a, p) => a + p.unit_price * p.quantity, 0) * 100) / 100
 
     // Vytvoř fakturu
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
       sf_no:       faktura.invoice_no,
       zakaznik_id: zakaznikId,
       pdf_url:     faktura.pdf_url,
-      celkem_sdph: celkem,   // sloupec zůstal z doby plátcovství; drží koncovou cenu
+      celkem_sdph: celkem,   // název sloupce v DB; hodnota je konečná cena
     })
     if (insertErr) {
       console.error("[george/vytvor-fakturu] george_faktury insert failed:", insertErr)

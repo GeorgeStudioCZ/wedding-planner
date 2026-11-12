@@ -172,7 +172,7 @@ function FakturaPageInner() {
               <span>Datum</span>
               <span>Zákazník</span>
               <span>Č. faktury</span>
-              <span>Celkem s DPH</span>
+              <span>Celkem</span>
               <span>Projekt</span>
               <span>Akce</span>
             </div>

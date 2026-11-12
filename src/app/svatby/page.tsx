@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import MapaDashboard from "@/components/MapaDashboard"
 import AppShell from "@/components/AppShell"
-import { bezDPH, castDPH } from "@/lib/dph"
 
 type Zakazka = {
   id: string
@@ -906,9 +905,7 @@ export default function Home() {
             <StatBox label="Letos celkem"       value={String(letosConfirmed)} />
             <StatBox label="Celková doba jízdy" value={celkovaCasJizdy} />
             <StatBox label="Zbývá ujet km"          value={`${zbyvaUjetKm.toLocaleString("cs-CZ")} km`} />
-            <StatBox label="Celkem obrat (s DPH)"    value={celkemObrat > 0 ? formatCena(celkemObrat) : "—"} />
-            <StatBox label="Základ bez DPH"          value={celkemObrat > 0 ? formatCena(Math.round(bezDPH(celkemObrat))) : "—"} />
-            <StatBox label="DPH 21 %"                value={celkemObrat > 0 ? formatCena(Math.round(castDPH(celkemObrat))) : "—"} />
+            <StatBox label="Celkem obrat"            value={celkemObrat > 0 ? formatCena(celkemObrat) : "—"} />
             <StatBox label="Uhrazené zálohy"         value={uhrazeneZalohy > 0 ? formatCena(uhrazeneZalohy) : "—"} />
             <StatBox label="Náklady na benzín"       value={nakladyBenzin ? formatCena(nakladyBenzin) : "—"} />
           </div>

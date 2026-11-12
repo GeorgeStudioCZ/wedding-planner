@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import AppShell from "@/components/AppShell"
 import RezervacePopup from "@/components/RezervacePopup"
-import { bezDPH, castDPH, formatKc } from "@/lib/dph"
+import { formatKc } from "@/lib/dph"
 import { zamrzleZaplaceni } from "@/lib/zamrzle"
 
 type Polozka = {
@@ -363,7 +363,7 @@ export default function PujcovnaDashboard() {
     )
     const pocet = rezMesice.length
     const hruba = rezMesice.reduce((s, r) => s + (celkovaCenaRezervace(r) ?? 0), 0)
-    const cisty = Math.round(bezDPH(hruba))
+    const cisty = Math.round(hruba)
     return { label, pocet, hruba, cisty }
   })
   const maxPocet = Math.max(...mesicniStats.map(m => m.pocet), 1)
@@ -371,8 +371,8 @@ export default function PujcovnaDashboard() {
 
   // ── Derived KPI values ──────────────────────────────────────────────────────
   const peakKap     = kapacita.reduce((best, k) => k.pct > best.pct ? k : best, { label: "—", pct: 0 })
-  const prijemYTD   = mesicniStats.reduce((s, m) => s + m.hruba, 0)   // s DPH
-  const prijemBezDPH = mesicniStats.reduce((s, m) => s + m.cisty, 0)  // bez DPH
+  const prijemYTD   = mesicniStats.reduce((s, m) => s + m.hruba, 0) 
+  const prijemCelkem = mesicniStats.reduce((s, m) => s + m.cisty, 0)
 
   // ── Inner components (need closure over state) ────────────────────────────
 
@@ -653,8 +653,7 @@ export default function PujcovnaDashboard() {
             value={loading ? "—" : `${Math.round(prijemYTD / 1000)}k`}
             foot={
               <>
-                <span>Kč s DPH</span>
-                <span style={{ fontFamily: "var(--font-mono)", opacity: .75 }}>bez DPH {Math.round(prijemBezDPH / 1000)}k</span>
+                <span>Kč</span>
               </>
             }
           />
@@ -704,7 +703,7 @@ export default function PujcovnaDashboard() {
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
                   <span style={{ width: 10, height: 10, borderRadius: 3, background: "#60a5fa", display: "inline-block" }} />
-                  Příjem bez DPH
+                  Příjem
                 </span>
               </div>
             </div>

@@ -262,7 +262,7 @@ export default function EditZakazka() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Cena s DPH (Kč)</label>
+                <label className={labelClass}>Cena (Kč)</label>
                 <input type="number" name="cena" value={form.cena} onChange={handleChange} className={inputClass} />
               </div>
               <div>
