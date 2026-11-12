@@ -393,7 +393,7 @@ function KomunikaceInner() {
               ) : (
                 <iframe
                   srcDoc={preview.html}
-                  sandbox="allow-same-origin"
+                  sandbox=""
                   style={{ width: "100%", height: "100%", minHeight: 500, border: "none" }}
                   title="Náhled e-mailu"
                 />

@@ -218,9 +218,7 @@ export default function PujcovnaDashboard() {
     setFioSyncing(true)
     setFioVysledek(null)
     try {
-      const secret = process.env.NEXT_PUBLIC_CRON_SECRET ?? ""
-      const url = `/api/pujcovna/fio-sync${secret ? `?secret=${secret}` : ""}`
-      const res = await fetch(url)
+      const res = await fetch("/api/pujcovna/fio-sync")
       const json = await res.json() as { ok: boolean; celkem?: number; prichozi?: number; sparovano?: number; chyby?: number; error?: string }
       if (!json.ok) {
         setFioVysledek(`❌ Chyba: ${json.error}`)

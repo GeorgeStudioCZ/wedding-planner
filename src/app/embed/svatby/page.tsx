@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
 
 type SvatbaEmbed = {
   datum_svatby: string
@@ -88,11 +87,10 @@ export default function KalendarEmbed() {
   const [rok, setRok] = useState(new Date().getFullYear())
 
   useEffect(() => {
-    supabase
-      .from("zakazky")
-      .select("datum_svatby, typ_sluzby")
-      .in("stav", ["objednavka", "zaplaceno", "po-svatbe", "ve-strizne", "ukonceno"])
-      .then(({ data }) => setSvatby(data ?? []))
+    fetch("/api/svatby/web-obsazeno")
+      .then(r => r.json())
+      .then(j => setSvatby(j.svatby ?? []))
+      .catch(() => {})
   }, [])
 
   // Posílá výšku obsahu do rodiče (auto-resize iframe)

@@ -59,12 +59,14 @@ export async function middleware(request: NextRequest) {
 }
 
 // Veřejné API volané z embed formulářů (zákazník není přihlášen)
+// Tyto endpointy si vstupy ověřují samy a nevěří datům z prohlížeče (ceny, dostupnost).
 const PUBLIC_API = new Set([
   "/api/pujcovna/cenik",
-  "/api/pujcovna/zaloh-faktura",
-  "/api/pujcovna/gcal-sync",
-  "/api/mail/rezervace-pujcovna",
-  "/api/mail/schuzka",
+  "/api/pujcovna/obsazenost",
+  "/api/pujcovna/web-rezervace",
+  "/api/svatby/web-obsazeno",
+  "/api/svatby/web-terminy",
+  "/api/svatby/web-schuzka",
 ])
 
 export const config = {

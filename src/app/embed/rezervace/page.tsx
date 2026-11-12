@@ -1,50 +1,17 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
-import { supabase } from "@/lib/supabase"
 import { formatKc } from "@/lib/dph"
+import {
+  type Polozka, type Stupen, type RezRow,
+  PRISL_CATS, PRISL_ORDER, NOT_MAIN_CATS, DRZAK_KAT, DRZAK_THULE_NAME, DRZAK_VARIANTY,
+  stanDetail, pocetDni, cenaPolozky, volnych, montazniPoplatek,
+} from "@/lib/pujcovna-web"
 
-// Poznámka: pujcovna_ceny_stupne má RLS — načítáme přes API route která má service role key
+// Formulář nesahá do databáze přímo — ceník, obsazenost i odeslání jdou přes serverové API.
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-type Polozka = {
-  id: number; name: string; category: string
-  unit_num: number; sort_order: number
-  cena_typ: "fixni" | "stupnovana" | "kusova"
-  cena_fixni: number | null; neomezene?: boolean
-}
-type Stupen = { polozka_id: number; dni_od: number; dni_do: number | null; cena_za_den: number }
-type RezRow  = { id: number; item_id: number; unit_index: number; start_date: string; end_date: string; group_id: string | null }
 type Step    = "vybrat" | "overuji" | "formular" | "odesilam" | "hotovo"
 
-// PRISL_CATS = kategorie příslušenství zobrazené v sekci Příslušenství
-const PRISL_CATS = new Set(["Markýzy","Sedátka","Napájení","Ledničky","Redukce","Camping sety","Stolky","Vařiče","Reproduktory","Držáky kol","Ostatní"])
-// PRISL_ORDER = požadované pořadí zobrazení kategorií příslušenství (Ostatní až na konec)
-const PRISL_ORDER = ["Markýzy","Napájení","Ledničky","Redukce","Camping sety","Stolky","Sedátka","Vařiče","Reproduktory","Držáky kol","Ostatní"]
-// NOT_MAIN_CATS = všechny kategorie které NEJSOU samostatně půjčitelné (příslušenství + příčníky)
-const NOT_MAIN_CATS = new Set([...PRISL_CATS, "Příčníky"])
-const BARVY_STANU: Record<string, string> = { "mal":"#F23753", "střed":"#3477F5", "velk":"#F3940E" }
-
-// Zobrazovaný název a technické info autostanů — jen pro veřejný formulář, DB se nemění
-const STAN_DETAILS: Record<string, { nazev: string; info: string }> = {
-  "mal":   { nazev: "Autostan MALÁ Alaska pro 2 osoby",   info: "rozměr matrace: 135×235 cm | váha: 50 kg" },
-  "střed": { nazev: "Autostan STŘEDNÍ Alaska pro 3 osoby", info: "rozměr matrace: 155×235 cm | váha: 55 kg" },
-  "velk":  { nazev: "Autostan VELKÁ Alaska pro 4 osoby",   info: "rozměr matrace: 185×235 cm | váha: 65 kg" },
-}
-function stanDetail(pol: Polozka): { nazev: string; info: string } | null {
-  if (pol.category !== "Stany") return null
-  const n = pol.name.toLowerCase()
-  for (const [k, v] of Object.entries(STAN_DETAILS)) if (n.includes(k)) return v
-  return null
-}
-
-// Virtuální kategorie Držáky kol — dvě varianty, obě odkazují na stejný produkt Thule
-const DRZAK_KAT       = "Držáky kol"
-const DRZAK_THULE_NAME = "Držák kol Thule"
-const DRZAK_VARIANTY  = [
-  { label: "Držák pro 3 kola", pocetKol: 3 },
-  { label: "Držák pro 4 kola", pocetKol: 4 },
-]
 const HODINY = Array.from({ length: 14 }, (_,i) => i + 8).map(h => `${h}:00 – ${h+1}:00`)
 
 // Smlouva o pronájmu + půjčovní řád + GDPR — jeden PDF dokument
@@ -59,7 +26,6 @@ const odkazProps = {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function pocetDni(a: string, b: string) { return Math.round((+new Date(b) - +new Date(a)) / 86400000) + 1 }
 function formatCena(c: number) { return c.toLocaleString("cs-CZ") + " Kč" }
 function formatDatum(d: string) { return new Date(d).toLocaleDateString("cs-CZ",{day:"numeric",month:"long",year:"numeric"}) }
 function dnesIso() { return new Date().toISOString().slice(0,10) }
@@ -67,42 +33,12 @@ function pridejDen(iso: string) {
   const d = new Date(iso); d.setDate(d.getDate() + 1); return d.toISOString().slice(0,10)
 }
 
-function barvaPolozky(pol: Polozka): string {
-  if (pol.category !== "Stany") return "#10b981"
-  const n = pol.name.toLowerCase()
-  for (const [k,v] of Object.entries(BARVY_STANU)) if (n.includes(k)) return v
-  return "#10b981"
-}
-function cenaPolozky(pol: Polozka, stupne: Stupen[], dni: number): number | null {
-  if (pol.cena_typ === "kusova") return pol.cena_fixni ?? null
-  if (pol.cena_typ === "fixni")  return pol.cena_fixni != null ? pol.cena_fixni * dni : null
-  // Přesný tier (dni_od <= dni <= dni_do, nebo dni_do = null = neomezeno)
-  const tier = stupne.find(s => s.polozka_id === pol.id && s.dni_od <= dni && (s.dni_do === null || s.dni_do >= dni))
-  if (tier) return tier.cena_za_den * dni
-  // Záloha: nejvyšší tier jehož dni_od <= dni (pokryje mezery v ceníku)
-  const fallback = stupne
-    .filter(s => s.polozka_id === pol.id && s.dni_od <= dni)
-    .sort((a, b) => b.dni_od - a.dni_od)[0]
-  return fallback ? fallback.cena_za_den * dni : null
-}
 function cenaPopis(pol: Polozka, stupne: Stupen[]): string {
   if (pol.cena_typ === "kusova" && pol.cena_fixni) return formatCena(pol.cena_fixni)
   if (pol.cena_typ === "fixni"  && pol.cena_fixni) return `od ${formatCena(pol.cena_fixni)}/den`
   const tiers = stupne.filter(s => s.polozka_id === pol.id).sort((a,b) => a.cena_za_den - b.cena_za_den)
   if (tiers.length) return `od ${formatCena(tiers[0].cena_za_den)}/den`
   return ""
-}
-function volnych(itemId: number, unitNum: number, neomezene: boolean|undefined, start: string, end: string, rez: RezRow[]) {
-  if (neomezene) return 999
-  const obs = rez.filter(r => r.item_id === itemId && start <= r.end_date && end >= r.start_date).length
-  return Math.max(0, unitNum - obs)
-}
-function freeUnit(itemId: number, unitNum: number, start: string, end: string, rez: RezRow[], used: number[]) {
-  for (let ui = 0; ui < unitNum; ui++) {
-    if (used.includes(ui)) continue
-    if (!rez.some(r => r.item_id === itemId && r.unit_index === ui && start <= r.end_date && end >= r.start_date)) return ui
-  }
-  return 0
 }
 function ikonaKat(cat: string) {
   if (cat === "Stany") return "⛺"
@@ -131,7 +67,6 @@ const card: React.CSSProperties = {
 export default function RezervacePage() {
   const [polozky,  setPolozky]  = useState<Polozka[]>([])
   const [stupne,   setStupne]   = useState<Stupen[]>([])
-  const [vsechRez, setVsechRez] = useState<RezRow[]>([])
   const [loading,      setLoading]      = useState(true)
   const [step,         setStep]         = useState<Step>("vybrat")
   const [chyba,        setChyba]        = useState<string | null>(null)
@@ -206,7 +141,7 @@ export default function RezervacePage() {
 
   const dni        = dateFrom && dateTo ? pocetDni(dateFrom, dateTo) : 0
   const cenaStan   = selPolozka && dni > 0 ? cenaPolozky(selPolozka, stupne, dni) : null
-  const montazPopl = jeStany && dni > 0 && dni <= 4 ? 500 : 0
+  const montazPopl = montazniPoplatek(!!jeStany, dni)
 
   const prislRadky = useMemo(() =>
     Object.entries(prisl)
@@ -248,11 +183,14 @@ export default function RezervacePage() {
     setChyba(null)
     setAlternativy([])
     setStep("overuji")
-    const { data } = await supabase.from("pujcovna_rezervace")
-      .select("id,item_id,unit_index,start_date,end_date,group_id")
-      .neq("stav", "storno")
-    const rez = (data ?? []) as RezRow[]
-    setVsechRez(rez)
+    let rez: RezRow[] = []
+    try {
+      const r = await fetch("/api/pujcovna/obsazenost")
+      const j = await r.json()
+      rez = (j.rezervace ?? []) as RezRow[]
+    } catch {
+      setChyba("Nepodařilo se ověřit dostupnost. Zkuste to prosím znovu."); setStep("vybrat"); return
+    }
     const pol = polozky.find(p => p.id === targetId)!
     if (volnych(pol.id, pol.unit_num, pol.neomezene, dateFrom, dateTo, rez) === 0) {
       // Hledej alternativní stany ve stejném termínu
@@ -285,138 +223,36 @@ export default function RezervacePage() {
   }
 
   // ── Submit ─────────────────────────────────────────────────────────────────
+  // Vše (ověření dostupnosti, výpočet ceny, uložení, zálohová faktura, e-mail, kalendář)
+  // dělá server — z prohlížeče posíláme jen výběr a kontaktní údaje.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!selPolozka || !canSubmit) return
     setStep("odesilam")
-
-    let zakaznikId: number | null = null
-    const { data: byEmail } = await supabase.from("zakaznici").select("id").eq("email", form.email.trim()).maybeSingle()
-    if (byEmail) {
-      zakaznikId = byEmail.id
-    } else {
-      const { data: byPhone } = await supabase.from("zakaznici").select("id").eq("telefon", form.telefon.trim()).maybeSingle()
-      if (byPhone) {
-        zakaznikId = byPhone.id
-      } else {
-        const { data: nz } = await supabase.from("zakaznici")
-          .insert({ jmeno:form.jmeno.trim(), prijmeni:form.prijmeni.trim(),
-            email:form.email.trim(), telefon:form.telefon.trim(),
-            ulice:form.ulice.trim(), mesto:form.mesto.trim(), psc:form.psc.trim(),
-            projekty:["Půjčovna"] })
-          .select("id").single()
-        zakaznikId = nz?.id ?? null
-      }
-    }
-
-    const groupId  = crypto.randomUUID()
-    const customer = `${form.jmeno} ${form.prijmeni}`.trim()
-    const used: Record<number,number[]> = {}
-    const mainUnit = freeUnit(selPolozka.id, selPolozka.unit_num, dateFrom, dateTo, vsechRez, [])
-    used[selPolozka.id] = [mainUnit]
-
-    const { data: mainRez } = await supabase.from("pujcovna_rezervace").insert({
-      item_id:selPolozka.id, unit_index:mainUnit, customer,
-      start_date:dateFrom, end_date:dateTo, color:barvaPolozky(selPolozka),
-      notes:[form.poznamka, drzakVariant ? `Varianta: ${drzakVariant}` : ""].filter(Boolean).join("\n"),
-      group_id:groupId, zakaznik_id:zakaznikId,
-      vozidlo:form.vozidlo, cas_vyzvednuti:form.cas_vyzvednuti,
-      cas_vraceni:form.cas_vraceni, pricniky:form.pricniky, stav:"web-rezervace",
-    }).select("id").single()
-
-    if (jeStany) {
-      const rows = []
-      for (const [ids, cnt] of Object.entries(prisl)) {
-        if (!cnt) continue
-        const pid = Number(ids)
-        const pol = polozky.find(p => p.id === pid); if (!pol) continue
-        used[pid] = used[pid] ?? []
-        for (let i = 0; i < cnt; i++) {
-          const slot = freeUnit(pid, pol.unit_num, dateFrom, dateTo, vsechRez, used[pid])
-          used[pid].push(slot)
-          rows.push({ item_id:pid, unit_index:slot, customer, start_date:dateFrom, end_date:dateTo,
-            color:barvaPolozky(selPolozka), notes:"", group_id:groupId,
-            zakaznik_id:zakaznikId, stav:"web-rezervace",
-            cas_vyzvednuti:form.cas_vyzvednuti, cas_vraceni:form.cas_vraceni })
-        }
-      }
-      if (rows.length) await supabase.from("pujcovna_rezervace").insert(rows)
-    }
-    if (mainRez?.id)
-      await supabase.from("pujcovna_rezervace_historie").insert({ rezervace_id:mainRez.id, stav:"web-rezervace" })
-
-    // ── Zálohová faktura v SuperFaktuře ────────────────────────────────────────
-    const stanNazev = stanDetail(selPolozka)?.nazev ?? selPolozka.name
-    const sfPolozky = [
-      ...(cenaStan != null && dni > 0
-        ? [{ nazev: stanNazev, cena_sdph: cenaStan / dni, pocet: dni, jednotka: "den" }]
-        : []),
-      ...prislRadky.filter(r => r.cena != null).map(r => ({
-        nazev: r.pol.name + (r.cnt > 1 ? ` × ${r.cnt}` : ""),
-        cena_sdph: (r.cena! * r.cnt) / dni,
-        pocet: dni,
-        jednotka: "den",
-      })),
-      ...(montazPopl > 0 ? [{ nazev: "Poplatek za montáž", cena_sdph: montazPopl, pocet: 1 }] : []),
-    ]
-    if (mainRez?.id && sfPolozky.length > 0) {
-      try {
-        const sfRes = await fetch("/api/pujcovna/zaloh-faktura", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            rezervaceId: mainRez.id,
-            groupId,
-            klient: { jmeno:`${form.jmeno} ${form.prijmeni}`.trim(), email:form.email, telefon:form.telefon,
-                      ulice:form.ulice, mesto:form.mesto, psc:form.psc },
-            polozky: sfPolozky,
-            celkem,
-            poznamka: form.poznamka || undefined,
-          }),
-        })
-        const sfData = await sfRes.json()
-        if (sfData.ok) platbaRef.current = sfData  // ref = synchronní, nezpůsobuje extra render
-      } catch (e) { console.error("SF záloha:", e) }
-    }
-
-    // Potvrzovací email (fire-and-forget) — obsahuje i platební údaje pokud jsou k dispozici
-    fetch("/api/mail/rezervace-pujcovna", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        zakaznik: { jmeno:form.jmeno, prijmeni:form.prijmeni, email:form.email, telefon:form.telefon },
-        polozka: selCat === DRZAK_KAT ? (drzakVariant ?? DRZAK_KAT) : stanNazev,
-        dateFrom, dateTo, dni,
-        vozidlo: form.vozidlo,
-        casVyzvednuti: form.cas_vyzvednuti,
-        casVraceni: form.cas_vraceni,
-        pricniky: form.pricniky,
-        poznamka: form.poznamka,
-        drzakVariant: drzakVariant ?? "",
-        prisl: prislRadky.map(r => ({ nazev: r.pol.name, cnt: r.cnt, cena: r.cena })),
-        cenaStan: cenaStan,
-        montazPopl,
-        celkem,
-        groupId,
-        platba: platbaRef.current ? {
-          vs: platbaRef.current.vs,
-          invoice_no: platbaRef.current.invoice_no,
-          cislo_uctu: platbaRef.current.cislo_uctu,
-          qr_url: platbaRef.current.qr_url,
-        } : undefined,
-      }),
-    }).catch(console.error)
-
-    // Google Calendar — vytvoř událost pro hlavní rezervaci
-    if (mainRez?.id) {
-      fetch("/api/pujcovna/gcal-sync", {
+    try {
+      const res = await fetch("/api/pujcovna/web-rezervace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rezervaceId: mainRez.id }),
-      }).catch(console.error)
+        body: JSON.stringify({
+          itemId: selPolozka.id,
+          dateFrom, dateTo,
+          prisl: jeStany ? prisl : {},
+          drzakVariant: drzakVariant ?? "",
+          form,
+        }),
+      })
+      const json = await res.json()
+      if (!json.ok) {
+        setChyba(json.error ?? "Rezervaci se nepodařilo odeslat. Zkuste to prosím znovu.")
+        setStep(res.status === 409 ? "vybrat" : "formular")
+        return
+      }
+      platbaRef.current = json.platba ?? null
+      setStep("hotovo")
+    } catch {
+      setChyba("Rezervaci se nepodařilo odeslat. Zkontrolujte připojení a zkuste to znovu.")
+      setStep("formular")
     }
-
-    setStep("hotovo")
   }
 
   // ── Render helpers ─────────────────────────────────────────────────────────
@@ -1016,6 +852,12 @@ export default function RezervacePage() {
               </label>
             )}
           </div>
+
+          {chyba && (
+            <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:9,padding:"11px 14px",color:"#dc2626",fontSize:13,marginBottom:12}}>
+              {chyba}
+            </div>
+          )}
 
           {/* ── Submit ── */}
           <button type="submit" disabled={!canSubmit || false}

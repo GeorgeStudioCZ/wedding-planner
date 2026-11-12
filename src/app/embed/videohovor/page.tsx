@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
 
 // ── Typ nastavení dostupnosti ─────────────────────────────────────────────────
 // klíč = ISO weekday (1=Po..7=Ne), hodnota = pole dostupných hodin
@@ -151,14 +150,10 @@ export default function VideohovorPage() {
 
   // Načtení nastavení dostupnosti (jednou při mountu)
   useEffect(() => {
-    supabase
-      .from("schuzky_nastaveni")
-      .select("dostupnost")
-      .eq("id", 1)
-      .single()
-      .then(({ data }) => {
-        if (data?.dostupnost) setDostupnost(data.dostupnost as Dostupnost)
-      })
+    fetch("/api/svatby/web-terminy")
+      .then(r => r.json())
+      .then(j => { if (j.dostupnost) setDostupnost(j.dostupnost as Dostupnost) })
+      .catch(() => {})
   }, [])
 
   // Načtení obsazenosti
@@ -167,20 +162,17 @@ export default function VideohovorPage() {
     const do_ = new Date(rok, mesic + 2, 0)
     const doStr = `${do_.getFullYear()}-${pad2(do_.getMonth() + 1)}-${pad2(do_.getDate())}`
 
-    supabase
-      .from("schuzky")
-      .select("datum, cas")
-      .gte("datum", od)
-      .lte("datum", doStr)
-      .neq("stav", "zrusena")
-      .then(({ data }) => {
-        if (!data) return
+    fetch(`/api/svatby/web-terminy?od=${od}&do=${doStr}`)
+      .then(r => r.json())
+      .then(j => {
+        const data = (j.terminy ?? []) as { datum: string; cas: string }[]
         const map: Record<string, number> = {}
         for (const r of data) {
           map[r.datum] = (map[r.datum] ?? 0) + 1
         }
         setObsazene(prev => ({ ...prev, ...map }))
       })
+      .catch(() => {})
   }, [rok, mesic])
 
   // Obsazené časy pro vybraný den
@@ -188,13 +180,11 @@ export default function VideohovorPage() {
 
   useEffect(() => {
     if (!vybraneDatum) { setObsazeneCasy(new Set()); return }
-    supabase
-      .from("schuzky")
-      .select("cas")
-      .eq("datum", vybraneDatum)
-      .neq("stav", "zrusena")
-      .then(({ data }) => {
-        const h = new Set((data ?? []).map((r: {cas: string}) => parseInt(r.cas.split(":")[0])))
+    fetch(`/api/svatby/web-terminy?od=${vybraneDatum}&do=${vybraneDatum}`)
+      .then(r => r.json())
+      .then(j => {
+        const data = (j.terminy ?? []) as { cas: string }[]
+        const h = new Set(data.map(r => parseInt(r.cas.split(":")[0])))
         setObsazeneCasy(h)
         // resetuj čas pokud je obsazený
         if (vybranyCas !== null && h.has(vybranyCas)) setVybranyCas(null)
@@ -231,36 +221,27 @@ export default function VideohovorPage() {
 
     const cas = `${pad2(vybranyCas!)}:00`
 
-    const { error } = await supabase.from("schuzky").insert({
-      jmeno:         jmeno.trim(),
-      email:         email.trim(),
-      datum_svadby:  datumSvatby || null,
-      kontakt:       kontaktUlozit,
-      typ_kontaktu:  typKontaktu,
-      otazky:        otazky.trim() || null,
-      datum:         vybraneDatum,
-      cas,
-      stav:          "nova",
-    })
-
-    if (error) { setOdeslani(false); setChyba("Nepodařilo se uložit. Zkus to znovu."); return }
-
-    // Emaily — fire and forget (nezastavujeme kvůli chybě emailu)
-    fetch("/api/mail/schuzka", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        typ:           "zadost",
-        jmeno:         jmeno.trim(),
-        email:         email.trim(),
-        datum:         vybraneDatum,
-        cas,
-        typ_kontaktu:  typKontaktu,
-        kontakt:       kontaktUlozit,
-        datum_svadby:  datumSvatby || null,
-        otazky:        otazky.trim() || null,
-      }),
-    }).catch(e => console.error("Mail error:", e))
+    // Uložení i e-maily dělá server (ověří i to, že je termín stále volný)
+    try {
+      const res = await fetch("/api/svatby/web-schuzka", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jmeno:         jmeno.trim(),
+          email:         email.trim(),
+          datum:         vybraneDatum,
+          cas,
+          typ_kontaktu:  typKontaktu,
+          kontakt:       kontaktUlozit,
+          datum_svadby:  datumSvatby || null,
+          otazky:        otazky.trim() || null,
+        }),
+      })
+      const json = await res.json()
+      if (!json.ok) { setOdeslani(false); setChyba(json.error ?? "Nepodařilo se uložit. Zkus to znovu."); return }
+    } catch {
+      setOdeslani(false); setChyba("Nepodařilo se uložit. Zkus to znovu."); return
+    }
 
     setOdeslani(false)
     setKrok("odeslano")

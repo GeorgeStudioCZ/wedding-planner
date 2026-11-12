@@ -20,20 +20,7 @@ import { textPlatbaPrijata }          from "@/lib/sms-templates"
 import { logSms }                     from "@/lib/email-log"
 import { htmlFaktura }                from "@/app/api/pujcovna/faktura-zaplaceno/route"
 
-// ── Ochrana endpointu ─────────────────────────────────────────────────────────
-// Vercel cron posílá: Authorization: Bearer CRON_SECRET
-// Ruční volání z CRM:  GET /api/pujcovna/fio-sync?secret=CRON_SECRET
-
-const CRON_SECRET = process.env.CRON_SECRET ?? ""
-
-function isAuthorized(req: NextRequest): boolean {
-  if (!CRON_SECRET) return true  // Secret není nastaven = volný přístup
-  const authHeader = req.headers.get("authorization") ?? ""
-  // Vercel cron posílá Bearer token — ostatní volání (z CRM) jsou vždy povolena
-  if (authHeader === `Bearer ${CRON_SECRET}`) return true
-  // Volání z prohlížeče (CRM) — povoleno vždy (interní nástroj)
-  return true
-}
+// Přístup hlídá middleware: přihlášený uživatel CRM, nebo Vercel cron (Authorization: Bearer CRON_SECRET).
 
 // ── Typy uložených platebních dat ─────────────────────────────────────────────
 
@@ -45,9 +32,6 @@ interface PlatbaData {
 // ── GET handler ───────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
 
   const sb = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

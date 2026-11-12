@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendMail } from "@/lib/mailer"
 import { logEmail } from "@/lib/email-log"
+import { escDeep, jeEmail, jedenRadek } from "@/lib/html"
 
 const NOTIFIKACE_EMAIL = "info@svatebni-video-hk.cz"
 
@@ -196,12 +197,17 @@ function htmlNotifikace(d: SchuzkaMailPayload): string {
 export async function POST(req: NextRequest) {
   try {
     const data: SchuzkaMailPayload = await req.json()
+    if (!jeEmail(data?.email)) {
+      return NextResponse.json({ ok: false, error: "Neplatný e-mail" }, { status: 400 })
+    }
+    // Do HTML jdou jen ošetřené hodnoty (vstupy pocházejí z veřejného formuláře)
+    const safe = escDeep(data)
 
     if (data.typ === "zadost") {
-      const subjZak = `Žádost o schůzku přijata — ${formatDatum(data.datum)} v ${data.cas}`
-      const subjNotif = `📅 Nová žádost: ${data.jmeno} — ${formatDatum(data.datum)} v ${data.cas}`
-      const htmlZak = htmlZadost(data)
-      const htmlNotif = htmlNotifikace(data)
+      const subjZak = jedenRadek(`Žádost o schůzku přijata — ${formatDatum(data.datum)} v ${data.cas}`)
+      const subjNotif = jedenRadek(`📅 Nová žádost: ${data.jmeno} — ${formatDatum(data.datum)} v ${data.cas}`)
+      const htmlZak = htmlZadost(safe)
+      const htmlNotif = htmlNotifikace(safe)
 
       await Promise.all([
         sendMail({ sluzba: "svatby", to: data.email, subject: subjZak, html: htmlZak }),
@@ -212,8 +218,8 @@ export async function POST(req: NextRequest) {
         logEmail({ sluzba: "svatby", typ: "schuzka-notifikace", to_email: NOTIFIKACE_EMAIL, subject: subjNotif, html: htmlNotif }),
       ])
     } else {
-      const subj = `✅ Schůzka potvrzena — ${formatDatum(data.datum)} v ${data.cas}`
-      const html = htmlPotvrzeni(data)
+      const subj = jedenRadek(`✅ Schůzka potvrzena — ${formatDatum(data.datum)} v ${data.cas}`)
+      const html = htmlPotvrzeni(safe)
       await sendMail({ sluzba: "svatby", to: data.email, subject: subj, html })
       await logEmail({ sluzba: "svatby", typ: "schuzka-potvrzeni", to_email: data.email, to_name: data.jmeno, subject: subj, html })
     }

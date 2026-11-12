@@ -4,6 +4,7 @@ import { logEmail } from "@/lib/email-log"
 import { sendSms } from "@/lib/bulkgate"
 import { logSms } from "@/lib/email-log"
 import { textNovaRezervace } from "@/lib/sms-templates"
+import { escDeep, jeEmail, jedenRadek } from "@/lib/html"
 
 const NOTIFIKACE_EMAIL = "info@stanujnaaute.cz"
 
@@ -216,11 +217,16 @@ function htmlNotifikace(d: RezervaceMailPayload): string {
 export async function POST(req: NextRequest) {
   try {
     const data: RezervaceMailPayload = await req.json()
+    if (!jeEmail(data?.zakaznik?.email)) {
+      return NextResponse.json({ ok: false, error: "Neplatný e-mail zákazníka" }, { status: 400 })
+    }
 
-    const subjZak = `Přijali jsme vaši rezervaci – ${data.polozka}`
-    const subjNotif = `Nová rezervace: ${data.zakaznik.jmeno} ${data.zakaznik.prijmeni} – ${data.polozka}`
-    const htmlZak = htmlZakaznik(data)
-    const htmlNotif = htmlNotifikace(data)
+    // Do HTML jdou jen ošetřené hodnoty (vstupy pocházejí z veřejného formuláře)
+    const safe = escDeep(data)
+    const subjZak = jedenRadek(`Přijali jsme vaši rezervaci – ${data.polozka}`)
+    const subjNotif = jedenRadek(`Nová rezervace: ${data.zakaznik.jmeno} ${data.zakaznik.prijmeni} – ${data.polozka}`)
+    const htmlZak = htmlZakaznik(safe)
+    const htmlNotif = htmlNotifikace(safe)
 
     await Promise.all([
       sendMail({ sluzba: "stany", to: data.zakaznik.email, subject: subjZak, html: htmlZak }),
