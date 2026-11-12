@@ -202,6 +202,172 @@ function SectionCard({
   )
 }
 
+// ─── Fakturace (SuperFaktura) ────────────────────────────────────────────────
+
+type SvatebniFaktura = {
+  id: string
+  typ: "zaloha" | "ostra" | "doplatek"
+  parent_id: string | null
+  cislo: string | null
+  castka: number
+  popis: string | null
+  pdf_url: string | null
+  stav: "vystavena" | "zaplacena"
+  created_at: string
+}
+
+const REZERVACNI_POPLATEK_KC = 2900
+
+function FakturaceSekce({ zakazka }: { zakazka: Zakazka }) {
+  const [faktury, setFaktury] = useState<SvatebniFaktura[]>([])
+  const [busy, setBusy] = useState(false)
+  const [chyba, setChyba] = useState<string | null>(null)
+
+  async function nacti() {
+    const res = await fetch(`/api/svatby/faktury?zakazka_id=${zakazka.id}`)
+    const json = await res.json()
+    if (json.ok) setFaktury(json.faktury)
+    else setChyba(json.error)
+  }
+
+  useEffect(() => { nacti() }, [zakazka.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const zaloha  = faktury.find(f => f.typ === "zaloha")
+  const ostra   = faktury.find(f => f.typ === "ostra")
+  const doplatek = faktury.find(f => f.typ === "doplatek")
+  const dnes = new Date().toISOString().slice(0, 10)
+  const svatbaProbehla = !!zakazka.datum_svatby && zakazka.datum_svatby <= dnes
+  const cena = Number(zakazka.cena ?? 0)
+  const castkaDoplatku = cena - REZERVACNI_POPLATEK_KC
+
+  async function vystav(typ: "zaloha" | "ostra" | "doplatek", otazka: string) {
+    if (!confirm(otazka)) return
+    setBusy(true); setChyba(null)
+    try {
+      const res = await fetch("/api/svatby/faktury", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zakazka_id: zakazka.id, typ }),
+      })
+      const json = await res.json()
+      if (!json.ok) setChyba(json.error)
+      await nacti()
+    } catch (e) {
+      setChyba(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function prepniZaplaceno(f: SvatebniFaktura) {
+    setBusy(true); setChyba(null)
+    try {
+      const novy = f.stav === "zaplacena" ? "vystavena" : "zaplacena"
+      const res = await fetch(`/api/svatby/faktury/${f.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stav: novy }),
+      })
+      const json = await res.json()
+      if (!json.ok) setChyba(json.error)
+      await nacti()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const btn = (aktivni: boolean): React.CSSProperties => ({
+    width: "100%", padding: "9px 12px", borderRadius: "var(--radius-md)",
+    border: "1px solid var(--line)", background: aktivni ? "var(--surface)" : "var(--surface-2, #f4f4f5)",
+    color: aktivni ? "var(--ink)" : "var(--muted)", fontSize: 13, fontWeight: 600,
+    cursor: aktivni && !busy ? "pointer" : "not-allowed", textAlign: "left",
+  })
+
+  const radek = (f: SvatebniFaktura, nazev: string) => (
+    <div key={f.id} style={{ border: "1px solid var(--line)", borderRadius: "var(--radius-md)", padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{nazev}</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)" }}>{f.cislo ?? "—"}</span>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{f.castka.toLocaleString("cs-CZ") + " Kč"}</span>
+        <span style={{
+          fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 99,
+          background: f.stav === "zaplacena" ? "#dcfce7" : "#fef3c7",
+          color: f.stav === "zaplacena" ? "#166534" : "#92400e",
+        }}>
+          {f.stav === "zaplacena" ? "Zaplaceno" : "Nezaplaceno"}
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        {f.pdf_url && (
+          <a href={f.pdf_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, color: "var(--ink-2)", textDecoration: "underline" }}>
+            Zobrazit PDF
+          </a>
+        )}
+        {f.typ !== "ostra" && (
+          <button onClick={() => prepniZaplaceno(f)} disabled={busy} style={{ marginLeft: "auto", fontSize: 12, background: "none", border: "none", color: "var(--ink-2)", cursor: "pointer", textDecoration: "underline" }}>
+            {f.stav === "zaplacena" ? "Vrátit na nezaplacenou" : "Označit jako zaplacenou"}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <SectionCard title="Fakturace" accent="#22c55e">
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {faktury.length === 0 && (
+          <span style={{ fontSize: 13, color: "var(--muted)" }}>Zatím žádná faktura.</span>
+        )}
+        {zaloha && radek(zaloha, "Zálohová faktura (rezervace)")}
+        {ostra && radek(ostra, "Faktura za rezervaci")}
+        {doplatek && radek(doplatek, "Doplatek za svatbu")}
+
+        {!zaloha && (
+          <button
+            disabled={busy}
+            style={btn(true)}
+            onClick={() => vystav("zaloha", `Vystavit zálohovou fakturu na rezervační poplatek ${REZERVACNI_POPLATEK_KC.toLocaleString("cs-CZ")} Kč? Faktura se vytvoří v SuperFakturze, neodešle se.`)}
+          >
+            + Vystavit zálohu ({REZERVACNI_POPLATEK_KC.toLocaleString("cs-CZ")} Kč)
+          </button>
+        )}
+
+        {zaloha && !ostra && (
+          <button
+            disabled={busy || zaloha.stav !== "zaplacena"}
+            style={btn(zaloha.stav === "zaplacena")}
+            onClick={() => vystav("ostra", "Vystavit ostrou fakturu ze zaplacené zálohy? Faktura se vytvoří v SuperFakturze, neodešle se.")}
+          >
+            {zaloha.stav === "zaplacena"
+              ? "+ Vystavit ostrou fakturu ze zálohy"
+              : "Ostrou fakturu lze vystavit po označení zálohy jako zaplacené"}
+          </button>
+        )}
+
+        {!doplatek && (
+          <button
+            disabled={busy || !svatbaProbehla || castkaDoplatku <= 0}
+            style={btn(svatbaProbehla && castkaDoplatku > 0)}
+            onClick={() => vystav("doplatek", `Vystavit fakturu na doplatek ${castkaDoplatku.toLocaleString("cs-CZ")} Kč (cena ${cena.toLocaleString("cs-CZ")} Kč − rezervace ${REZERVACNI_POPLATEK_KC.toLocaleString("cs-CZ")} Kč)? Faktura se vytvoří v SuperFakturze, neodešle se.`)}
+          >
+            {!svatbaProbehla
+              ? "Doplatek lze vystavit až po svatbě"
+              : castkaDoplatku <= 0
+                ? "Doplatek nelze vypočítat (zkontroluj cenu)"
+                : `+ Vystavit doplatek (${castkaDoplatku.toLocaleString("cs-CZ")} Kč)`}
+          </button>
+        )}
+
+        {chyba && (
+          <div style={{ fontSize: 12.5, color: "#b91c1c" }}>{chyba}</div>
+        )}
+      </div>
+    </SectionCard>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function DetailZakazky() {
@@ -1078,6 +1244,9 @@ export default function DetailZakazky() {
                 ) : null}
               </div>
             </SectionCard>
+
+            {/* Fakturace */}
+            <FakturaceSekce zakazka={zakazka} />
 
             {/* Služba */}
             <SectionCard title="Služba & doplňky" accent="#f97316">

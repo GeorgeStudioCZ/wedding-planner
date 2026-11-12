@@ -441,3 +441,76 @@ export function qrPlatbaUrl(iban: string, vs: string, castka: number): string {
   const data = `SPD*1.0*ACC:${iban}*AM:${castka.toFixed(2)}*CC:CZK*X-VS:${vs}*MSG:Zalohova faktura STANY`
   return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data)}&size=200x200&margin=8`
 }
+
+// ── Svatby — FotímePříběhy.cz ─────────────────────────────────────────────────
+
+const SV_SEQ_ZALOHA  = 656590   // "FotímePříběhy.cz - Zálohová faktura" (SVZ)
+const SV_SEQ_FAKTURA = 656589   // "FotímePříběhy.cz - Vystavená faktura" (SV)
+const SV_BANK_ID     = 50020    // bankovní účet CZ4206000000000286090768
+const SV_LOGO_ID     = 859740   // logo na fakturu
+
+export async function vytvorSvatebniZalohu(
+  klient: SFKlient,
+  polozky: SFPolozka[],
+  poznamka?: string,
+): Promise<SFProformaVystup> {
+  const payload = {
+    Invoice: {
+      type: "proforma",
+      name: "Zálohová faktura - SVATBA",
+      sequence_id: SV_SEQ_ZALOHA,
+      invoice_currency: "CZK",
+      logo_id: SV_LOGO_ID,
+      bank_accounts: [{ id: SV_BANK_ID }],
+      ...(poznamka ? { internal_comment: poznamka } : {}),
+    },
+    Client: buildClient(klient),
+    InvoiceItem: polozky.map(buildItem),
+  }
+
+  const json = await sfPost("/invoices/create", payload)
+  const wrapper = (json.data ?? json) as Record<string, unknown>
+  const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
+  if (!inv?.id) throw new Error(`SF: nepodařilo se vytvořit zálohu: ${JSON.stringify(json).slice(0, 300)}`)
+
+  return {
+    id:         Number(inv.id),
+    invoice_no: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
+    vs:         String(inv.variable ?? inv.id),
+    token:      String(inv.token ?? ""),
+    pdf_url:    `${SF_BASE}/invoices/pdf/${inv.id}/token:${inv.token}`,
+  }
+}
+
+export async function vytvorSvatebniFakturu(
+  klient: SFKlient,
+  polozky: SFPolozka[],
+  proformaId?: number | null,
+  poznamka?: string,
+): Promise<SFFakturaVystup> {
+  const payload = {
+    Invoice: {
+      type: "regular",
+      name: "Faktura - SVATBA",
+      sequence_id: SV_SEQ_FAKTURA,
+      invoice_currency: "CZK",
+      logo_id: SV_LOGO_ID,
+      bank_accounts: [{ id: SV_BANK_ID }],
+      ...(proformaId ? { proforma_id: String(proformaId) } : {}),
+      ...(poznamka ? { internal_comment: poznamka } : {}),
+    },
+    Client: buildClient(klient),
+    InvoiceItem: polozky.map(buildItem),
+  }
+
+  const json = await sfPost("/invoices/create", payload)
+  const wrapper = (json.data ?? json) as Record<string, unknown>
+  const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
+  if (!inv?.id) throw new Error(`SF: nepodařilo se vytvořit fakturu: ${JSON.stringify(json).slice(0, 300)}`)
+
+  return {
+    id:         Number(inv.id),
+    invoice_no: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
+    pdf_url:    `${SF_BASE}/invoices/pdf/${inv.id}/token:${inv.token}`,
+  }
+}
