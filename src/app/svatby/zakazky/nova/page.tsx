@@ -6,14 +6,13 @@ import { supabase } from "@/lib/supabase"
 import AppShell from "@/components/AppShell"
 import { vypocitejVzdalenost } from "@/lib/vzdalenost"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
-import { nactiUzivatele, aktualniUzivatelId, type Uzivatel } from "@/lib/vlastnici"
+import { aktualniUzivatelId } from "@/lib/vlastnici"
 
 export default function NovaZakazka() {
   const router = useRouter()
   const [ukladam, setUkladam] = useState(false)
   const [chyba, setChyba] = useState<string | null>(null)
   const [zakaznikId, setZakaznikId] = useState<number | null>(null)
-  const [uzivatele, setUzivatele] = useState<Uzivatel[]>([])
   const [form, setForm] = useState({
     vlastnik_id: "",
     jmeno_nevesty: "",
@@ -39,7 +38,6 @@ export default function NovaZakazka() {
   })
 
   useEffect(() => {
-    nactiUzivatele().then(setUzivatele)
     aktualniUzivatelId().then(id => {
       if (id) setForm(f => ({ ...f, vlastnik_id: id }))
     })
@@ -64,7 +62,7 @@ export default function NovaZakazka() {
     const { data: nova, error } = await supabase.from("zakazky").insert([{
       ...form,
       zakaznik_id: zakaznikId,
-      vlastnik_id: form.vlastnik_id || null,
+      vlastnik_id: form.vlastnik_id || (await aktualniUzivatelId()),
       cena: form.cena ? Number(form.cena) : null,
       pocet_svatebcanu: form.pocet_svatebcanu ? Number(form.pocet_svatebcanu) : null,
       datum_svatby: form.datum_svatby || null,
@@ -125,14 +123,6 @@ export default function NovaZakazka() {
               {zakaznikId && (
                 <p className="mt-1.5 text-xs text-emerald-600 font-medium">✓ Zákazník propojen</p>
               )}
-            </div>
-            <div>
-              <label className={labelClass}>Vlastník zakázky</label>
-              <select name="vlastnik_id" value={form.vlastnik_id} onChange={handleChange} className={inputClass}>
-                {uzivatele.map(u => (
-                  <option key={u.id} value={u.id}>{u.jmeno}</option>
-                ))}
-              </select>
             </div>
             <div>
               <label className={labelClass}>Stav zakázky</label>
