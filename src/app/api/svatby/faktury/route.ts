@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
       if (seznam.some(f => f.typ === "doplatek")) {
         return NextResponse.json({ ok: false, error: "Faktura na doplatek už existuje." }, { status: 409 })
       }
-      const polozky: SFPolozka[] = [polozkaSvatby(zakazka, "Doplatek za svatební focení/natáčení", castka)]
+      const polozky: SFPolozka[] = [polozkaSvatby(zakazka, "Svatební focení/natáčení", castka)]
       const f = await vytvorSvatebniFakturu(klient, polozky, null, `Cena zakázky ${cena} Kč − rezervační poplatek ${REZERVACNI_POPLATEK} Kč`)
       const { data, error } = await db.from("svatby_faktury").insert({
         zakazka_id, typ: "doplatek", sf_id: f.id, cislo: f.invoice_no,
