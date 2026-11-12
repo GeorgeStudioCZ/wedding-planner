@@ -197,7 +197,7 @@ function MesicniKalendar({ rok, mesic, svatby }: {
 export default function Kalendar() {
   const [zakazky, setZakazky] = useState<Zakazka[]>([])
   const [rok, setRok]         = useState(new Date().getFullYear())
-  const [vlastnikFilter, setVlastnikFilter] = useState<string>("vse")   // "vse" | "moje" | id uživatele
+  const [vlastnikFilter, setVlastnikFilter] = useState<string>("moje")   // "moje" (výchozí) | "vse" (obě) | id uživatele
   const [mojeId, setMojeId]   = useState<string | null>(null)
   const [uzivatele, setUzivatele] = useState<Uzivatel[]>([])
 
@@ -211,6 +211,7 @@ export default function Kalendar() {
       .from("zakazky")
       .select("id, datum_svatby, typ_sluzby, jmeno_nevesty, jmeno_zenicha, stav")
       .in("stav", ["objednavka", "cekam-platbu", "zaplaceno", "po-svatbe", "ve-strizne", "ukonceno"])
+    if (vlastnikFilter === "moje" && !mojeId) return // počkej, až se načte přihlášený uživatel
     const cil = vlastnikFilter === "moje" ? mojeId : vlastnikFilter !== "vse" ? vlastnikFilter : null
     if (cil) dotaz = dotaz.eq("vlastnik_id", cil)
     dotaz.then(({ data }) => setZakazky(data ?? []))
@@ -245,8 +246,8 @@ export default function Kalendar() {
                 fontSize: 12.5, color: "var(--ink)", background: "var(--surface)", fontFamily: "inherit",
               }}
             >
-              <option value="vse">Všechny zakázky</option>
               <option value="moje">Moje zakázky</option>
+              <option value="vse">Zakázky obou</option>
               {uzivatele.filter(u => u.id !== mojeId).map(u => (
                 <option key={u.id} value={u.id}>Zakázky: {u.jmeno}</option>
               ))}

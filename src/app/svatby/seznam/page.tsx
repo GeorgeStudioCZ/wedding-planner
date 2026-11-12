@@ -117,7 +117,7 @@ export default function SeznamSvateb() {
   const [loading, setLoading]     = useState(true)
   const [stavFilter, setStavFilter] = useState("vse")
   const [search, setSearch]       = useState("")
-  const [vlastnikFilter, setVlastnikFilter] = useState("vse")   // "vse" | "moje" | id uživatele
+  const [vlastnikFilter, setVlastnikFilter] = useState("moje")   // "moje" (výchozí) | "vse" (obě) | id uživatele
   const [uzivatele, setUzivatele] = useState<Uzivatel[]>([])
   const [mojeId, setMojeId]       = useState<string | null>(null)
 
@@ -139,7 +139,7 @@ export default function SeznamSvateb() {
     .filter(z => {
       if (vlastnikFilter === "vse") return true
       const cil = vlastnikFilter === "moje" ? mojeId : vlastnikFilter
-      return z.vlastnik_id === cil
+      return !!cil && z.vlastnik_id === cil
     })
     .filter(z => {
       if (!search.trim()) return true
@@ -265,8 +265,8 @@ export default function SeznamSvateb() {
               color: "var(--ink)", background: "var(--surface)", fontFamily: "inherit",
             }}
           >
-            <option value="vse">Všechny zakázky</option>
             <option value="moje">Moje zakázky</option>
+            <option value="vse">Zakázky obou</option>
             {uzivatele.filter(u => u.id !== mojeId).map(u => (
               <option key={u.id} value={u.id}>Zakázky: {u.jmeno}</option>
             ))}

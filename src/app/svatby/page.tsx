@@ -228,7 +228,7 @@ export default function Home() {
   const [chyba, setChyba] = useState<string | null>(null)
   const [cenaBenzinu, setCenaBenzinu] = useState<number | null>(null)
   const [filter, setFilter] = useState<"Vše" | "Zaplaceno" | "Čeká">("Vše")
-  const [vlastnikFilter, setVlastnikFilter] = useState<string>("vse")   // "vse" | "moje" | id uživatele
+  const [vlastnikFilter, setVlastnikFilter] = useState<string>("moje")   // "moje" (výchozí) | "vse" (obě) | id uživatele
   const [mojeId, setMojeId] = useState<string | null>(null)
   const [uzivatele, setUzivatele] = useState<Uzivatel[]>([])
   const [statsRozsireno, setStatsRozsireno] = useState(false)
@@ -243,6 +243,7 @@ export default function Home() {
       .from("zakazky")
       .select("id, jmeno_nevesty, jmeno_zenicha, datum_svatby, typ_sluzby, balicek, cena, adresa_obradu, vzdalenost_km, lat, lng, vystup_odevzdan, rychlost_dodani, stav, videohovor_datum")
       .order("datum_svatby", { ascending: true })
+    if (vlastnikFilter === "moje" && !mojeId) return // počkej, až se načte přihlášený uživatel
     const cil = vlastnikFilter === "moje" ? mojeId : vlastnikFilter !== "vse" ? vlastnikFilter : null
     if (cil) dotaz = dotaz.eq("vlastnik_id", cil)
     const { data, error } = await dotaz
@@ -890,8 +891,8 @@ export default function Home() {
               fontSize: 12.5, color: "var(--ink)", background: "var(--surface)", fontFamily: "inherit",
             }}
           >
-            <option value="vse">Všechny zakázky</option>
             <option value="moje">Moje zakázky</option>
+            <option value="vse">Zakázky obou</option>
             {uzivatele.filter(u => u.id !== mojeId).map(u => (
               <option key={u.id} value={u.id}>Zakázky: {u.jmeno}</option>
             ))}
