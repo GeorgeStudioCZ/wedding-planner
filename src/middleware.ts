@@ -22,6 +22,19 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  const path = request.nextUrl.pathname
+
+  // API — vyžaduje přihlášeného uživatele, nebo CRON_SECRET (Vercel cron).
+  // Výjimka: endpointy, které volá veřejný embed formulář (rezervace, videohovor).
+  if (path.startsWith("/api/")) {
+    if (PUBLIC_API.has(path)) return supabaseResponse
+
+    const cronSecret = process.env.CRON_SECRET
+    const jeCron = !!cronSecret && request.headers.get("authorization") === `Bearer ${cronSecret}`
+    if (jeCron || user) return supabaseResponse
+
+    return NextResponse.json({ ok: false, error: "Nepřihlášen" }, { status: 401 })
+  }
 
   // Veřejné embed stránky — nevyžadují přihlášení
   if (request.nextUrl.pathname.startsWith("/embed")) {
@@ -45,6 +58,15 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse
 }
 
+// Veřejné API volané z embed formulářů (zákazník není přihlášen)
+const PUBLIC_API = new Set([
+  "/api/pujcovna/cenik",
+  "/api/pujcovna/zaloh-faktura",
+  "/api/pujcovna/gcal-sync",
+  "/api/mail/rezervace-pujcovna",
+  "/api/mail/schuzka",
+])
+
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 }
