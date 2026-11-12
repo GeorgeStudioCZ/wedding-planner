@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
+import { nactiUzivatele, aktualniUzivatelId, type Uzivatel } from "@/lib/vlastnici"
 import MapaDashboard from "@/components/MapaDashboard"
 import AppShell from "@/components/AppShell"
 
@@ -227,6 +228,9 @@ export default function Home() {
   const [chyba, setChyba] = useState<string | null>(null)
   const [cenaBenzinu, setCenaBenzinu] = useState<number | null>(null)
   const [filter, setFilter] = useState<"Vše" | "Zaplaceno" | "Čeká">("Vše")
+  const [vlastnikFilter, setVlastnikFilter] = useState<string>("vse")   // "vse" | "moje" | id uživatele
+  const [mojeId, setMojeId] = useState<string | null>(null)
+  const [uzivatele, setUzivatele] = useState<Uzivatel[]>([])
   const [statsRozsireno, setStatsRozsireno] = useState(false)
   const [upcomingLimit, setUpcomingLimit] = useState(14)
   const [schuzkyBudouci, setSchuzkyBudouci] = useState<SchuzkaPreview[]>([])
@@ -235,10 +239,13 @@ export default function Home() {
   const [schuzkyMinuleDny,  setSchuzkyMinuleDny]  = useState<Set<string>>(new Set())
 
   async function nactiZakazky() {
-    const { data, error } = await supabase
+    let dotaz = supabase
       .from("zakazky")
       .select("id, jmeno_nevesty, jmeno_zenicha, datum_svatby, typ_sluzby, balicek, cena, adresa_obradu, vzdalenost_km, lat, lng, vystup_odevzdan, rychlost_dodani, stav, videohovor_datum")
       .order("datum_svatby", { ascending: true })
+    const cil = vlastnikFilter === "moje" ? mojeId : vlastnikFilter !== "vse" ? vlastnikFilter : null
+    if (cil) dotaz = dotaz.eq("vlastnik_id", cil)
+    const { data, error } = await dotaz
 
     if (error) {
       console.error("Supabase chyba:", error)
@@ -283,7 +290,15 @@ export default function Home() {
   }
 
   useEffect(() => {
+    nactiUzivatele().then(setUzivatele)
+    aktualniUzivatelId().then(setMojeId)
+  }, [])
+
+  useEffect(() => {
     nactiZakazky()
+  }, [vlastnikFilter, mojeId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     fetch("/api/cena-benzinu")
       .then(r => r.json())
       .then(d => { if (d.cena) setCenaBenzinu(d.cena) })
@@ -862,6 +877,25 @@ export default function Home() {
               Přehled <span style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", color: "var(--muted)", fontWeight: 400 }}>/ Dashboard</span>
             </h1>
           </div>
+        </div>
+
+        {/* ── Filtr vlastníka ── */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, color: "var(--muted)" }}>Zobrazit:</span>
+          <select
+            value={vlastnikFilter}
+            onChange={e => setVlastnikFilter(e.target.value)}
+            style={{
+              padding: "6px 10px", borderRadius: "var(--radius-md)", border: "1px solid var(--line-strong)",
+              fontSize: 12.5, color: "var(--ink)", background: "var(--surface)", fontFamily: "inherit",
+            }}
+          >
+            <option value="vse">Všechny zakázky</option>
+            <option value="moje">Moje zakázky</option>
+            {uzivatele.filter(u => u.id !== mojeId).map(u => (
+              <option key={u.id} value={u.id}>Zakázky: {u.jmeno}</option>
+            ))}
+          </select>
         </div>
 
         {/* ── Řádek 1: 6 KPI stat boxes ─────────────────────────────────── */}

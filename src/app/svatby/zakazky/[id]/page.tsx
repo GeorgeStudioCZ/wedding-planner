@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase-browser"
 import MapaTrasy from "@/components/MapaTrasy"
 import AppShell from "@/components/AppShell"
+import { nactiUzivatele, jmenoVlastnika, type Uzivatel } from "@/lib/vlastnici"
 
 // ─── Design constants ────────────────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ type Zakazka = {
   cena_benzinu: number | null
   dalsi_info: string
   videohovor_datum: string | null
+  vlastnik_id: string | null
 }
 
 // ─── Row helper ───────────────────────────────────────────────────────────────
@@ -374,6 +376,8 @@ export default function DetailZakazky() {
   const router = useRouter()
   const params = useParams()
   const [zakazka, setZakazka] = useState<Zakazka | null>(null)
+  const [uzivatele, setUzivatele] = useState<Uzivatel[]>([])
+  useEffect(() => { nactiUzivatele().then(setUzivatele) }, [])
   const [schuzka, setSchuzka] = useState<SchuzkaDetail | null>(null)
   const [editTermin, setEditTermin] = useState(false)
   const [editDatum, setEditDatum] = useState("")
@@ -1238,6 +1242,7 @@ export default function DetailZakazky() {
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <Row label="Vlastník zakázky" value={jmenoVlastnika(uzivatele, zakazka.vlastnik_id)} />
                 <Row label="Rezervační poplatek" value="2 900 Kč" mono />
                 {zakazka.cena_benzinu ? (
                   <Row label="Cena benzínu ke dni svatby" value={`${zakazka.cena_benzinu.toFixed(2).replace(".", ",")} Kč/l`} mono />

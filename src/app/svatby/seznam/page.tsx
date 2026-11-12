@@ -4,9 +4,11 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import AppShell from "@/components/AppShell"
+import { nactiUzivatele, aktualniUzivatelId, jmenoVlastnika, type Uzivatel } from "@/lib/vlastnici"
 
 type Zakazka = {
   id: string
+  vlastnik_id?: string | null
   datum_svatby: string
   jmeno_nevesty: string
   jmeno_zenicha: string
@@ -115,20 +117,30 @@ export default function SeznamSvateb() {
   const [loading, setLoading]     = useState(true)
   const [stavFilter, setStavFilter] = useState("vse")
   const [search, setSearch]       = useState("")
+  const [vlastnikFilter, setVlastnikFilter] = useState("vse")   // "vse" | "moje" | id uživatele
+  const [uzivatele, setUzivatele] = useState<Uzivatel[]>([])
+  const [mojeId, setMojeId]       = useState<string | null>(null)
 
   useEffect(() => {
     supabase
       .from("zakazky")
-      .select("id, datum_svatby, jmeno_nevesty, jmeno_zenicha, stav, adresa_obradu, typ_sluzby, balicek, cena, vzdalenost_km, videohovor_datum, cas_prijezdu, cas_obradu, pocet_svatebcanu")
+      .select("id, datum_svatby, jmeno_nevesty, jmeno_zenicha, stav, adresa_obradu, typ_sluzby, balicek, cena, vzdalenost_km, videohovor_datum, cas_prijezdu, cas_obradu, pocet_svatebcanu, vlastnik_id")
       .order("datum_svatby", { ascending: true })
       .then(({ data }) => {
         setZakazky(data ?? [])
         setLoading(false)
       })
+    nactiUzivatele().then(setUzivatele)
+    aktualniUzivatelId().then(setMojeId)
   }, [])
 
   const filtered = zakazky
     .filter(z => stavFilter === "vse" || z.stav === stavFilter)
+    .filter(z => {
+      if (vlastnikFilter === "vse") return true
+      const cil = vlastnikFilter === "moje" ? mojeId : vlastnikFilter
+      return z.vlastnik_id === cil
+    })
     .filter(z => {
       if (!search.trim()) return true
       const q = search.toLowerCase()
@@ -243,6 +255,22 @@ export default function SeznamSvateb() {
               )
             })}
           </div>
+          {/* Vlastník */}
+          <select
+            value={vlastnikFilter}
+            onChange={e => setVlastnikFilter(e.target.value)}
+            style={{
+              padding: "7px 10px", borderRadius: "var(--radius-md)",
+              border: "1px solid var(--line-strong)", fontSize: 12.5,
+              color: "var(--ink)", background: "var(--surface)", fontFamily: "inherit",
+            }}
+          >
+            <option value="vse">Všechny zakázky</option>
+            <option value="moje">Moje zakázky</option>
+            {uzivatele.filter(u => u.id !== mojeId).map(u => (
+              <option key={u.id} value={u.id}>Zakázky: {u.jmeno}</option>
+            ))}
+          </select>
           {/* Search */}
           <input
             type="text"
@@ -374,6 +402,9 @@ export default function SeznamSvateb() {
                           <div style={{ flex: 1, minWidth: 0, padding: "9px 12px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}>
                             <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {z.jmeno_nevesty || "—"} &amp; {z.jmeno_zenicha || "—"}
+                            </div>
+                            <div style={{ fontSize: 10.5, color: "var(--muted)", fontFamily: "var(--font-mono)", letterSpacing: ".04em" }}>
+                              {jmenoVlastnika(uzivatele, z.vlastnik_id)}
                             </div>
                             {z.adresa_obradu && (
                               <div style={{ fontSize: 11, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

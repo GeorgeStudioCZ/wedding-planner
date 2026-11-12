@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 import AppShell from "@/components/AppShell"
+import { nactiUzivatele, aktualniUzivatelId, type Uzivatel } from "@/lib/vlastnici"
 
 type Zakazka = {
   id: string
@@ -196,14 +197,24 @@ function MesicniKalendar({ rok, mesic, svatby }: {
 export default function Kalendar() {
   const [zakazky, setZakazky] = useState<Zakazka[]>([])
   const [rok, setRok]         = useState(new Date().getFullYear())
+  const [vlastnikFilter, setVlastnikFilter] = useState<string>("vse")   // "vse" | "moje" | id uživatele
+  const [mojeId, setMojeId]   = useState<string | null>(null)
+  const [uzivatele, setUzivatele] = useState<Uzivatel[]>([])
 
   useEffect(() => {
-    supabase
+    nactiUzivatele().then(setUzivatele)
+    aktualniUzivatelId().then(setMojeId)
+  }, [])
+
+  useEffect(() => {
+    let dotaz = supabase
       .from("zakazky")
       .select("id, datum_svatby, typ_sluzby, jmeno_nevesty, jmeno_zenicha, stav")
       .in("stav", ["objednavka", "cekam-platbu", "zaplaceno", "po-svatbe", "ve-strizne", "ukonceno"])
-      .then(({ data }) => setZakazky(data ?? []))
-  }, [])
+    const cil = vlastnikFilter === "moje" ? mojeId : vlastnikFilter !== "vse" ? vlastnikFilter : null
+    if (cil) dotaz = dotaz.eq("vlastnik_id", cil)
+    dotaz.then(({ data }) => setZakazky(data ?? []))
+  }, [vlastnikFilter, mojeId])
 
   const rocniSvatby  = zakazky.filter(z => z.datum_svatby && new Date(z.datum_svatby).getFullYear() === rok)
   const celkemVRoce  = rocniSvatby.length
@@ -224,6 +235,22 @@ export default function Kalendar() {
                 / Přehled roku
               </span>
             </h1>
+
+            {/* Vlastník */}
+            <select
+              value={vlastnikFilter}
+              onChange={e => setVlastnikFilter(e.target.value)}
+              style={{
+                padding: "6px 10px", borderRadius: "var(--radius-md)", border: "1px solid var(--line-strong)",
+                fontSize: 12.5, color: "var(--ink)", background: "var(--surface)", fontFamily: "inherit",
+              }}
+            >
+              <option value="vse">Všechny zakázky</option>
+              <option value="moje">Moje zakázky</option>
+              {uzivatele.filter(u => u.id !== mojeId).map(u => (
+                <option key={u.id} value={u.id}>Zakázky: {u.jmeno}</option>
+              ))}
+            </select>
 
             {/* Navigace rokem */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

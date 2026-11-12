@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase"
 import { vypocitejVzdalenost } from "@/lib/vzdalenost"
 import { ZakaznikSearch, type Zakaznik } from "@/components/ZakaznikSearch"
 import AppShell from "@/components/AppShell"
+import { nactiUzivatele, type Uzivatel } from "@/lib/vlastnici"
 
 export default function EditZakazka() {
   const router = useRouter()
@@ -17,7 +18,9 @@ export default function EditZakazka() {
   const [puvodniStav, setPuvodniStav] = useState("")
   const [zakaznikId, setZakaznikId] = useState<number | null>(null)
 
+  const [uzivatele, setUzivatele] = useState<Uzivatel[]>([])
   const [form, setForm] = useState({
+    vlastnik_id: "",
     jmeno_nevesty: "",
     jmeno_zenicha: "",
     datum_svatby: "",
@@ -41,6 +44,10 @@ export default function EditZakazka() {
   })
 
   useEffect(() => {
+    nactiUzivatele().then(setUzivatele)
+  }, [])
+
+  useEffect(() => {
     async function nacti() {
       const { data } = await supabase
         .from("zakazky")
@@ -50,6 +57,7 @@ export default function EditZakazka() {
 
       if (data) {
         setForm({
+          vlastnik_id: data.vlastnik_id ?? "",
           jmeno_nevesty: data.jmeno_nevesty ?? "",
           jmeno_zenicha: data.jmeno_zenicha ?? "",
           datum_svatby: data.datum_svatby ?? "",
@@ -106,6 +114,7 @@ export default function EditZakazka() {
     const update: Record<string, unknown> = {
       ...form,
       zakaznik_id: zakaznikId,
+      vlastnik_id: form.vlastnik_id || null,
       cena: form.cena ? Number(form.cena) : null,
       pocet_svatebcanu: form.pocet_svatebcanu ? Number(form.pocet_svatebcanu) : null,
       datum_svatby: form.datum_svatby || null,
@@ -177,6 +186,14 @@ export default function EditZakazka() {
               {zakaznikId && (
                 <p className="mt-1.5 text-xs text-emerald-600 font-medium">✓ Zákazník propojen (ID: {zakaznikId})</p>
               )}
+            </div>
+            <div>
+              <label className={labelClass}>Vlastník zakázky</label>
+              <select name="vlastnik_id" value={form.vlastnik_id} onChange={handleChange} className={inputClass}>
+                {uzivatele.map(u => (
+                  <option key={u.id} value={u.id}>{u.jmeno}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className={labelClass}>Stav zakázky</label>
