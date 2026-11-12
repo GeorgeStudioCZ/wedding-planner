@@ -17,6 +17,7 @@
 
 /* ── Design tokens ─────────────────────────────────────────────────────────── */
 :root {
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --bg:          #f6f5f2;
   --surface:     #ffffff;
   --ink:         #15151a;
