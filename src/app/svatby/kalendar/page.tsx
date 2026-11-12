@@ -215,7 +215,7 @@ export default function Kalendar() {
         {/* ── Page header ── */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 4 }}>
-            Wedding Planner · Plánování
+            FotímePříběhy.cz · Plánování
           </div>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
             <h1 style={{ fontFamily: "var(--font-serif), serif", fontWeight: 700, fontStyle: "normal", fontSize: 32, lineHeight: 1.05, color: "var(--ink)", margin: 0 }}>

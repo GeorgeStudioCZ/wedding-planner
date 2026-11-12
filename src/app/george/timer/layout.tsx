@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next"
 
 export const metadata: Metadata = {
-  title: "George Studio Timer",
+  title: "GeorgeStudio.cz Timer",
   manifest: "/timer-manifest.json",
 }
 

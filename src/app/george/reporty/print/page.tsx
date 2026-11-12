@@ -179,7 +179,7 @@ function PrintPageInner() {
 
       {/* Toolbar */}
       <div className="no-print" style={{ background: "#0e0f14", padding: "12px 24px", display: "flex", gap: 10, alignItems: "center", justifyContent: "flex-end" }}>
-        <span style={{ color: "#5a5b66", fontSize: 12, flex: 1 }}>Výkaz práce — George Studio</span>
+        <span style={{ color: "#5a5b66", fontSize: 12, flex: 1 }}>Výkaz práce — GeorgeStudio.cz</span>
         <button onClick={downloadPDF} disabled={pdfLoading} style={{
           background: "linear-gradient(135deg, #6366f1, #f97316)", border: "none", borderRadius: 8,
           padding: "8px 18px", color: "white", fontSize: 13, fontWeight: 600,
@@ -201,7 +201,7 @@ function PrintPageInner() {
         {/* Hlavička */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, paddingBottom: 20, borderBottom: "2px solid #0e0f14" }}>
           <div>
-            <img src="/gs-logo.png" alt="George Studio" style={{ height: 48, display: "block" }} />
+            <img src="/gs-logo.png" alt="GeorgeStudio.cz" style={{ height: 48, display: "block" }} />
             <div style={{ fontSize: 11, color: "#6b7280", marginTop: 6, letterSpacing: ".1em" }}>VÝKAZ PRÁCE</div>
           </div>
           <div style={{ textAlign: "right" }}>
@@ -296,7 +296,7 @@ function PrintPageInner() {
 
         {/* Patička */}
         <div style={{ marginTop: 32, paddingTop: 12, borderTop: "1px solid #e5e7eb", fontSize: 10, color: "#9ca3af", textAlign: "center" }}>
-          George Studio · výkaz práce generován {today}
+          GeorgeStudio.cz · výkaz práce generován {today}
         </div>
       </div>
     </>

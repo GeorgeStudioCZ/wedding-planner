@@ -1,7 +1,7 @@
 {
-  "name": "George Studio Timer",
+  "name": "GeorgeStudio.cz Timer",
   "short_name": "Timer",
-  "description": "Sledování času — George Studio CRM",
+  "description": "Sledování času — GeorgeStudio.cz CRM",
   "start_url": "/george/timer",
   "display": "standalone",
   "background_color": "#0e0f14",

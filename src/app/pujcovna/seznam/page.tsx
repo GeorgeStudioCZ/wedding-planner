@@ -261,7 +261,7 @@ export default function SeznamRezervaci() {
         <div style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
           <div>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--muted)" }}>
-              Autostany Planner
+              Stanujnaautě.cz
             </div>
             <h1 style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 34, lineHeight: 1.05, letterSpacing: "-.01em", color: "var(--ink)", margin: "4px 0 0" }}>
               Seznam <span style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", color: "var(--muted)", fontWeight: 400 }}>/ Rezervace</span>

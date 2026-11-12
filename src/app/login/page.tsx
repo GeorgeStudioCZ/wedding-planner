@@ -35,7 +35,7 @@ export default function Login() {
 
         {/* Hlavička */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-sky-900">Wedding Planner</h1>
+          <h1 className="text-3xl font-bold text-sky-900">FotímePříběhy.cz</h1>
           <p className="text-gray-400 text-sm mt-2">Přihlaste se pro přístup</p>
         </div>
 

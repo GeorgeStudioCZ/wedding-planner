@@ -17,7 +17,7 @@ const SLUZBY: Record<MailSluzba, { user: string; pass: string; from: string }> =
   george: {
     user: process.env.SMTP_USER_GEORGE!,
     pass: process.env.SMTP_PASS_GEORGE!,
-    from: `"George Studio" <${process.env.SMTP_USER_GEORGE}>`,
+    from: `"GeorgeStudio.cz" <${process.env.SMTP_USER_GEORGE}>`,
   },
 }
 

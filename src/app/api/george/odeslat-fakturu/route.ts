@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       typ:      "faktura",
       to_email: zak.email,
       to_name:  zakName,
-      subject:  `Faktura ${faktura.sf_no} – George Studio`,
+      subject:  `Faktura ${faktura.sf_no} – GeorgeStudio.cz`,
       html:     `Faktura ${faktura.sf_no} odeslána zákazníkovi přes SuperFaktura.`,
       status:   "sent",
     })

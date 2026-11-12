@@ -108,14 +108,14 @@ export default function AppShell({ module, children, extraActions }: { module: A
           fontFamily: "var(--font-serif), serif", fontStyle: "normal",
         }}>G</div>
         <div>
-          <div style={{ fontWeight: 600, letterSpacing: "-.01em", color: "white", fontSize: 15 }}>George Studio</div>
+          <div style={{ fontWeight: 600, letterSpacing: "-.01em", color: "white", fontSize: 15 }}>GeorgeStudio.cz</div>
           <div style={{ fontSize: 11, color: "#7a7b85", letterSpacing: ".08em", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>CRM · 2026</div>
         </div>
       </div>
 
       {/* Section label */}
       <div style={{ padding: "12px 14px 6px", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: "#5a5b66", fontFamily: "var(--font-mono)" }}>
-        {module === "wed" ? "Svatby" : module === "van" ? "Autostany" : "George Studio"}
+        {module === "wed" ? "FotímePříběhy.cz" : module === "van" ? "Stanujnaautě.cz" : "GeorgeStudio.cz"}
       </div>
 
       {/* Nav */}
@@ -172,9 +172,9 @@ export default function AppShell({ module, children, extraActions }: { module: A
           Modul
         </div>
         {([
-          { mod: "wed"    as AppModule, label: "Wedding Planner",   sub: "Sezóna 2026", href: "/svatby",   grad: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))" },
-          { mod: "van"    as AppModule, label: "Autostany Planner", sub: "Sezóna 2026", href: "/pujcovna", grad: "linear-gradient(135deg, var(--van-grad-a), var(--van-grad-b))" },
-          { mod: "studio" as AppModule, label: "George Studio",     sub: "Časomíra",    href: "/george",   grad: "linear-gradient(135deg, var(--studio-grad-a), var(--studio-grad-b))" },
+          { mod: "wed"    as AppModule, label: "FotímePříběhy.cz",   sub: "Sezóna 2026", href: "/svatby",   grad: "linear-gradient(135deg, var(--wed-grad-a), var(--wed-grad-b))" },
+          { mod: "van"    as AppModule, label: "Stanujnaautě.cz", sub: "Sezóna 2026", href: "/pujcovna", grad: "linear-gradient(135deg, var(--van-grad-a), var(--van-grad-b))" },
+          { mod: "studio" as AppModule, label: "GeorgeStudio.cz",     sub: "Časomíra",    href: "/george",   grad: "linear-gradient(135deg, var(--studio-grad-a), var(--studio-grad-b))" },
         ] as const).map(m => (
           <Link key={m.mod} href={m.href}
             style={{

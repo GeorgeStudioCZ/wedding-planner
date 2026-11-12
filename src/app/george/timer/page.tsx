@@ -111,7 +111,7 @@ export default function TimerPopup() {
   }, [])
 
   // Nastavit title okna
-  useEffect(() => { document.title = "Timer · George Studio" }, [])
+  useEffect(() => { document.title = "Timer · GeorgeStudio.cz" }, [])
 
   const loadData = useCallback(async () => {
     const [{ data: zak }, { data: kat }, { data: zzn }] = await Promise.all([
@@ -148,7 +148,7 @@ export default function TimerPopup() {
   // Sync title s časem
   useEffect(() => {
     if (running) document.title = `${formatClock(elapsed)} · Timer`
-    else document.title = "Timer · George Studio"
+    else document.title = "Timer · GeorgeStudio.cz"
   }, [elapsed, running])
 
   async function handleStart() {
@@ -309,7 +309,7 @@ export default function TimerPopup() {
             display: "grid", placeItems: "center",
           }} />
           <span style={{ fontSize: 12, fontWeight: 600, color: "#5a5b66", letterSpacing: ".1em", textTransform: "uppercase" }}>
-            George Studio · Timer
+            GeorgeStudio.cz · Timer
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

@@ -604,7 +604,7 @@ export default function PujcovnaDashboard() {
         <div style={{ display: "flex", alignItems: "flex-end", marginBottom: 20, gap: 12 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: "var(--muted)" }}>
-              Autostany Planner · Sezóna {ROK}
+              Stanujnaautě.cz · Sezóna {ROK}
             </div>
             <h1 style={{ fontFamily: "var(--font-serif), serif", fontStyle: "normal", fontWeight: 700, fontSize: 34, lineHeight: 1.05, letterSpacing: "-.01em", color: "var(--ink)", margin: "4px 0 0" }}>
               Přehled <span style={{ fontStyle: "normal", fontFamily: "var(--font-sans)", color: "var(--muted)", fontWeight: 400 }}>/ Dashboard</span>
