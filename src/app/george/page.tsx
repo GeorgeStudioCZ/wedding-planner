@@ -112,12 +112,14 @@ const IC = {
   trash: ["M3 6h18", "M8 6V4h8v2", "M19 6l-1 14H6L5 6"],
   edit:  ["M12 20h9", "M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"],
   close: "M18 6L6 18M6 6l12 12",
+  copy:  ["M9 9h11a1 1 0 011 1v10a1 1 0 01-1 1H9a1 1 0 01-1-1V10a1 1 0 011-1z", "M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"],
 }
 
 // ── ZaznamRadek ───────────────────────────────────────────────────────────────
-function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit, onContinue, isRunning }: {
+function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit, onDuplicate, onContinue, isRunning }: {
   z: Zaznam; kategorie: Kategorie[]; zakaznici: Zakaznik[]
   onDelete: (id: number) => void; onEdit: (z: Zaznam) => void
+  onDuplicate?: (z: Zaznam) => void
   onContinue?: (z: Zaznam) => void; isRunning?: boolean
 }) {
   const kat      = kategorie.find(k => k.id === z.kategorie_id)
@@ -171,6 +173,12 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit, onContinue, is
           <Ico d={IC.play} size={14} />
         </button>
       )}
+      {/* Duplikovat — jen dokončené záznamy */}
+      {onDuplicate && z.end_at && (
+        <button onClick={() => onDuplicate(z)} style={iconBtn} title="Duplikovat">
+          <Ico d={IC.copy} size={14} />
+        </button>
+      )}
       <button onClick={() => onEdit(z)} style={iconBtn} title="Upravit">
         <Ico d={IC.edit} size={14} />
       </button>
@@ -187,10 +195,11 @@ type EditForm = {
   zakaznikId: string; kategorieId: string; poznamka: string; pocet: string; cenaKus: string
 }
 
-function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
+function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose, duplikace = false }: {
   zaznam: Zaznam; kategorie: Kategorie[]; zakaznici: Zakaznik[]
   onSave: (id: number, updates: Partial<Zaznam>) => Promise<void>
   onClose: () => void
+  duplikace?: boolean   // true = z údajů vznikne nový záznam (kopie), původní se nemění
 }) {
   const isMat = zaznam.pocet != null
 
@@ -274,7 +283,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h2 style={{ margin: 0, fontSize: 16.5, fontWeight: 700, color: "#111827" }}>Upravit záznam</h2>
+            <h2 style={{ margin: 0, fontSize: 16.5, fontWeight: 700, color: "#111827" }}>{duplikace ? "Duplikovat záznam" : "Upravit záznam"}</h2>
             <span style={{
               fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 99,
               background: isMat ? "#f0fdf4" : "#eef2ff",
@@ -399,7 +408,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose }: {
               color: "white", fontSize: 14, fontWeight: 600,
               opacity: saving || !canSave ? .5 : 1, transition: "opacity .15s",
             }}>
-              {saving ? "Ukládám…" : "Uložit"}
+              {saving ? "Ukládám…" : duplikace ? "Vytvořit kopii" : "Uložit"}
             </button>
             <button onClick={onClose} style={{
               padding: "10px 20px", borderRadius: 9, border: "1px solid #e5e7eb",
@@ -431,6 +440,7 @@ export default function GeorgePage() {
 
   // Edit popup
   const [editingZaznam, setEditingZaznam] = useState<Zaznam | null>(null)
+  const [duplikovanyZaznam, setDuplikovanyZaznam] = useState<Zaznam | null>(null)
 
   // Form
   const [nazev,       setNazev]       = useState("")
@@ -613,6 +623,38 @@ export default function GeorgePage() {
     setEditingZaznam(null)
   }
 
+  // Duplikace: okno se otevře s údaji záznamu a dnešním datem (čas a délka zůstávají),
+  // nový záznam vznikne až po uložení. Nekopíruje se stav fakturace ani zmražená sazba.
+  function handleDuplicate(z: Zaznam) {
+    const dnes = isoToDate(new Date().toISOString())
+    setDuplikovanyZaznam({
+      ...z,
+      start_at: localToIso(dnes, isoToTime(z.start_at)),
+      end_at:   z.end_at ? localToIso(dnes, isoToTime(z.end_at)) : null,
+    })
+  }
+
+  async function handleSaveDuplicate(_id: number, updates: Partial<Zaznam>) {
+    const zdroj = duplikovanyZaznam
+    if (!zdroj) return
+    const db = createClient()
+    const { data, error } = await db.from("george_zaznamy").insert({
+      nazev:           zdroj.nazev,
+      zakaznik_id:     zdroj.zakaznik_id,
+      kategorie_id:    zdroj.kategorie_id,
+      poznamka:        zdroj.poznamka,
+      pocet:           zdroj.pocet,
+      cena_prodej_kus: zdroj.cena_prodej_kus,
+      cena_nakup_kus:  zdroj.cena_nakup_kus,
+      start_at:        zdroj.start_at,
+      end_at:          zdroj.end_at,
+      ...updates,   // to, co uživatel v okně upravil
+    }).select().single()
+    if (!zapisOk(error) || !data) return
+    setZaznamy(prev => [data, ...prev.filter(z => z.id !== data.id)].sort((a, b) => b.start_at.localeCompare(a.start_at)))
+    setDuplikovanyZaznam(null)
+  }
+
   async function handleAddMaterial() {
     if (!kategorieId) return
     const pocetNum = parseFloat(pocet.replace(",", "."))
@@ -777,6 +819,7 @@ export default function GeorgePage() {
                   {g.items.map(z => (
                     <ZaznamRadek key={z.id} z={z} kategorie={kategorie} zakaznici={zakaznici}
                       onDelete={handleDelete} onEdit={setEditingZaznam}
+                      onDuplicate={handleDuplicate}
                       onContinue={handleContinue} isRunning={!!running} />
                   ))}
                 </div>
@@ -1260,6 +1303,16 @@ export default function GeorgePage() {
                           <Ico d={IC.play} size={12} />
                         </button>
                       )}
+                      <button onClick={() => handleDuplicate(z)} title="Duplikovat" style={{
+                        background: "none", border: "none", cursor: "pointer", padding: "2px 3px",
+                        color: "#3a3b44", borderRadius: 4, flexShrink: 0, lineHeight: 1,
+                        transition: "color .15s",
+                      }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "#818cf8")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "#3a3b44")}
+                      >
+                        <Ico d={IC.copy} size={12} />
+                      </button>
                       <button onClick={() => setEditingZaznam(z)} title="Upravit" style={{
                         background: "none", border: "none", cursor: "pointer", padding: "2px 3px",
                         color: "#3a3b44", borderRadius: 4, flexShrink: 0, lineHeight: 1,
@@ -1298,6 +1351,18 @@ export default function GeorgePage() {
           zakaznici={zakaznici}
           onSave={handleSaveEdit}
           onClose={() => setEditingZaznam(null)}
+        />
+      )}
+
+      {/* ── Duplikace záznamu ──────────────────────────────────────────── */}
+      {duplikovanyZaznam && (
+        <EditPopup
+          duplikace
+          zaznam={duplikovanyZaznam}
+          kategorie={kategorie}
+          zakaznici={zakaznici}
+          onSave={handleSaveDuplicate}
+          onClose={() => setDuplikovanyZaznam(null)}
         />
       )}
 
