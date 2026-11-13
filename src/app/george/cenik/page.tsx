@@ -562,7 +562,14 @@ export default function CenikPage() {
 
   async function handleDelete(id: number) {
     const db = createClient()
-    await db.from("george_kategorie").delete().eq("id", id)
+    const { count } = await db.from("george_zaznamy").select("id", { count: "exact", head: true }).eq("kategorie_id", id)
+    const pouzito = count ?? 0
+    const msg = pouzito > 0
+      ? `Tuto položku používá ${pouzito} zadaných záznamů v přehledu. Záznamy zůstanou, ale ztratí vazbu na ceník (kategorii a jednotku). Opravdu smazat?`
+      : "Smazat položku z ceníku?"
+    if (!window.confirm(msg)) return
+    const { error } = await db.from("george_kategorie").delete().eq("id", id)
+    if (error) { alert("Smazání se nepovedlo: " + error.message); return }
     setPolozky(prev => prev.filter(p => p.id !== id))
   }
 
