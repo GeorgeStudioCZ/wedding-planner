@@ -45,7 +45,11 @@ function formatDate(iso: string) {
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })
 }
-function isoDate(iso: string) { return iso.slice(0, 10) }
+// Místní datum (YYYY-MM-DD) – ne UTC, jinak se půlnoc posune o den zpět
+function localDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+function isoDate(iso: string) { return localDate(new Date(iso)) }
 
 function dateLabel(iso: string) {
   const d = new Date(iso)
@@ -70,8 +74,8 @@ function zaznamCena(z: Zaznam, kat: Kategorie | undefined): number {
 // ── Výchozí rozsah — aktuální měsíc ───────────────────────────────────────────
 function defaultDateRange() {
   const now = new Date()
-  const od  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-  const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+  const od  = localDate(new Date(now.getFullYear(), now.getMonth(), 1))
+  const do_ = localDate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
   return { od, do: do_ }
 }
 
@@ -81,10 +85,10 @@ function quickRanges() {
   const y    = now.getFullYear()
   const m    = now.getMonth()
   return [
-    { label: "Tento měsíc",    od: new Date(y, m, 1).toISOString().slice(0, 10),     do: new Date(y, m + 1, 0).toISOString().slice(0, 10) },
-    { label: "Minulý měsíc",   od: new Date(y, m - 1, 1).toISOString().slice(0, 10), do: new Date(y, m, 0).toISOString().slice(0, 10) },
+    { label: "Tento měsíc",    od: localDate(new Date(y, m, 1)),     do: localDate(new Date(y, m + 1, 0)) },
+    { label: "Minulý měsíc",   od: localDate(new Date(y, m - 1, 1)), do: localDate(new Date(y, m, 0)) },
     { label: "Tento rok",      od: `${y}-01-01`,                                      do: `${y}-12-31` },
-    { label: "Vše",            od: "2020-01-01",                                      do: new Date(y + 1, 0, 0).toISOString().slice(0, 10) },
+    { label: "Vše",            od: "2020-01-01",                                      do: localDate(new Date(y + 1, 0, 0)) },
   ]
 }
 
