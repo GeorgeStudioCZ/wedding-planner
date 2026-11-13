@@ -331,7 +331,7 @@ function buildItemGeorge(p: SFPolozkaGeorge): Record<string, unknown> {
     unit_price: Math.round(p.unit_price * 100) / 100,
     tax:        0,
 
-    quantity:   Math.round(p.quantity * 10000) / 10000,   // hodiny jako desetinné číslo
+    quantity:   Math.round(p.quantity * 100) / 100,   // hodiny jako desetinné číslo
     unit:       p.unit,
     ...(p.popis ? { description: p.popis } : {}),
   }

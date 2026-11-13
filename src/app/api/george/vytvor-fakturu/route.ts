@@ -92,8 +92,8 @@ export async function POST(req: NextRequest) {
       nazev:      g.nazev,
       popis:      g.popis || undefined,
       unit_price: g.cena,
-      // Hodiny jako desetinné číslo (1,4167 h), kusy celé
-      quantity:   g.material ? g.mnozstvi : Math.round(g.mnozstvi * 10000) / 10000,
+      // Hodiny jako desetinné číslo na 2 místa (1,42 h), kusy celé
+      quantity:   g.material ? g.mnozstvi : Math.round(g.mnozstvi * 100) / 100,
       unit:       g.jednotka,
     }))
 
