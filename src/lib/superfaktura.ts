@@ -2,6 +2,8 @@
 // Docs: https://github.com/superfaktura/docs
 
 
+import { zapisDoklad } from "@/lib/faktury-evidence"
+
 const SF_BASE       = "https://moje.superfaktura.cz"
 const SF_MODULE     = "SvatebniCRM"
 
@@ -108,6 +110,13 @@ export async function vytvorZalohFakturu(
   const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
   if (!inv?.id) throw new Error(`SF: nepodařilo se načíst Invoice z odpovědi: ${JSON.stringify(json).slice(0, 300)}`)
 
+  await zapisDoklad({
+    modul: "pujcovna", typ: "zaloha", sf_id: Number(inv.id),
+    cislo: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
+    vs: String(inv.variable ?? inv.id), castka: polozky.reduce((s, p) => s + p.cena_sdph * p.pocet, 0),
+    zakaznik: klient.jmeno, pdf_url: `${SF_BASE}/invoices/pdf/${inv.id}/token:${inv.token}`,
+  })
+
   return {
     id:         Number(inv.id),
     invoice_no: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
@@ -148,6 +157,14 @@ export async function vytvorFakturuZeZalohy(
   const wrapper = (json.data ?? json) as Record<string, unknown>
   const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
   if (!inv?.id) throw new Error(`SF: nepodařilo se načíst Invoice z odpovědi: ${JSON.stringify(json).slice(0, 300)}`)
+
+  await zapisDoklad({
+    modul: "pujcovna", typ: "faktura", sf_id: Number(inv.id),
+    cislo: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
+    vs: inv.variable ? String(inv.variable) : null, castka: polozky.reduce((s, p) => s + p.cena_sdph * p.pocet, 0),
+    zakaznik: klient.jmeno, pdf_url: `${SF_BASE}/invoices/pdf/${inv.id}/token:${inv.token}`,
+    souvisejici_sf_id: proformaId,
+  })
 
   return {
     id:         Number(inv.id),
@@ -427,6 +444,15 @@ export async function vytvorDobropis(
   const wrapper = (json.data ?? json) as Record<string, unknown>
   const inv = (wrapper.Invoice ?? wrapper.invoice ?? json.Invoice ?? json.invoice) as Record<string, unknown>
   if (!inv?.id) throw new Error(`SF dobropis: nepodařilo se načíst Invoice z odpovědi: ${JSON.stringify(json).slice(0, 300)}`)
+
+  await zapisDoklad({
+    modul: "pujcovna", typ: "dobropis", sf_id: Number(inv.id),
+    cislo: String(inv.invoice_no_formatted ?? inv.invoice_no ?? inv.id),
+    castka: -bezDphCastka,
+    zakaznik: origCl.name ? String(origCl.name) : null,
+    pdf_url: `${SF_BASE}/invoices/pdf/${inv.id}/token:${inv.token}`,
+    souvisejici_sf_id: cancelInvoiceId,
+  })
 
   return {
     id:         Number(inv.id),
