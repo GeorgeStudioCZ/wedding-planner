@@ -137,12 +137,14 @@ export default function ReportyPage() {
   const katMap = useMemo(() => Object.fromEntries(kategorie.map(k => [k.id, k])), [kategorie])
 
   const kpi = useMemo(() => {
-    let ms = 0; let celkemKc = 0
+    let ms = 0; let celkemKc = 0; let nevyfaktKc = 0
     for (const z of filtered) {
       if (z.end_at && z.pocet == null) ms += new Date(z.end_at).getTime() - new Date(z.start_at).getTime()
-      celkemKc += zaznamCena(z, z.kategorie_id ? katMap[z.kategorie_id] : undefined)
+      const cena = zaznamCena(z, z.kategorie_id ? katMap[z.kategorie_id] : undefined)
+      celkemKc += cena
+      if (!z.fakturovano) nevyfaktKc += cena   // vyfakturované i zaplacené hotově se nepočítají
     }
-    return { ms, celkemKc, pocet: filtered.length }
+    return { ms, celkemKc, nevyfaktKc, pocet: filtered.length }
   }, [filtered, katMap])
 
   // ── Skupiny podle dne ─────────────────────────────────────────────────────
@@ -299,6 +301,7 @@ export default function ReportyPage() {
           {[
             { label: "Celkem odpracováno", value: formatElapsed(kpi.ms) },
             { label: "Celkem",             value: zformatCena(kpi.celkemKc) },
+            { label: "Nevyfakturováno",    value: zformatCena(kpi.nevyfaktKc) },
             { label: "Počet záznamů",      value: String(kpi.pocet) },
           ].map(k => (
             <div key={k.label} style={{
