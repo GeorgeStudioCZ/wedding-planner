@@ -64,58 +64,38 @@ export async function POST(req: NextRequest) {
       : { data: [] }
     const katMap = Object.fromEntries((kategorie ?? []).map(k => [k.id, k]))
 
-    // Seskup záznamy dle kategorie — každá kategorie = jedna položka na faktuře
-    type KatSkupina = { kat: { id: number; name: string; sazba: number; typ: string | null; jednotka: string | null } | null; zaznamy: typeof zaznamy }
-    const skupiny = new Map<number | null, KatSkupina>()
+    // Jedna položka = název zakázky (záznamu) + popis (kategorie z ceníku).
+    // Záznamy se stejným názvem, kategorií a cenou se sečtou.
+    type Skup = { nazev: string; popis: string; material: boolean; cena: number; jednotka: string; mnozstvi: number }
+    const skupiny = new Map<string, Skup>()
     for (const z of zaznamy) {
-      const key = z.kategorie_id ?? null
-      if (!skupiny.has(key)) skupiny.set(key, { kat: key ? katMap[key] ?? null : null, zaznamy: [] })
-      skupiny.get(key)!.zaznamy.push(z)
-    }
-
-    const polozky: SFPolozkaGeorge[] = []
-    for (const { kat, zaznamy: skupina } of skupiny.values()) {
-      const jeMaterial = skupina[0].pocet != null
-
-      if (jeMaterial) {
-        // Materiál / kusová služba — quantity = kusy, unit_price = cena/ks
-        let totalPocet = 0
-        let kusCena = 0
-        for (const z of skupina) {
-          totalPocet += z.pocet ?? 0
-          if (!kusCena) kusCena = z.cena_prodej_kus ?? kat?.sazba ?? 0
-        }
-        if (totalPocet <= 0 || kusCena <= 0) continue
-        polozky.push({
-          nazev:      kat?.name ?? "Materiál",
-          unit_price: kusCena,
-          quantity:   totalPocet,
-          unit:       kat?.jednotka ?? "ks",
-        })
-      } else {
-        // Časová služba — stejný výpočet jako v PDF reportu (per-záznam, pak suma)
-        // → faktura i report zobrazí shodnou částku
-        let totalMs = 0
-        let totalCena = 0
-        const sazba = kat?.sazba ?? 0
-        for (const z of skupina) {
-          if (!z.end_at) continue
-          const ms = new Date(z.end_at).getTime() - new Date(z.start_at).getTime()
-          totalMs += ms
-          totalCena += Math.round(ms / 3_600_000 * sazba * 100) / 100
-        }
-        if (totalMs <= 0 || sazba <= 0) continue
-        const totalHoursDisplay = totalMs / 3_600_000
-        const h = Math.floor(totalHoursDisplay)
-        const m = Math.round((totalHoursDisplay - h) * 60)
-        polozky.push({
-          nazev:      kat?.name ?? "Práce",
-          unit_price: Math.round(totalCena * 100) / 100,
-          quantity:   1,
-          unit:       `${h}:${String(m).padStart(2, "0")} hod`,
-        })
+      const kat = z.kategorie_id ? katMap[z.kategorie_id] : null
+      const material = z.pocet != null
+      // Ceny zmražené u záznamu mají přednost před aktuálním ceníkem
+      const cena = material ? (z.cena_prodej_kus ?? kat?.sazba ?? 0) : (z.sazba_snapshot ?? kat?.sazba ?? 0)
+      let mnozstvi = 0
+      if (material) mnozstvi = z.pocet ?? 0
+      else if (z.end_at) mnozstvi = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
+      if (mnozstvi <= 0 || cena <= 0) continue
+      const nazev = (z.nazev?.trim() || kat?.name || (material ? "Materiál" : "Práce"))
+      const popis = kat?.name && kat.name !== nazev ? kat.name : ""
+      const key = [nazev, popis, material, cena].join("|")
+      const g = skupiny.get(key) ?? {
+        nazev, popis, material, cena, mnozstvi: 0,
+        jednotka: material ? (kat?.jednotka ?? "ks") : "hod",
       }
+      g.mnozstvi += mnozstvi
+      skupiny.set(key, g)
     }
+
+    const polozky: SFPolozkaGeorge[] = [...skupiny.values()].map(g => ({
+      nazev:      g.nazev,
+      popis:      g.popis || undefined,
+      unit_price: g.cena,
+      // Hodiny jako desetinné číslo (1,4167 h), kusy celé
+      quantity:   g.material ? g.mnozstvi : Math.round(g.mnozstvi * 10000) / 10000,
+      unit:       g.jednotka,
+    }))
 
     if (!polozky.length) {
       return NextResponse.json({ ok: false, error: "Žádné položky s cenou pro fakturu" }, { status: 422 })
