@@ -556,6 +556,7 @@ export default function GeorgePage() {
     const { data, error } = await db.from("george_zaznamy").insert({
       nazev: nazev.trim(), zakaznik_id: zakaznikId, kategorie_id: kategorieId,
       start_at: new Date().toISOString(),
+      sazba_snapshot: kategorie.find(k => k.id === kategorieId)?.sazba ?? null,   // zmražená sazba
     }).select().single()
     if (error || !data) return
     pauseOffsetRef.current = 0
@@ -589,6 +590,7 @@ export default function GeorgePage() {
     const { data, error } = await db.from("george_zaznamy").insert({
       nazev: z.nazev, zakaznik_id: z.zakaznik_id, kategorie_id: z.kategorie_id,
       start_at: new Date().toISOString(),
+      sazba_snapshot: kategorie.find(k => k.id === z.kategorie_id)?.sazba ?? null,
     }).select().single()
     if (error || !data) return
     pauseOffsetRef.current = 0
@@ -614,6 +616,11 @@ export default function GeorgePage() {
 
   async function handleSaveEdit(id: number, updates: Partial<Zaznam>) {
     const db = createClient()
+    // Při změně kategorie u hodinového záznamu zmrazit sazbu nové kategorie
+    const puvodni = zaznamy.find(z => z.id === id)
+    if (puvodni && puvodni.pocet == null && updates.kategorie_id !== undefined && updates.kategorie_id !== puvodni.kategorie_id) {
+      updates = { ...updates, sazba_snapshot: kategorie.find(k => k.id === updates.kategorie_id)?.sazba ?? null }
+    }
     const { data, error } = await db.from("george_zaznamy").update(updates).eq("id", id).select().single()
     if (!zapisOk(error)) return
     if (!error && data) {
@@ -646,6 +653,8 @@ export default function GeorgePage() {
       pocet:           zdroj.pocet,
       cena_prodej_kus: zdroj.cena_prodej_kus,
       cena_nakup_kus:  zdroj.cena_nakup_kus,
+      sazba_snapshot:  zdroj.pocet == null
+        ? (kategorie.find(k => k.id === zdroj.kategorie_id)?.sazba ?? null) : null,
       start_at:        zdroj.start_at,
       end_at:          zdroj.end_at,
       ...updates,   // to, co uživatel v okně upravil
@@ -691,6 +700,7 @@ export default function GeorgePage() {
     const { data, error } = await db.from("george_zaznamy").insert({
       nazev: nazev.trim(), zakaznik_id: zakaznikId, kategorie_id: kategorieId,
       start_at, end_at,
+      sazba_snapshot: kategorie.find(k => k.id === kategorieId)?.sazba ?? null,
     }).select().single()
     if (error || !data) return
     setZaznamy(prev => [data, ...prev.filter(z => z.id !== data.id)].sort((a, b) => b.start_at.localeCompare(a.start_at)))

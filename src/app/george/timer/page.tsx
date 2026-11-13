@@ -158,6 +158,7 @@ export default function TimerPopup() {
     const { data, error } = await db.from("george_zaznamy").insert({
       nazev: nazev.trim(), zakaznik_id: zakaznikId, kategorie_id: kategorieId,
       start_at: new Date().toISOString(),
+      sazba_snapshot: kategorie.find(k => k.id === kategorieId)?.sazba ?? null,
     }).select().single()
     if (error || !data) return
     pauseOffsetRef.current = 0; pausedAtRef.current = null
@@ -188,6 +189,7 @@ export default function TimerPopup() {
     const { data, error } = await db.from("george_zaznamy").insert({
       nazev: z.nazev, zakaznik_id: z.zakaznik_id, kategorie_id: z.kategorie_id,
       start_at: new Date().toISOString(),
+      sazba_snapshot: kategorie.find(k => k.id === z.kategorie_id)?.sazba ?? null,
     }).select().single()
     if (error || !data) return
     pauseOffsetRef.current = 0; pausedAtRef.current = null
@@ -236,6 +238,7 @@ export default function TimerPopup() {
     const { data, error } = await db.from("george_zaznamy").insert({
       nazev: nazev.trim(), zakaznik_id: zakaznikId, kategorie_id: kategorieId,
       start_at, end_at,
+      sazba_snapshot: kategorie.find(k => k.id === kategorieId)?.sazba ?? null,
     }).select().single()
     if (error || !data) return
     setZaznamy(prev => [data, ...prev.filter(z => z.id !== data.id)].sort((a, b) => b.start_at.localeCompare(a.start_at)))
