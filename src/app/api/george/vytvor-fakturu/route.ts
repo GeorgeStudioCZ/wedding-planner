@@ -49,6 +49,15 @@ export async function POST(req: NextRequest) {
 
     if (!zaznamy?.length) return NextResponse.json({ ok: false, error: "Záznamy nenalezeny" }, { status: 404 })
 
+    // Záznam už vyfakturovaný nebo označený jako zaplacený hotově se do faktury znovu nedává
+    const uzVyrizene = zaznamy.filter(z => z.fakturovano)
+    if (uzVyrizene.length > 0) {
+      return NextResponse.json({
+        ok: false,
+        error: `${uzVyrizene.length} z vybraných záznamů už je vyfakturováno nebo označeno jako zaplaceno hotově. Obnov stránku a zkus to znovu.`,
+      }, { status: 409 })
+    }
+
     const katIds = [...new Set(zaznamy.map(z => z.kategorie_id).filter(Boolean))]
     const { data: kategorie } = katIds.length
       ? await sb.from("george_kategorie").select("id, name, sazba, sazba_typ, typ, jednotka").in("id", katIds)

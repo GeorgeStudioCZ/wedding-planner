@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import AppShell from "@/components/AppShell"
+import { zapisOk } from "@/lib/zapis"
+
+// Hodnota v sf_faktura_no u záznamů označených ručně jako zaplacené hotově (bez faktury)
+const HOTOVE = "hotově"
 
 type Zakaznik  = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
 type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null }
@@ -100,6 +104,7 @@ export default function ReportyPage() {
   const [filterOd,        setFilterOd]        = useState(def.od)
   const [filterDo,        setFilterDo]        = useState(def.do)
   const [filterFaktura,   setFilterFaktura]   = useState<"vse" | "ano" | "ne">("vse")
+  const [menimId,         setMenimId]         = useState<number | null>(null)
 
   const loadData = useCallback(async () => {
     const [{ data: zak }, { data: kat }, { data: zzn }] = await Promise.all([
@@ -175,6 +180,22 @@ export default function ReportyPage() {
 
   // Jen nevyfakturované z filtru — tyto jdou do faktury
   const filteredNevyfakt = useMemo(() => filtered.filter(z => !z.fakturovano), [filtered])
+
+  // Ruční označení „zaplaceno hotově" (bez faktury) a návrat zpět.
+  // Záznam se tváří jako vyfakturovaný, ale bez čísla faktury ze SuperFaktury.
+  async function prepniHotove(z: Zaznam) {
+    const hotove = z.fakturovano && z.sf_faktura_id == null && z.sf_faktura_no === HOTOVE
+    if (z.fakturovano && !hotove) return
+    setMenimId(z.id)
+    const zmena = hotove
+      ? { fakturovano: false, sf_faktura_no: null, sf_faktura_id: null }
+      : { fakturovano: true,  sf_faktura_no: HOTOVE, sf_faktura_id: null }
+    const { error } = await supabase.from("george_zaznamy").update(zmena).eq("id", z.id)
+    if (zapisOk(error)) {
+      setZaznamy(prev => prev.map(x => x.id === z.id ? { ...x, ...zmena } : x))
+    }
+    setMenimId(null)
+  }
 
   function otevritReport() {
     const params = new URLSearchParams()
@@ -429,16 +450,35 @@ export default function ReportyPage() {
                         </div>
                       )}
 
-                      {/* Stav fakturace — pouze informativní, nelze měnit kliknutím */}
-                      <span style={{
-                        flexShrink: 0, padding: "4px 9px", borderRadius: 20,
-                        border: "1.5px solid", fontSize: 11, fontWeight: 600,
-                        borderColor: z.fakturovano ? "#10b981" : "var(--line)",
-                        background:  z.fakturovano ? "rgba(16,185,129,.1)" : "white",
-                        color:       z.fakturovano ? "#10b981" : "var(--muted)",
-                      }} title={z.sf_faktura_no ?? undefined}>
-                        {z.fakturovano ? `✓ ${z.sf_faktura_no ?? "Vyfakt."}` : "Nevyfakt."}
-                      </span>
+                      {/* Stav fakturace: záznam s fakturou ze SuperFaktury je jen informativní,
+                          ostatní jde ručně označit jako zaplacený hotově (a vrátit zpět) */}
+                      {(() => {
+                        const hotove = z.fakturovano && z.sf_faktura_id == null && z.sf_faktura_no === HOTOVE
+                        const mozneMenit = !z.fakturovano || hotove
+                        return (
+                          <button
+                            type="button"
+                            disabled={!mozneMenit || menimId === z.id}
+                            onClick={() => prepniHotove(z)}
+                            style={{
+                              flexShrink: 0, padding: "4px 9px", borderRadius: 20,
+                              border: "1.5px solid", fontSize: 11, fontWeight: 600,
+                              cursor: mozneMenit ? "pointer" : "default",
+                              opacity: menimId === z.id ? .5 : 1,
+                              borderColor: z.fakturovano ? "#10b981" : "var(--line)",
+                              background:  z.fakturovano ? "rgba(16,185,129,.1)" : "white",
+                              color:       z.fakturovano ? "#10b981" : "var(--muted)",
+                            }}
+                            title={
+                              hotove ? "Zaplaceno hotově — kliknutím vrátíš na nevyfakturované"
+                              : z.fakturovano ? (z.sf_faktura_no ?? undefined)
+                              : "Kliknutím označíš jako zaplaceno hotově (nepůjde do další faktury)"
+                            }
+                          >
+                            {z.fakturovano ? `✓ ${z.sf_faktura_no ?? "Vyfakt."}` : "Nevyfakt."}
+                          </button>
+                        )
+                      })()}
                     </div>
                   )
                 })}
