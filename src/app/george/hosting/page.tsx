@@ -259,8 +259,12 @@ export default function HostingPage() {
     return [...byZak.entries()]
       .map(([zid, rows]) => ({
         zid, zak: zid ? zakMap.get(zid) : undefined,
-        // nepřiřazené řadíme podle expirace, ostatní podle webu
-        rows: zid ? rows : [...rows].sort((a, b) => (a.expirace ?? "9999").localeCompare(b.expirace ?? "9999")),
+        // Řazení: nejdřív domény, pak hostingy, redirecty a nakonec e-maily;
+        // uvnitř typu nepřiřazené podle expirace, ostatní podle webu
+        rows: [...rows].sort((a, b) =>
+          TYPY.findIndex(t => t.v === a.typ) - TYPY.findIndex(t => t.v === b.typ)
+          || (zid ? a.web.localeCompare(b.web, "cs") : (a.expirace ?? "9999").localeCompare(b.expirace ?? "9999"))
+          || a.id - b.id),
       }))
       .filter(g => g.zid === 0 || g.zak)
       .filter(g => {
