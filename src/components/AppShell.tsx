@@ -18,6 +18,7 @@ function Ico({ d, size = 16 }: { d: string | string[]; size?: number }) {
 }
 
 const I = {
+  globe:    ["M12 21a9 9 0 100-18 9 9 0 000 18z","M3 12h18","M12 3a14 14 0 010 18","M12 3a14 14 0 000 18"],
   home:     ["M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z","M9 22V12h6v10"],
   list:     ["M8 6h13","M8 12h13","M8 18h13","M3 6h.01","M3 12h.01","M3 18h.01"],
   kanban:   ["M3 3h7v9H3z","M14 3h7v5h-7z","M14 12h7v9h-7z","M3 16h7v5H3z"],
@@ -64,6 +65,7 @@ const NAV_STUDIO = [
   { key: "reporty",    label: "Reporty",      href: "/george/reporty",            ico: I.barChart },
   { key: "fakturace",  label: "Fakturace",    href: "/fakturace?from=studio",     ico: I.receipt },
   { key: "cenik",      label: "Ceník služeb", href: "/george/cenik",              ico: I.wallet },
+  { key: "hosting",    label: "Správa hostingu", href: "/george/hosting",         ico: I.globe },
   { key: "klienti",    label: "Zákazníci",    href: "/zakaznici?from=studio",     ico: I.users },
   { key: "komunikace", label: "Komunikace",   href: "/komunikace?from=studio",    ico: I.mail },
 ]

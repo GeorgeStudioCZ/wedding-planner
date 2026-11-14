@@ -8,7 +8,7 @@ import { zapisOk } from "@/lib/zapis"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
-type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null; jednotka: string | null; nakupni_cena: number | null }
+type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null; jednotka: string | null; nakupni_cena: number | null; rocni?: boolean }
 type Zaznam = {
   id: number
   zakaznik_id: number | null
@@ -226,7 +226,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose, duplikace = 
   const katAkt       = kategorie.find(k => String(k.id) === form.kategorieId)
   const katFilt      = isMat
     ? kategorie.filter(k => k.typ === "material")
-    : kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba")
+    : kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba" && !k.rocni)
 
   async function handleSave() {
     if (isMat) {
@@ -484,7 +484,7 @@ export default function GeorgePage() {
   }
 
   // Kategorie podle typu
-  const sluzbyKat   = kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba")
+  const sluzbyKat   = kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba" && !k.rocni)
   const materialyKat = kategorie.filter(k => k.typ === "material")
   const aktivniKat   = modTyp === "sluzba" ? sluzbyKat : materialyKat
 

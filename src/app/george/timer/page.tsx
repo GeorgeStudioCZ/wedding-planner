@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase-browser"
 import { zapisOk } from "@/lib/zapis"
 
 type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma?: string | null; projekty: string[] | null }
-type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null; jednotka: string | null; nakupni_cena: number | null }
+type Kategorie = { id: number; name: string; barva: string; sazba_typ: string; sazba: number; typ: string | null; jednotka: string | null; nakupni_cena: number | null; rocni?: boolean }
 type Zaznam    = { id: number; zakaznik_id: number | null; kategorie_id: number | null; nazev: string; start_at: string; end_at: string | null; poznamka: string; pocet: number | null; cena_prodej_kus: number | null; cena_nakup_kus: number | null }
 
 const RING_R    = 72
@@ -266,7 +266,7 @@ export default function TimerPopup() {
 
   const studioZakaznici = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
   const katAktivni      = kategorie.find(k => k.id === kategorieId)
-  const sluzbyKat       = kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba")
+  const sluzbyKat       = kategorie.filter(k => (k.typ ?? "sluzba") === "sluzba" && !k.rocni)
   const materialyKat    = kategorie.filter(k => k.typ === "material")
   const aktivniKat      = modTyp === "sluzba" ? sluzbyKat : materialyKat
   // Kusová služba = služba účtovaná za kus (ne hodinově) → zobrazí pole jako materiál

@@ -19,6 +19,8 @@ type Polozka = {
   kod_produktu: string | null
   odkaz: string | null
   sort_order: number
+  skupina?: string | null   // vlastní skupina v ceníku (např. Tiskové služby, Hostingové služby)
+  rocni?: boolean           // roční služba — eviduje se ve Správě hostingu
 }
 
 // Pevné barvy podle typu — červená = služba, modrá = materiál
@@ -28,7 +30,7 @@ function barvaTypu(typ: "sluzba" | "material") {
   return typ === "sluzba" ? BARVA_SLUZBA : BARVA_MATERIAL
 }
 
-const JEDNOTKY = ["ks", "sada", "m", "km", "kg"]
+const JEDNOTKY = ["ks", "sada", "m", "km", "kg", "rok"]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fKc(n: number) {
@@ -58,17 +60,20 @@ const IC = {
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function Modal({
-  onClose, onSaved, editItem, pocetPolozek,
+  onClose, onSaved, editItem, pocetPolozek, skupiny,
 }: {
   onClose: () => void
   onSaved: (p: Polozka) => void
   editItem?: Polozka
   pocetPolozek: number
+  skupiny: string[]
 }) {
   const isEdit = !!editItem
   const [typ,         setTyp]         = useState<"sluzba" | "material">(editItem?.typ ?? "sluzba")
   const [sluzbaRezim, setSluzbaRezim] = useState<"hodina" | "kus">(editItem?.sazba_typ === "kus" ? "kus" : "hodina")
   const [name,     setName]     = useState(editItem?.name ?? "")
+  const [skupina,  setSkupina]  = useState(editItem?.skupina ?? "")
+  const [rocni,    setRocni]    = useState(!!editItem?.rocni)
   const barva = barvaTypu(typ)   // automaticky podle typu, nepotřebuje state
   const [prodej,      setProdej]      = useState(editItem ? String(editItem.sazba) : "")
   const [jednotka,   setJednotka]    = useState(editItem?.jednotka ?? "ks")
@@ -89,14 +94,17 @@ function Modal({
     setErr("")
     setSaving(true)
     const db = createClient()
-    const kusMode = typ === "material" || (typ === "sluzba" && sluzbaRezim === "kus")
+    const jeRocni = typ === "sluzba" && rocni
+    const kusMode = jeRocni || typ === "material" || (typ === "sluzba" && sluzbaRezim === "kus")
     const payload = {
       name:          name.trim(),
       barva,
       typ,
       sazba:         parseNum(prodej)!,
-      sazba_typ:     typ === "sluzba" ? sluzbaRezim : "kus",
-      jednotka:      kusMode ? jednotka : null,
+      sazba_typ:     jeRocni ? "kus" : typ === "sluzba" ? sluzbaRezim : "kus",
+      jednotka:      jeRocni ? "rok" : kusMode ? jednotka : null,
+      skupina:       skupina.trim() || null,
+      rocni:         jeRocni,
       nakupni_cena:  kusMode && parseNum(nakup) !== null ? parseNum(nakup) : null,
       dodavatel:     typ === "material" && dodavatel.trim() ? dodavatel.trim() : null,
       kod_produktu:  typ === "material" && kodProd.trim()   ? kodProd.trim()   : null,
@@ -169,11 +177,31 @@ function Modal({
           />
         </div>
 
+        {/* Skupina v ceníku */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={lbl}>Skupina (volitelné)</label>
+          <input
+            value={skupina}
+            onChange={e => setSkupina(e.target.value)}
+            list="cenik-skupiny"
+            placeholder="např. Tiskové služby, Hostingové služby…"
+            style={inp}
+          />
+          <datalist id="cenik-skupiny">{skupiny.map(g => <option key={g} value={g} />)}</datalist>
+        </div>
+
+        {typ === "sluzba" && (
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 13, color: "var(--ink-2)", cursor: "pointer" }}>
+            <input type="checkbox" checked={rocni} onChange={e => { setRocni(e.target.checked); if (e.target.checked) { setSluzbaRezim("kus"); setJednotka("rok") } }} />
+            Roční služba (doména, hosting, e-mail…) – eviduje se ve Správě hostingu
+          </label>
+        )}
+
         {/* ── Služba ── */}
         {typ === "sluzba" && (
           <>
             {/* Přepínač hodinová / kusová */}
-            <div style={{ marginBottom: 18 }}>
+            {!rocni && <div style={{ marginBottom: 18 }}>
               <label style={lbl}>Způsob účtování</label>
               <div style={{ display: "flex", gap: 8 }}>
                 {(["hodina", "kus"] as const).map(r => (
@@ -189,9 +217,9 @@ function Modal({
                   </button>
                 ))}
               </div>
-            </div>
+            </div>}
 
-            {sluzbaRezim === "hodina" ? (
+            {sluzbaRezim === "hodina" && !rocni ? (
               <div style={{ marginBottom: 20 }}>
                 <label style={lbl}>Hodinová sazba</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -434,7 +462,7 @@ function PolozkaRadek({ p, onEdit, onDelete }: {
             background: typEff === "sluzba" ? "#eef2ff" : "#f0fdf4",
             color: typEff === "sluzba" ? "#4338ca" : "#166534",
           }}>
-            {typEff === "sluzba" ? "Služba" : "Materiál"}
+            {p.rocni ? "Roční služba" : typEff === "sluzba" ? "Služba" : "Materiál"}
           </span>
         </div>
 
@@ -578,8 +606,15 @@ export default function CenikPage() {
     setShowModal(true)
   }
 
-  const sluzby   = polozky.filter(p => (p.typ ?? "sluzba") === "sluzba")
-  const materialy = polozky.filter(p => p.typ === "material")
+  // Sekce: vlastní skupiny (podle názvu), ostatní položky dle typu
+  const sekce: { nazev: string; polozky: Polozka[] }[] = []
+  const skupinyNazvy = [...new Set(polozky.map(p => p.skupina).filter((g): g is string => !!g))].sort((x, y) => x.localeCompare(y, "cs"))
+  for (const g of skupinyNazvy) sekce.push({ nazev: g, polozky: polozky.filter(p => p.skupina === g) })
+  const bezSkupiny = polozky.filter(p => !p.skupina)
+  const sluzby    = bezSkupiny.filter(p => (p.typ ?? "sluzba") === "sluzba")
+  const materialy = bezSkupiny.filter(p => p.typ === "material")
+  if (sluzby.length)    sekce.push({ nazev: "Služby",   polozky: sluzby })
+  if (materialy.length) sekce.push({ nazev: "Materiál", polozky: materialy })
 
   return (
     <AppShell module="studio">
@@ -589,6 +624,7 @@ export default function CenikPage() {
           onSaved={handleSaved}
           editItem={editItem}
           pocetPolozek={polozky.length}
+          skupiny={[...new Set(polozky.map(p => p.skupina).filter((g): g is string => !!g))]}
         />
       )}
 
@@ -622,22 +658,14 @@ export default function CenikPage() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-            {sluzby.length > 0 && (
-              <section>
-                <SecHeader count={sluzby.length}>Služby</SecHeader>
+            {sekce.map(sk => (
+              <section key={sk.nazev}>
+                <SecHeader count={sk.polozky.length}>{sk.nazev}</SecHeader>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {sluzby.map(p => <PolozkaRadek key={p.id} p={p} onEdit={openEdit} onDelete={handleDelete} />)}
+                  {sk.polozky.map(p => <PolozkaRadek key={p.id} p={p} onEdit={openEdit} onDelete={handleDelete} />)}
                 </div>
               </section>
-            )}
-            {materialy.length > 0 && (
-              <section>
-                <SecHeader count={materialy.length}>Materiál</SecHeader>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {materialy.map(p => <PolozkaRadek key={p.id} p={p} onEdit={openEdit} onDelete={handleDelete} />)}
-                </div>
-              </section>
-            )}
+            ))}
           </div>
         )}
       </div>
