@@ -13,7 +13,7 @@ type Sluzba = {
   kategorie_id: number
   web: string
   kvota_gb: number | null
-  cena_rok: number
+  cena_rok: number | null   // null = cena se řídí ceníkem (× kvóta); číslo = vlastní cena
   stav: string
   typ: TypSluzby
   poznamka: string | null
@@ -37,6 +37,11 @@ function typPodleNazvu(nazev: string): TypSluzby {
   return "domena"
 }
 // Sloupce tabulky služeb (tabulkové zarovnání, název služby se nezalamuje)
+// Cena služby podle ceníku: cena položky × kvóta GB (bez kvóty 1×)
+function cenaZCeniku(sazba: number, kvota: number | null) {
+  return Math.round(sazba * (kvota != null && kvota > 0 ? kvota : 1) * 100) / 100
+}
+
 const GRID = "92px minmax(190px, 1.2fr) minmax(250px, 1.3fr) 64px 118px 96px 150px 76px"
 
 function zakLabel(z: Zakaznik) { return z.firma?.trim() || `${z.jmeno} ${z.prijmeni}`.trim() || `#${z.id}` }
@@ -70,39 +75,27 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
   const [katId,  setKatId]  = useState<string>(edit ? String(edit.kategorie_id) : "")
   const [web,    setWeb]    = useState(edit?.web ?? "")
   const [kvota,  setKvota]  = useState(edit?.kvota_gb != null ? String(edit.kvota_gb) : "")
-  const [cena,   setCena]   = useState(edit ? String(edit.cena_rok) : "")
+  // Prázdné pole = cena se řídí ceníkem; vyplněné = vlastní (pevná) cena
+  const [cena,   setCena]   = useState(edit?.cena_rok != null ? String(edit.cena_rok) : "")
   const [typ,    setTyp]    = useState<TypSluzby>(edit?.typ ?? "domena")
   const [pozn,   setPozn]   = useState(edit?.poznamka ?? "")
   const [expirace, setExpirace] = useState(edit?.expirace ?? "")
   const [saving, setSaving] = useState(false)
   const [err,    setErr]    = useState("")
 
-  // Cena za rok = cena z ceníku × kvóta v GB (bez kvóty = 1×). Po přepočtu ji jde ručně přepsat.
-  function prepocti(katIdStr: string, kvotaStr: string) {
-    const k = kategorie.find(x => String(x.id) === katIdStr)
-    if (!k) return
-    const kv = kvotaStr.trim() ? parseNum(kvotaStr) : null
-    const nasobek = kv != null && kv > 0 ? kv : 1
-    setCena(String(Math.round(k.sazba * nasobek * 100) / 100))
-  }
   function zmenaKategorie(id: string) {
     setKatId(id)
     const k = kategorie.find(x => String(x.id) === id)
     if (k) setTyp(typPodleNazvu(k.name))
-    // Při zakládání vždy; při úpravě jen pokud je zadaná kvóta (jinak by se přepsala ručně upravená cena)
-    if (!edit || kvota.trim()) prepocti(id, kvota)
   }
-  function zmenaKvoty(v: string) {
-    setKvota(v)
-    prepocti(katId, v)
-  }
+  function zmenaKvoty(v: string) { setKvota(v) }
   const katAkt   = kategorie.find(x => String(x.id) === katId)
   const kvotaNum = kvota.trim() ? parseNum(kvota) : null
 
   async function ulozit() {
     if (!katId) { setErr("Vyber službu z ceníku"); return }
-    const cenaNum = parseNum(cena)
-    if (cenaNum === null) { setErr("Zadej platnou cenu za rok"); return }
+    const cenaNum = cena.trim() ? parseNum(cena) : null
+    if (cena.trim() && cenaNum === null) { setErr("Cena musí být číslo"); return }
     const kvotaNum = kvota.trim() ? parseNum(kvota) : null
     if (kvota.trim() && kvotaNum === null) { setErr("Kvóta musí být číslo"); return }
     setErr(""); setSaving(true)
@@ -149,17 +142,20 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
         </div>
         <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
           <div style={{ flex: 1 }}>
-            <label style={lbl}>Cena za rok (Kč)</label>
-            <input value={cena} onChange={e => setCena(e.target.value)} inputMode="decimal" placeholder="0" style={inp} />
+            <label style={lbl}>Vlastní cena za rok (Kč)</label>
+            <input value={cena} onChange={e => setCena(e.target.value)} inputMode="decimal"
+              placeholder={katAkt ? `podle ceníku: ${Math.round(cenaZCeniku(katAkt.sazba, kvotaNum))}` : "podle ceníku"} style={inp} />
           </div>
           <div style={{ flex: 1 }}>
             <label style={lbl}>Kvóta (GB)</label>
             <input value={kvota} onChange={e => zmenaKvoty(e.target.value)} inputMode="decimal" placeholder="volitelné" style={inp} />
           </div>
         </div>
-        {katAkt && kvotaNum != null && kvotaNum > 0 && (
-          <div style={{ fontSize: 12, color: "var(--muted)", margin: "-6px 0 14px" }}>
-            Cena z ceníku {fKc(katAkt.sazba)} × {kvotaNum} GB = <b>{fKc(katAkt.sazba * kvotaNum)}</b> (hodnotu v poli Cena můžeš přepsat)
+        {katAkt && (
+          <div style={{ fontSize: 12, color: "var(--muted)", margin: "-6px 0 14px", lineHeight: 1.5 }}>
+            {cena.trim()
+              ? <>Pevná vlastní cena — <b>nemění se</b> s ceníkem. Smaž ji a služba se vrátí k ceně z ceníku.</>
+              : <>Cena se řídí ceníkem: {fKc(katAkt.sazba)}{kvotaNum != null && kvotaNum > 0 ? ` × ${kvotaNum} GB` : ""} = <b>{fKc(cenaZCeniku(katAkt.sazba, kvotaNum))}</b>. Při zvýšení ceníku se změní u nevyfakturovaných let.</>}
           </div>
         )}
         <div style={{ marginBottom: 14 }}>
@@ -200,7 +196,8 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
 // ── Stránka ───────────────────────────────────────────────────────────────────
 export default function HostingPage() {
   const [zakaznici, setZakaznici] = useState<Zakaznik[]>([])
-  const [kategorie, setKategorie] = useState<Kat[]>([])
+  const [kategorie, setKategorie] = useState<Kat[]>([])        // jen položky typu Hosting (nabídka ve formuláři)
+  const [vsechnyKat, setVsechnyKat] = useState<Map<number, Kat>>(new Map())   // všechny položky ceníku (cena i název existujících služeb)
   const [sluzby,    setSluzby]    = useState<Sluzba[]>([])
   const [fakt,      setFakt]      = useState<Fakt[]>([])
   const [loading,   setLoading]   = useState(true)
@@ -214,12 +211,13 @@ export default function HostingPage() {
     const db = createClient()
     const [z, k, s, f] = await Promise.all([
       db.from("zakaznici").select("id, jmeno, prijmeni, firma, projekty").order("prijmeni"),
-      db.from("george_kategorie").select("id, name, sazba, sort_order").eq("rocni", true).order("sort_order"),
+      db.from("george_kategorie").select("id, name, sazba, sort_order, rocni").order("sort_order"),
       db.from("george_hosting").select("*").order("web").order("id"),
       db.from("george_hosting_fakturace").select("*"),
     ])
     setZakaznici(z.data ?? [])
-    setKategorie(k.data ?? [])
+    setKategorie((k.data ?? []).filter(x => x.rocni))
+    setVsechnyKat(new Map((k.data ?? []).map(x => [x.id, x as Kat])))
     setSluzby((s.data ?? []) as Sluzba[])
     setFakt((f.data ?? []) as Fakt[])
     setLoading(false)
@@ -228,7 +226,6 @@ export default function HostingPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { nacti() }, [nacti])
 
-  const katMap  = useMemo(() => new Map(kategorie.map(k => [k.id, k])), [kategorie])
   const zakMap  = useMemo(() => new Map(zakaznici.map(z => [z.id, z])), [zakaznici])
   const faktMap = useMemo(() => {
     const m = new Map<number, Fakt>()
@@ -236,15 +233,12 @@ export default function HostingPage() {
     return m
   }, [fakt, rok])
 
-  // Kategorie může být i neroční (zůstala z dřívějška) — název dohledáme zvlášť
-  const [nazvyKat, setNazvyKat] = useState<Map<number, string>>(new Map())
-  useEffect(() => {
-    const chybi = [...new Set(sluzby.map(s => s.kategorie_id))].filter(id => !katMap.has(id))
-    if (!chybi.length) return
-    createClient().from("george_kategorie").select("id, name").in("id", chybi)
-      .then(({ data }) => setNazvyKat(new Map((data ?? []).map(k => [k.id, k.name]))))
-  }, [sluzby, katMap])
-  const nazevSluzby = (id: number) => katMap.get(id)?.name ?? nazvyKat.get(id) ?? "—"
+  const nazevSluzby = (id: number) => vsechnyKat.get(id)?.name ?? "—"
+  // Efektivní cena nevyfakturované služby: vlastní cena, jinak ceník × kvóta
+  const efektivniCena = (s: Sluzba) =>
+    s.cena_rok != null ? Number(s.cena_rok) : cenaZCeniku(vsechnyKat.get(s.kategorie_id)?.sazba ?? 0, s.kvota_gb != null ? Number(s.kvota_gb) : null)
+  // Cena v právě zobrazeném roce: vyfakturované je zmražené na faktuře, ostatní podle ceníku
+  const cenaRoku = (s: Sluzba) => faktMap.get(s.id)?.cena != null ? Number(faktMap.get(s.id)!.cena) : efektivniCena(s)
 
   // Seskupení podle zákazníka
   const skupiny = useMemo(() => {
@@ -275,17 +269,17 @@ export default function HostingPage() {
   }, [sluzby, zakMap, hledat])
 
   const aktivni      = sluzby.filter(s => s.stav === "ok")
-  const rocniTrzba   = aktivni.reduce((a, s) => a + Number(s.cena_rok), 0)
+  const rocniTrzba   = aktivni.reduce((a, s) => a + cenaRoku(s), 0)
   const kFakturaci   = aktivni.filter(s => s.zakaznik_id != null && !faktMap.has(s.id))
-  const kFakturaciKc = kFakturaci.reduce((a, s) => a + Number(s.cena_rok), 0)
+  const kFakturaciKc = kFakturaci.reduce((a, s) => a + cenaRoku(s), 0)
   const pocetZak     = new Set(sluzby.filter(s => s.zakaznik_id != null).map(s => s.zakaznik_id)).size
   const pocetBez     = sluzby.filter(s => s.zakaznik_id == null).length
 
   async function vyfakturovat(zid: number) {
     const zak = zakMap.get(zid)
-    const radky = aktivni.filter(s => s.zakaznik_id === zid && !faktMap.has(s.id) && Number(s.cena_rok) > 0)
+    const radky = aktivni.filter(s => s.zakaznik_id === zid && !faktMap.has(s.id) && cenaRoku(s) > 0)
     if (!zak || !radky.length) return
-    const suma = radky.reduce((a, s) => a + Number(s.cena_rok), 0)
+    const suma = radky.reduce((a, s) => a + cenaRoku(s), 0)
     if (!window.confirm(`Vystavit fakturu pro ${zakLabel(zak)} za rok ${rok}?\n\n${radky.length} služeb, celkem ${fKc(suma)}.`)) return
     setBusy(zid); setZprava(null)
     try {
@@ -407,9 +401,9 @@ export default function HostingPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {skupiny.map(({ zid, zak, rows }) => {
               const akt        = rows.filter(r => r.stav === "ok")
-              const rocni      = akt.reduce((a, r) => a + Number(r.cena_rok), 0)
-              const nevyfakt   = akt.filter(r => !faktMap.has(r.id) && Number(r.cena_rok) > 0)
-              const nevyfaktKc = nevyfakt.reduce((a, r) => a + Number(r.cena_rok), 0)
+              const rocni      = akt.reduce((a, r) => a + cenaRoku(r), 0)
+              const nevyfakt   = akt.filter(r => !faktMap.has(r.id) && cenaRoku(r) > 0)
+              const nevyfaktKc = nevyfakt.reduce((a, r) => a + cenaRoku(r), 0)
               return (
                 <section key={zid} style={{ background: "white", borderRadius: 14, overflow: "hidden", border: "1px solid var(--line)", boxShadow: "var(--shadow-1)" }}>
                   <div style={{ background: "#111", color: "white", padding: "11px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -446,7 +440,10 @@ export default function HostingPage() {
                           title={d == null ? "" : d < 0 ? "Doména expirovala" : ""}>
                           {s.expirace ? fDatum(s.expirace) : <span style={{ fontSize: 12, color: "#d1d5db" }}>—</span>}
                         </div>
-                        <div style={{ fontWeight: 700, fontSize: 14, textAlign: "right" }}>{fKc(Number(s.cena_rok))}</div>
+                        <div style={{ fontWeight: 700, fontSize: 14, textAlign: "right" }}
+                          title={f ? "Cena zmražená na faktuře" : s.cena_rok != null ? "Vlastní pevná cena (neřídí se ceníkem)" : "Cena podle ceníku"}>
+                          {fKc(cenaRoku(s))}{!f && s.cena_rok != null && <span style={{ color: "#f59e0b", marginLeft: 3 }}>•</span>}
+                        </div>
                         <div style={{ textAlign: "center" }}>
                           {f ? (
                             <button onClick={() => zrusitFakturu(f)} disabled={busy === -s.id} title={f.sf_faktura_id ? "Kliknutím fakturu zrušíš" : "Kliknutím označení odebereš"} style={{

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const { data: sluzby } = await sb
       .from("george_hosting")
-      .select("id, web, cena_rok, kvota_gb, kategorie_id, stav, george_kategorie(name)")
+      .select("id, web, cena_rok, kvota_gb, kategorie_id, stav, george_kategorie(name, sazba)")
       .eq("zakaznik_id", zakaznikId)
       .eq("stav", "ok")
       .order("web", { ascending: true })
@@ -44,7 +44,14 @@ export async function POST(req: NextRequest) {
       .eq("rok", rok)
       .in("hosting_id", sluzby.map(s => s.id))
     const hotoveSet = new Set((hotove ?? []).map(h => h.hosting_id))
-    const k_fakturaci = sluzby.filter(s => !hotoveSet.has(s.id) && Number(s.cena_rok) > 0)
+    // Cena služby: vlastní (pevná), jinak cena z ceníku × kvóta GB
+    const cenaSluzby = (s: (typeof sluzby)[number]) => {
+      if (s.cena_rok != null) return Number(s.cena_rok)
+      const sazba = Number((s.george_kategorie as unknown as { sazba: number } | null)?.sazba ?? 0)
+      const kv = s.kvota_gb != null && Number(s.kvota_gb) > 0 ? Number(s.kvota_gb) : 1
+      return Math.round(sazba * kv * 100) / 100
+    }
+    const k_fakturaci = sluzby.filter(s => !hotoveSet.has(s.id) && cenaSluzby(s) > 0)
     if (!k_fakturaci.length) {
       return NextResponse.json({ ok: false, error: `Všechny služby jsou za rok ${rok} už vyfakturované` }, { status: 409 })
     }
@@ -56,7 +63,7 @@ export async function POST(req: NextRequest) {
       return {
         nazev:      web || katJmeno + kvota,
         popis:      web ? katJmeno + kvota : undefined,
-        unit_price: Number(s.cena_rok),
+        unit_price: cenaSluzby(s),
         quantity:   1,
         unit:       "rok",
       }
@@ -85,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     const { error: fErr } = await sb.from("george_hosting_fakturace").insert(
       k_fakturaci.map(s => ({
-        hosting_id: s.id, rok, cena: Number(s.cena_rok),
+        hosting_id: s.id, rok, cena: cenaSluzby(s),
         sf_faktura_id: faktura.id, sf_faktura_no: faktura.invoice_no,
       })),
     )
