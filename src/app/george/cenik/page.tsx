@@ -221,7 +221,7 @@ function Modal({
         {typ === "sluzba" && (
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 13, color: "var(--ink-2)", cursor: "pointer" }}>
             <input type="checkbox" checked={rocni} onChange={e => { setRocni(e.target.checked); if (e.target.checked) { setSluzbaRezim("kus"); setJednotka("rok") } }} />
-            Roční služba (doména, hosting, e-mail…) – eviduje se ve Správě hostingu
+            Hosting (doména, hosting, e-mail…) – roční služba, eviduje se ve Správě hostingu
           </label>
         )}
 
@@ -530,7 +530,7 @@ function SkupinyModal({ skupiny, pocty, onClose, onZmena }: {
 const GRID = "minmax(240px, 1fr) 110px 120px 110px 150px 80px 104px"
 
 function typInfo(p: Polozka) {
-  if (p.rocni)              return { label: "Roční",    bg: "#fef3c7", fg: "#92400e" }
+  if (p.rocni)              return { label: "Hosting",  bg: "#fef3c7", fg: "#92400e" }
   if (p.typ === "material") return { label: "Materiál", bg: "#dbeafe", fg: "#1d4ed8" }
   return                           { label: "Služba",   bg: "#fee2e2", fg: "#b91c1c" }
 }
@@ -766,7 +766,7 @@ export default function CenikPage() {
               <input value={hledat} onChange={e => setHledat(e.target.value)} placeholder="Hledat v ceníku…" style={{ ...inp, paddingLeft: 34 }} />
             </div>
             <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 10, padding: 3 }}>
-              {([["vse", "Vše"], ["sluzba", "Služby"], ["material", "Materiál"], ["rocni", "Roční"]] as [TypFiltr, string][]).map(([v, l]) => (
+              {([["vse", "Vše"], ["sluzba", "Služby"], ["material", "Materiál"], ["rocni", "Hosting"]] as [TypFiltr, string][]).map(([v, l]) => (
                 <button key={v} onClick={() => setFTyp(v)} style={{
                   padding: "6px 13px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13,
                   background: fTyp === v ? "white" : "transparent", color: fTyp === v ? "var(--ink)" : "#6b7280",

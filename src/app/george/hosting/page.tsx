@@ -104,7 +104,7 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
           </select>
           {kategorie.length === 0 && (
             <div style={{ fontSize: 12, color: "#b45309", marginTop: 6 }}>
-              V ceníku zatím není žádná roční služba. V Ceníku přidej položku a zaškrtni „Roční služba“.
+              V ceníku zatím není žádná roční služba. V Ceníku přidej položku a zaškrtni „Hosting“.
             </div>
           )}
         </div>
@@ -336,7 +336,7 @@ export default function HostingPage() {
             </div>
             {sluzby.length === 0 && (
               <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>
-                1) V Ceníku vytvoř položky (doména, hosting, e-mail…) se zaškrtnutím „Roční služba“.<br />
+                1) V Ceníku vytvoř položky (doména, hosting, e-mail…) se zaškrtnutím „Hosting“.<br />
                 2) Tady klikni na „Přidat službu“ a přiřaď ji zákazníkovi.
               </div>
             )}
