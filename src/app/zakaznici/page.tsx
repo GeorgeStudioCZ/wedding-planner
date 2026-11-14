@@ -111,16 +111,43 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // ── CustomerForm ───────────────────────────────────────────────────────────────
 function CustomerForm({
   form, onChange, onToggleProjekt,
-  inputCls, inputStyle,
+  inputCls, inputStyle, ostatni, selfId,
 }: {
   form: FormData
   onChange: (f: FormData) => void
   onToggleProjekt: (p: string) => void
   inputCls: string
   inputStyle: React.CSSProperties
+  ostatni: Zakaznik[]          // pro kontrolu duplicit podle IČO
+  selfId?: number | null       // právě upravovaný zákazník (neporovnávat sám se sebou)
 }) {
   const s = (key: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
     onChange({ ...form, [key]: e.target.value })
+
+  const [aresLoading, setAresLoading] = useState(false)
+  const [aresMsg, setAresMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const icoNorm = form.ico.replace(/\s+/g, "")
+  const duplicita = icoNorm.length >= 6
+    ? ostatni.find(z => z.id !== selfId && (z.ico ?? "").replace(/\s+/g, "").replace(/^0+/, "") === icoNorm.replace(/^0+/, ""))
+    : undefined
+
+  async function nactiAres() {
+    setAresMsg(null)
+    if (!icoNorm) { setAresMsg({ ok: false, text: "Nejdřív vyplň IČO" }); return }
+    setAresLoading(true)
+    try {
+      const res = await fetch(`/api/ares?ico=${encodeURIComponent(icoNorm)}`)
+      const j = await res.json()
+      if (!j.ok) { setAresMsg({ ok: false, text: j.error ?? "Načtení se nepovedlo" }); return }
+      onChange({ ...form, ico: j.ico, firma: j.firma || form.firma, dic: j.dic || form.dic, ulice: j.ulice || form.ulice, mesto: j.mesto || form.mesto, psc: j.psc || form.psc })
+      setAresMsg({ ok: true, text: `Načteno z ARES: ${j.firma}${j.dic ? "" : " (bez DIČ – neplátce DPH)"}` })
+    } catch {
+      setAresMsg({ ok: false, text: "Chyba spojení s ARES" })
+    } finally {
+      setAresLoading(false)
+    }
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -141,10 +168,21 @@ function CustomerForm({
         <SectionLabel>Fakturační údaje</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <input value={form.firma} onChange={s("firma")} placeholder="Název firmy (volitelné)" className={inputCls} style={inputStyle} />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <input value={form.ico}   onChange={s("ico")}   placeholder="IČO"   className={inputCls} style={inputStyle} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
+            <input value={form.ico}   onChange={s("ico")}   placeholder="IČO"   className={inputCls} style={inputStyle}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); nactiAres() } }} inputMode="numeric" />
+            <button type="button" onClick={nactiAres} disabled={aresLoading} title="Načíst název, DIČ a adresu z ARES podle IČO" style={{
+              padding: "8px 12px", borderRadius: 9, border: "1px solid var(--line-strong)", background: "white", cursor: "pointer",
+              fontSize: 12, fontWeight: 600, color: "var(--ink-2)", whiteSpace: "nowrap", opacity: aresLoading ? .6 : 1,
+            }}>{aresLoading ? "Načítám…" : "Načíst z ARES"}</button>
             <input value={form.dic}   onChange={s("dic")}   placeholder="DIČ"   className={inputCls} style={inputStyle} />
           </div>
+          {aresMsg && <div style={{ fontSize: 12, color: aresMsg.ok ? "#047857" : "#dc2626" }}>{aresMsg.text}</div>}
+          {duplicita && (
+            <div style={{ fontSize: 12, color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "6px 10px" }}>
+              Zákazník s tímto IČO už existuje: <b>{displayName(duplicita)}</b>
+            </div>
+          )}
           <input value={form.ulice}   onChange={s("ulice")}  placeholder="Ulice a č.p."  className={inputCls} style={inputStyle} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
             <input value={form.mesto} onChange={s("mesto")}  placeholder="Město" className={inputCls} style={inputStyle} />
@@ -374,6 +412,8 @@ function ZakazníciInner() {
                       onToggleProjekt={p => toggleProjekt(p, editForm, setEditForm)}
                       inputCls={inputCls}
                       inputStyle={inputStyle}
+                      ostatni={zakaznici}
+                      selfId={editId}
                     />
                     <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                       <button onClick={ulozEdit} disabled={ukladam} style={{
@@ -527,6 +567,7 @@ function ZakazníciInner() {
                 onToggleProjekt={p => toggleProjekt(p, novyForm, setNovyForm)}
                 inputCls={inputCls}
                 inputStyle={inputStyle}
+                ostatni={zakaznici}
               />
             </div>
 
