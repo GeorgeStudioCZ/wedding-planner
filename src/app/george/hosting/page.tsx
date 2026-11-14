@@ -9,13 +9,14 @@ type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma: string | n
 type Kat      = { id: number; name: string; sazba: number; sort_order: number }
 type Sluzba = {
   id: number
-  zakaznik_id: number
+  zakaznik_id: number | null
   kategorie_id: number
   web: string
   kvota_gb: number | null
   cena_rok: number
   stav: "ok" | "pozastaveno" | "zruseno"
   poznamka: string | null
+  expirace: string | null
 }
 type Fakt = { id: number; hosting_id: number; rok: number; cena: number; sf_faktura_id: number | null; sf_faktura_no: string | null }
 
@@ -26,6 +27,14 @@ const STAVY: { v: Sluzba["stav"]; label: string; bg: string; fg: string }[] = [
 ]
 
 function zakLabel(z: Zakaznik) { return z.firma?.trim() || `${z.jmeno} ${z.prijmeni}`.trim() || `#${z.id}` }
+// Zbývající dny do expirace (záporné = po expiraci)
+function dnyDo(iso: string | null) {
+  if (!iso) return null
+  const dnes = new Date(); dnes.setHours(0, 0, 0, 0)
+  return Math.round((new Date(iso + "T00:00:00").getTime() - dnes.getTime()) / 86_400_000)
+}
+function fDatum(iso: string) { const [y, m, d] = iso.split("-"); return `${Number(d)}. ${Number(m)}. ${y}` }
+
 function fKc(n: number) { return Math.round(n).toLocaleString("cs-CZ") + " Kč" }
 function parseNum(s: string) { const v = parseFloat(s.replace(",", ".")); return isNaN(v) || v < 0 ? null : v }
 
@@ -44,13 +53,14 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
   onClose: () => void
   onSaved: () => void
 }) {
-  const [zakId,  setZakId]  = useState<string>(edit ? String(edit.zakaznik_id) : predvolenyZakaznik ? String(predvolenyZakaznik) : "")
+  const [zakId,  setZakId]  = useState<string>(edit ? (edit.zakaznik_id != null ? String(edit.zakaznik_id) : "") : predvolenyZakaznik ? String(predvolenyZakaznik) : "")
   const [katId,  setKatId]  = useState<string>(edit ? String(edit.kategorie_id) : "")
   const [web,    setWeb]    = useState(edit?.web ?? "")
   const [kvota,  setKvota]  = useState(edit?.kvota_gb != null ? String(edit.kvota_gb) : "")
   const [cena,   setCena]   = useState(edit ? String(edit.cena_rok) : "")
   const [stav,   setStav]   = useState<Sluzba["stav"]>(edit?.stav ?? "ok")
   const [pozn,   setPozn]   = useState(edit?.poznamka ?? "")
+  const [expirace, setExpirace] = useState(edit?.expirace ?? "")
   const [saving, setSaving] = useState(false)
   const [err,    setErr]    = useState("")
 
@@ -64,7 +74,6 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
   }
 
   async function ulozit() {
-    if (!zakId) { setErr("Vyber zákazníka"); return }
     if (!katId) { setErr("Vyber službu z ceníku"); return }
     const cenaNum = parseNum(cena)
     if (cenaNum === null) { setErr("Zadej platnou cenu za rok"); return }
@@ -72,7 +81,7 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
     if (kvota.trim() && kvotaNum === null) { setErr("Kvóta musí být číslo"); return }
     setErr(""); setSaving(true)
     const payload = {
-      zakaznik_id: Number(zakId), kategorie_id: Number(katId), web: web.trim(),
+      zakaznik_id: zakId ? Number(zakId) : null, expirace: expirace || null, kategorie_id: Number(katId), web: web.trim(),
       kvota_gb: kvotaNum, cena_rok: cenaNum, stav, poznamka: pozn.trim() || null,
     }
     const db = createClient()
@@ -92,7 +101,7 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
         <div style={{ marginBottom: 14 }}>
           <label style={lbl}>Zákazník</label>
           <select value={zakId} onChange={e => setZakId(e.target.value)} style={inp}>
-            <option value="">— vyber —</option>
+            <option value="">— bez zákazníka (přiřadím později) —</option>
             {zakaznici.map(z => <option key={z.id} value={z.id}>{zakLabel(z)}</option>)}
           </select>
         </div>
@@ -121,6 +130,10 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
             <label style={lbl}>Kvóta (GB)</label>
             <input value={kvota} onChange={e => setKvota(e.target.value)} inputMode="decimal" placeholder="volitelné" style={inp} />
           </div>
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={lbl}>Expirace (platnost do)</label>
+          <input type="date" value={expirace} onChange={e => setExpirace(e.target.value)} style={inp} />
         </div>
         <div style={{ marginBottom: 14 }}>
           <label style={lbl}>Stav</label>
@@ -206,26 +219,33 @@ export default function HostingPage() {
   // Seskupení podle zákazníka
   const skupiny = useMemo(() => {
     const q = hledat.trim().toLowerCase()
+    // Klíč 0 = služby bez přiřazeného zákazníka
     const byZak = new Map<number, Sluzba[]>()
     for (const s of sluzby) {
-      const arr = byZak.get(s.zakaznik_id) ?? []
-      arr.push(s); byZak.set(s.zakaznik_id, arr)
+      const k = s.zakaznik_id ?? 0
+      const arr = byZak.get(k) ?? []
+      arr.push(s); byZak.set(k, arr)
     }
     return [...byZak.entries()]
-      .map(([zid, rows]) => ({ zid, zak: zakMap.get(zid), rows }))
-      .filter(g => g.zak)
+      .map(([zid, rows]) => ({
+        zid, zak: zid ? zakMap.get(zid) : undefined,
+        // nepřiřazené řadíme podle expirace, ostatní podle webu
+        rows: zid ? rows : [...rows].sort((a, b) => (a.expirace ?? "9999").localeCompare(b.expirace ?? "9999")),
+      }))
+      .filter(g => g.zid === 0 || g.zak)
       .filter(g => {
         if (!q) return true
-        return zakLabel(g.zak!).toLowerCase().includes(q) || g.rows.some(r => r.web.toLowerCase().includes(q))
+        return (g.zak ? zakLabel(g.zak).toLowerCase().includes(q) : "nepřiřazené".includes(q)) || g.rows.some(r => r.web.toLowerCase().includes(q))
       })
-      .sort((a, b) => zakLabel(a.zak!).localeCompare(zakLabel(b.zak!), "cs"))
+      .sort((a, b) => a.zid === 0 ? -1 : b.zid === 0 ? 1 : zakLabel(a.zak!).localeCompare(zakLabel(b.zak!), "cs"))
   }, [sluzby, zakMap, hledat])
 
   const aktivni      = sluzby.filter(s => s.stav === "ok")
   const rocniTrzba   = aktivni.reduce((a, s) => a + Number(s.cena_rok), 0)
-  const kFakturaci   = aktivni.filter(s => !faktMap.has(s.id))
+  const kFakturaci   = aktivni.filter(s => s.zakaznik_id != null && !faktMap.has(s.id))
   const kFakturaciKc = kFakturaci.reduce((a, s) => a + Number(s.cena_rok), 0)
-  const pocetZak     = new Set(sluzby.map(s => s.zakaznik_id)).size
+  const pocetZak     = new Set(sluzby.filter(s => s.zakaznik_id != null).map(s => s.zakaznik_id)).size
+  const pocetBez     = sluzby.filter(s => s.zakaznik_id == null).length
 
   async function vyfakturovat(zid: number) {
     const zak = zakMap.get(zid)
@@ -304,6 +324,7 @@ export default function HostingPage() {
         {/* Souhrn */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
           <div style={karta}><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em" }}>Zákazníků</div><div style={{ fontSize: 24, fontWeight: 700 }}>{pocetZak}</div></div>
+          {pocetBez > 0 && <div style={karta}><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em" }}>Nepřiřazených</div><div style={{ fontSize: 24, fontWeight: 700, color: "#ea580c" }}>{pocetBez}</div></div>}
           <div style={karta}><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em" }}>Aktivních služeb</div><div style={{ fontSize: 24, fontWeight: 700 }}>{aktivni.length}</div></div>
           <div style={karta}><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em" }}>Roční tržba</div><div style={{ fontSize: 24, fontWeight: 700 }}>{fKc(rocniTrzba)}</div></div>
           <div style={karta}><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em" }}>K vyfakturování {rok}</div><div style={{ fontSize: 24, fontWeight: 700, color: kFakturaciKc > 0 ? "#dc2626" : "#059669" }}>{fKc(kFakturaciKc)}</div></div>
@@ -351,9 +372,9 @@ export default function HostingPage() {
               return (
                 <section key={zid} style={{ background: "white", borderRadius: 14, overflow: "hidden", border: "1px solid var(--line)", boxShadow: "var(--shadow-1)" }}>
                   <div style={{ background: "#111", color: "white", padding: "11px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, flex: 1, minWidth: 160 }}>{zakLabel(zak!)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, flex: 1, minWidth: 160 }}>{zak ? zakLabel(zak) : "Nepřiřazené služby"}{!zak && <span style={{ fontWeight: 400, fontSize: 12.5, opacity: .7, marginLeft: 10 }}>bez zákazníka — přiřaď ho úpravou (✎)</span>}</div>
                     <div style={{ fontSize: 13, opacity: .8 }}>Ročně <b style={{ color: "white" }}>{fKc(rocni)}</b></div>
-                    {nevyfakt.length > 0 ? (
+                    {!zak ? null : nevyfakt.length > 0 ? (
                       <button onClick={() => vyfakturovat(zid)} disabled={busy === zid} style={{
                         padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 700,
                         background: "linear-gradient(135deg, var(--studio-grad-a), var(--studio-grad-b))", color: "white", opacity: busy === zid ? .6 : 1,
@@ -361,7 +382,7 @@ export default function HostingPage() {
                     ) : akt.length > 0 ? (
                       <span style={{ fontSize: 12, color: "#86efac", fontWeight: 600 }}>✓ Rok {rok} vyfakturován</span>
                     ) : null}
-                    <button onClick={() => setModal({ zakaznik: zid })} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "white", cursor: "pointer", fontSize: 12.5 }}>+ Služba</button>
+                    {zak && <button onClick={() => setModal({ zakaznik: zid })} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "white", cursor: "pointer", fontSize: 12.5 }}>+ Služba</button>}
                   </div>
 
                   {rows.map((s, i) => {
@@ -376,6 +397,20 @@ export default function HostingPage() {
                         </div>
                         <div style={{ flex: "1 1 120px", fontSize: 13.5 }}>{nazevSluzby(s.kategorie_id)}</div>
                         <div style={{ width: 60, fontSize: 13, color: "var(--muted)", textAlign: "center" }}>{s.kvota_gb != null ? `${s.kvota_gb} GB` : "—"}</div>
+                        {(() => {
+                          const d = dnyDo(s.expirace)
+                          const barva = d == null ? "#d1d5db" : d < 0 ? "#dc2626" : d <= 30 ? "#ea580c" : d <= 90 ? "#ca8a04" : "var(--ink-2)"
+                          return (
+                            <div style={{ width: 130, textAlign: "center" }} title={d == null ? "" : d < 0 ? `Expirovalo před ${-d} dny` : `Zbývá ${d} dní`}>
+                              {s.expirace ? (
+                                <>
+                                  <div style={{ fontSize: 13, fontWeight: d != null && d <= 30 ? 700 : 500, color: barva }}>{fDatum(s.expirace)}</div>
+                                  {d != null && d <= 90 && <div style={{ fontSize: 11, color: barva }}>{d < 0 ? "expirováno" : d === 0 ? "dnes" : `za ${d} dní`}</div>}
+                                </>
+                              ) : <span style={{ fontSize: 12, color: "#d1d5db" }}>—</span>}
+                            </div>
+                          )
+                        })()}
                         <div style={{ width: 84, fontWeight: 700, fontSize: 14, textAlign: "right" }}>{fKc(Number(s.cena_rok))}</div>
                         <div style={{ width: 150, textAlign: "center" }}>
                           {f ? (
@@ -383,7 +418,7 @@ export default function HostingPage() {
                               fontSize: 11.5, fontWeight: 700, padding: "3px 10px", borderRadius: 99, cursor: "pointer",
                               border: "1.5px solid #86efac", background: "#f0fdf4", color: "#166534",
                             }}>✓ {f.sf_faktura_no}</button>
-                          ) : s.stav === "ok" ? (
+                          ) : s.stav === "ok" && s.zakaznik_id != null ? (
                             <span style={{ fontSize: 11.5, color: "#9ca3af" }}>nevyfakturováno</span>
                           ) : <span style={{ fontSize: 11.5, color: "#d1d5db" }}>—</span>}
                         </div>
