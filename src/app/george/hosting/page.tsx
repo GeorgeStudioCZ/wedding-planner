@@ -289,7 +289,7 @@ export default function HostingPage() {
         />
       )}
 
-      <div style={{ padding: 28, maxWidth: 1000 }}>
+      <div style={{ padding: 28 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--ink)", margin: 0 }}>Správa hostingu</h1>
