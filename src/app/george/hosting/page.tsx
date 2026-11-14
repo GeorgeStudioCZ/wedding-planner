@@ -14,17 +14,30 @@ type Sluzba = {
   web: string
   kvota_gb: number | null
   cena_rok: number
-  stav: "ok" | "pozastaveno" | "zruseno"
+  stav: string
+  typ: TypSluzby
   poznamka: string | null
   expirace: string | null
 }
 type Fakt = { id: number; hosting_id: number; rok: number; cena: number; sf_faktura_id: number | null; sf_faktura_no: string | null }
 
-const STAVY: { v: Sluzba["stav"]; label: string; bg: string; fg: string }[] = [
-  { v: "ok",          label: "OK",          bg: "#dcfce7", fg: "#166534" },
-  { v: "pozastaveno", label: "Pozastaveno", bg: "#fef9c3", fg: "#854d0e" },
-  { v: "zruseno",     label: "Zrušeno",     bg: "#f3f4f6", fg: "#6b7280" },
+type TypSluzby = "domena" | "hosting" | "redirect" | "email"
+const TYPY: { v: TypSluzby; label: string; bg: string; fg: string }[] = [
+  { v: "domena",   label: "Doména",   bg: "#dbeafe", fg: "#1d4ed8" },
+  { v: "hosting",  label: "Hosting",  bg: "#ede9fe", fg: "#6d28d9" },
+  { v: "redirect", label: "Redirect", bg: "#fef3c7", fg: "#92400e" },
+  { v: "email",    label: "E-mail",   bg: "#dcfce7", fg: "#166534" },
 ]
+// Typ podle názvu položky z ceníku (předvyplní se při výběru služby)
+function typPodleNazvu(nazev: string): TypSluzby {
+  const n = nazev.toLowerCase()
+  if (n.includes("e-mail") || n.includes("email")) return "email"
+  if (n.includes("redirect")) return "redirect"
+  if (n.includes("hosting")) return "hosting"
+  return "domena"
+}
+// Sloupce tabulky služeb (tabulkové zarovnání, název služby se nezalamuje)
+const GRID = "92px minmax(190px, 1.2fr) minmax(250px, 1.3fr) 64px 118px 96px 150px 76px"
 
 function zakLabel(z: Zakaznik) { return z.firma?.trim() || `${z.jmeno} ${z.prijmeni}`.trim() || `#${z.id}` }
 // Zbývající dny do expirace (záporné = po expiraci)
@@ -58,7 +71,7 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
   const [web,    setWeb]    = useState(edit?.web ?? "")
   const [kvota,  setKvota]  = useState(edit?.kvota_gb != null ? String(edit.kvota_gb) : "")
   const [cena,   setCena]   = useState(edit ? String(edit.cena_rok) : "")
-  const [stav,   setStav]   = useState<Sluzba["stav"]>(edit?.stav ?? "ok")
+  const [typ,    setTyp]    = useState<TypSluzby>(edit?.typ ?? "domena")
   const [pozn,   setPozn]   = useState(edit?.poznamka ?? "")
   const [expirace, setExpirace] = useState(edit?.expirace ?? "")
   const [saving, setSaving] = useState(false)
@@ -74,6 +87,8 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
   }
   function zmenaKategorie(id: string) {
     setKatId(id)
+    const k = kategorie.find(x => String(x.id) === id)
+    if (k) setTyp(typPodleNazvu(k.name))
     // Při zakládání vždy; při úpravě jen pokud je zadaná kvóta (jinak by se přepsala ručně upravená cena)
     if (!edit || kvota.trim()) prepocti(id, kvota)
   }
@@ -93,7 +108,7 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
     setErr(""); setSaving(true)
     const payload = {
       zakaznik_id: zakId ? Number(zakId) : null, expirace: expirace || null, kategorie_id: Number(katId), web: web.trim(),
-      kvota_gb: kvotaNum, cena_rok: cenaNum, stav, poznamka: pozn.trim() || null,
+      kvota_gb: kvotaNum, cena_rok: cenaNum, typ, poznamka: pozn.trim() || null,
     }
     const db = createClient()
     const { error } = edit
@@ -152,18 +167,17 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
           <input type="date" value={expirace} onChange={e => setExpirace(e.target.value)} style={inp} />
         </div>
         <div style={{ marginBottom: 14 }}>
-          <label style={lbl}>Stav</label>
+          <label style={lbl}>Typ služby</label>
           <div style={{ display: "flex", gap: 8 }}>
-            {STAVY.map(s => (
-              <button key={s.v} onClick={() => setStav(s.v)} style={{
+            {TYPY.map(t => (
+              <button key={t.v} type="button" onClick={() => setTyp(t.v)} style={{
                 flex: 1, padding: "8px 6px", borderRadius: 9, cursor: "pointer", fontSize: 13,
-                border: "1.5px solid", borderColor: stav === s.v ? "#6366f1" : "#e5e7eb",
-                background: stav === s.v ? "#eef2ff" : "white", color: stav === s.v ? "#4338ca" : "#6b7280",
-                fontWeight: stav === s.v ? 700 : 400,
-              }}>{s.label}</button>
+                border: "1.5px solid", borderColor: typ === t.v ? t.fg : "#e5e7eb",
+                background: typ === t.v ? t.bg : "white", color: typ === t.v ? t.fg : "#6b7280",
+                fontWeight: typ === t.v ? 700 : 400,
+              }}>{t.label}</button>
             ))}
           </div>
-          <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 6 }}>Fakturují se jen služby ve stavu OK.</div>
         </div>
         <div style={{ marginBottom: 18 }}>
           <label style={lbl}>Poznámka</label>
@@ -304,7 +318,7 @@ export default function HostingPage() {
 
   async function smazat(s: Sluzba) {
     const mela = fakt.some(f => f.hosting_id === s.id)
-    if (!window.confirm(`Smazat službu „${nazevSluzby(s.kategorie_id)}${s.web ? " – " + s.web : ""}“?${mela ? "\n\nSmaže se i historie fakturace této služby (faktury ve SuperFaktuře zůstanou). Pokud službu jen ukončuješ, nastav raději stav Zrušeno." : ""}`)) return
+    if (!window.confirm(`Smazat službu „${nazevSluzby(s.kategorie_id)}${s.web ? " – " + s.web : ""}“?${mela ? "\n\nSmaže se i historie fakturace této služby (faktury ve SuperFaktuře zůstanou)." : ""}`)) return
     const { error } = await createClient().from("george_hosting").delete().eq("id", s.id)
     if (error) { setZprava({ ok: false, text: "Smazání se nepovedlo: " + error.message }); return }
     await nacti()
@@ -401,50 +415,46 @@ export default function HostingPage() {
                     {zak && <button onClick={() => setModal({ zakaznik: zid })} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.3)", background: "transparent", color: "white", cursor: "pointer", fontSize: 12.5 }}>+ Služba</button>}
                   </div>
 
+                  <div style={{ overflowX: "auto" }}>
+                    <div style={{ minWidth: 1010 }}>
                   {rows.map((s, i) => {
-                    const st = STAVY.find(x => x.v === s.stav)!
+                    const t  = TYPY.find(x => x.v === s.typ) ?? TYPY[0]
                     const f  = faktMap.get(s.id)
+                    const d  = dnyDo(s.expirace)
+                    const barva = d == null ? "#d1d5db" : d < 0 ? "#dc2626" : d <= 30 ? "#ea580c" : d <= 90 ? "#ca8a04" : "var(--ink-2)"
                     return (
-                      <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px", borderTop: i === 0 ? "none" : "1px solid #f3f4f6", flexWrap: "wrap", opacity: s.stav === "zruseno" ? .55 : 1 }}>
-                        <span style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 99, background: st.bg, color: st.fg, minWidth: 28, textAlign: "center" }}>{st.label}</span>
-                        <div style={{ flex: "2 1 220px", minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, fontSize: 14, color: "#2563eb", overflow: "hidden", textOverflow: "ellipsis" }}>{s.web || "—"}</div>
-                          {s.poznamka && <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{s.poznamka}</div>}
+                      <div key={s.id} style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", gap: 12, padding: "10px 18px", borderTop: i === 0 ? "none" : "1px solid #f3f4f6" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 99, background: t.bg, color: t.fg, textAlign: "center" }}>{t.label}</span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 14, color: "#2563eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={s.web}>{s.web || "—"}</div>
+                          {s.poznamka && <div style={{ fontSize: 11.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.poznamka}</div>}
                         </div>
-                        <div style={{ flex: "1 1 120px", fontSize: 13.5 }}>{nazevSluzby(s.kategorie_id)}</div>
-                        <div style={{ width: 60, fontSize: 13, color: "var(--muted)", textAlign: "center" }}>{s.kvota_gb != null ? `${s.kvota_gb} GB` : "—"}</div>
-                        {(() => {
-                          const d = dnyDo(s.expirace)
-                          const barva = d == null ? "#d1d5db" : d < 0 ? "#dc2626" : d <= 30 ? "#ea580c" : d <= 90 ? "#ca8a04" : "var(--ink-2)"
-                          return (
-                            <div style={{ width: 130, textAlign: "center" }} title={d == null ? "" : d < 0 ? `Expirovalo před ${-d} dny` : `Zbývá ${d} dní`}>
-                              {s.expirace ? (
-                                <>
-                                  <div style={{ fontSize: 13, fontWeight: d != null && d <= 30 ? 700 : 500, color: barva }}>{fDatum(s.expirace)}</div>
-                                  {d != null && d <= 90 && <div style={{ fontSize: 11, color: barva }}>{d < 0 ? "expirováno" : d === 0 ? "dnes" : `za ${d} dní`}</div>}
-                                </>
-                              ) : <span style={{ fontSize: 12, color: "#d1d5db" }}>—</span>}
-                            </div>
-                          )
-                        })()}
-                        <div style={{ width: 84, fontWeight: 700, fontSize: 14, textAlign: "right" }}>{fKc(Number(s.cena_rok))}</div>
-                        <div style={{ width: 150, textAlign: "center" }}>
+                        <div style={{ fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={nazevSluzby(s.kategorie_id)}>{nazevSluzby(s.kategorie_id)}</div>
+                        <div style={{ fontSize: 13, color: "var(--muted)", textAlign: "center" }}>{s.kvota_gb != null ? `${s.kvota_gb} GB` : "—"}</div>
+                        <div style={{ textAlign: "center", fontSize: 13, fontWeight: d != null && d <= 30 ? 700 : 500, color: barva }}
+                          title={d == null ? "" : d < 0 ? "Doména expirovala" : ""}>
+                          {s.expirace ? fDatum(s.expirace) : <span style={{ fontSize: 12, color: "#d1d5db" }}>—</span>}
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: 14, textAlign: "right" }}>{fKc(Number(s.cena_rok))}</div>
+                        <div style={{ textAlign: "center" }}>
                           {f ? (
                             <button onClick={() => zrusitFakturu(f)} disabled={busy === -s.id} title="Kliknutím fakturu zrušíš" style={{
                               fontSize: 11.5, fontWeight: 700, padding: "3px 10px", borderRadius: 99, cursor: "pointer",
                               border: "1.5px solid #86efac", background: "#f0fdf4", color: "#166534",
                             }}>✓ {f.sf_faktura_no}</button>
-                          ) : s.stav === "ok" && s.zakaznik_id != null ? (
+                          ) : s.zakaznik_id != null ? (
                             <span style={{ fontSize: 11.5, color: "#9ca3af" }}>nevyfakturováno</span>
                           ) : <span style={{ fontSize: 11.5, color: "#d1d5db" }}>—</span>}
                         </div>
-                        <div style={{ display: "flex", gap: 2 }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
                           <button onClick={() => setModal({ edit: s })} title="Upravit" style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: "var(--muted)" }}>✎</button>
                           <button onClick={() => smazat(s)} title="Smazat" style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: "var(--muted)" }}>🗑</button>
                         </div>
                       </div>
                     )
                   })}
+                    </div>
+                  </div>
                 </section>
               )
             })}
