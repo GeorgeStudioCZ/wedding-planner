@@ -5,7 +5,7 @@ import AppShell from "@/components/AppShell"
 import { createClient } from "@/lib/supabase-browser"
 
 // ── Typy ──────────────────────────────────────────────────────────────────────
-type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma: string | null }
+type Zakaznik = { id: number; jmeno: string; prijmeni: string; firma: string | null; projekty?: string[] | null }
 type Kat      = { id: number; name: string; sazba: number; sort_order: number }
 type Sluzba = {
   id: number
@@ -170,7 +170,7 @@ export default function HostingPage() {
   const nacti = useCallback(async () => {
     const db = createClient()
     const [z, k, s, f] = await Promise.all([
-      db.from("zakaznici").select("id, jmeno, prijmeni, firma").order("prijmeni"),
+      db.from("zakaznici").select("id, jmeno, prijmeni, firma, projekty").order("prijmeni"),
       db.from("george_kategorie").select("id, name, sazba, sort_order").eq("rocni", true).order("sort_order"),
       db.from("george_hosting").select("*").order("web").order("id"),
       db.from("george_hosting_fakturace").select("*"),
@@ -280,7 +280,9 @@ export default function HostingPage() {
     <AppShell module="studio">
       {modal && (
         <SluzbaModal
-          edit={modal.edit} zakaznici={zakaznici} kategorie={kategorie}
+          edit={modal.edit} kategorie={kategorie}
+          // Ve výběru jen zákazníci studia (+ aktuální zákazník při úpravě)
+          zakaznici={zakaznici.filter(z => z.projekty?.includes("Studio") || z.id === modal.edit?.zakaznik_id || z.id === modal.zakaznik)}
           predvolenyZakaznik={modal.zakaznik ?? null}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); nacti() }}
