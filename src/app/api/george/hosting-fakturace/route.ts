@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const { data: sluzby } = await sb
       .from("george_hosting")
-      .select("id, web, cena_rok, kategorie_id, stav, george_kategorie(name)")
+      .select("id, web, cena_rok, kvota_gb, kategorie_id, stav, george_kategorie(name)")
       .eq("zakaznik_id", zakaznikId)
       .eq("stav", "ok")
       .order("web", { ascending: true })
@@ -52,9 +52,10 @@ export async function POST(req: NextRequest) {
     const polozky: SFPolozkaGeorge[] = k_fakturaci.map(s => {
       const katJmeno = (s.george_kategorie as unknown as { name: string } | null)?.name ?? "Služba"
       const web = (s.web ?? "").trim()
+      const kvota = s.kvota_gb != null ? ` – ${Number(s.kvota_gb)} GB` : ""
       return {
-        nazev:      web || katJmeno,
-        popis:      web ? katJmeno : undefined,
+        nazev:      web || katJmeno + kvota,
+        popis:      web ? katJmeno + kvota : undefined,
         unit_price: Number(s.cena_rok),
         quantity:   1,
         unit:       "rok",

@@ -64,14 +64,25 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
   const [saving, setSaving] = useState(false)
   const [err,    setErr]    = useState("")
 
+  // Cena za rok = cena z ceníku × kvóta v GB (bez kvóty = 1×). Po přepočtu ji jde ručně přepsat.
+  function prepocti(katIdStr: string, kvotaStr: string) {
+    const k = kategorie.find(x => String(x.id) === katIdStr)
+    if (!k) return
+    const kv = kvotaStr.trim() ? parseNum(kvotaStr) : null
+    const nasobek = kv != null && kv > 0 ? kv : 1
+    setCena(String(Math.round(k.sazba * nasobek * 100) / 100))
+  }
   function zmenaKategorie(id: string) {
     setKatId(id)
-    // Cena z ceníku se předvyplní jen při zakládání — dá se přepsat
-    if (!edit) {
-      const k = kategorie.find(x => String(x.id) === id)
-      if (k) setCena(String(k.sazba))
-    }
+    // Při zakládání vždy; při úpravě jen pokud je zadaná kvóta (jinak by se přepsala ručně upravená cena)
+    if (!edit || kvota.trim()) prepocti(id, kvota)
   }
+  function zmenaKvoty(v: string) {
+    setKvota(v)
+    prepocti(katId, v)
+  }
+  const katAkt   = kategorie.find(x => String(x.id) === katId)
+  const kvotaNum = kvota.trim() ? parseNum(kvota) : null
 
   async function ulozit() {
     if (!katId) { setErr("Vyber službu z ceníku"); return }
@@ -128,9 +139,14 @@ function SluzbaModal({ edit, zakaznici, kategorie, predvolenyZakaznik, onClose, 
           </div>
           <div style={{ flex: 1 }}>
             <label style={lbl}>Kvóta (GB)</label>
-            <input value={kvota} onChange={e => setKvota(e.target.value)} inputMode="decimal" placeholder="volitelné" style={inp} />
+            <input value={kvota} onChange={e => zmenaKvoty(e.target.value)} inputMode="decimal" placeholder="volitelné" style={inp} />
           </div>
         </div>
+        {katAkt && kvotaNum != null && kvotaNum > 0 && (
+          <div style={{ fontSize: 12, color: "var(--muted)", margin: "-6px 0 14px" }}>
+            Cena z ceníku {fKc(katAkt.sazba)} × {kvotaNum} GB = <b>{fKc(katAkt.sazba * kvotaNum)}</b> (hodnotu v poli Cena můžeš přepsat)
+          </div>
+        )}
         <div style={{ marginBottom: 14 }}>
           <label style={lbl}>Expirace (platnost do)</label>
           <input type="date" value={expirace} onChange={e => setExpirace(e.target.value)} style={inp} />
