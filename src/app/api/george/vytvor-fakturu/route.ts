@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       const cena = material ? (z.cena_prodej_kus ?? kat?.sazba ?? 0) : (z.sazba_snapshot ?? kat?.sazba ?? 0)
       let mnozstvi = 0
       if (material) mnozstvi = z.pocet ?? 0
-      else if (z.end_at) mnozstvi = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
+      else if (z.end_at) mnozstvi = Math.round((new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 36_000) / 100   // hodiny na 2 místa, jako v reportu
       if (mnozstvi <= 0 || cena <= 0) continue
       const nazev = (z.nazev?.trim() || kat?.name || (material ? "Materiál" : "Práce"))
       const popis = kat?.name && kat.name !== nazev ? kat.name : ""

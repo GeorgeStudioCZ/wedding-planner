@@ -87,12 +87,15 @@ function cenaKusZaznamu(z: Zaznam, kat: Kategorie): number {
 
 function calcEarnings(z: Zaznam, kategorie: Kategorie[]) {
   const kat = kategorie.find(k => k.id === z.kategorie_id)
-  if (!kat) return 0
-  if (z.pocet != null) return Math.round(z.pocet * cenaKusZaznamu(z, kat))   // materiál
+  // Materiál: cena je uložená u záznamu, nezávisí na ceníku (ani po jeho smazání)
+  if (z.pocet != null) return Math.round(z.pocet * (z.cena_prodej_kus ?? kat?.sazba ?? 0))
   if (!z.end_at) return 0
-  const hours = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
   // Zmražená sazba má přednost: změna ceníku nesmí přepočítat starý záznam
-  return Math.round(hours * (z.sazba_snapshot ?? kat.sazba))
+  const sazba = z.sazba_snapshot ?? kat?.sazba
+  if (sazba == null) return 0
+  // Fakturované hodiny jsou zaokrouhlené na 2 desetinná místa (stejně jako na faktuře)
+  const hours = Math.round((new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 36_000) / 100
+  return Math.round(hours * sazba)
 }
 
 // ── Inline SVG icons ──────────────────────────────────────────────────────────

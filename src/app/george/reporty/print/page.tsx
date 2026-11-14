@@ -26,7 +26,8 @@ function isoDate(iso: string) { return iso.slice(0, 10) }
 function calcCena(z: Zaznam, kat: Kategorie | undefined): number {
   if (z.pocet != null) return Math.round((z.pocet * (z.cena_prodej_kus ?? kat?.sazba ?? 0)) * 100) / 100
   if (!z.end_at || !kat) return 0
-  const hours = (new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 3_600_000
+  // Fakturované hodiny jsou zaokrouhlené na 2 desetinná místa (stejně jako na faktuře)
+  const hours = Math.round((new Date(z.end_at).getTime() - new Date(z.start_at).getTime()) / 36_000) / 100
   return Math.round(hours * (z.sazba_snapshot ?? kat.sazba) * 100) / 100
 }
 
