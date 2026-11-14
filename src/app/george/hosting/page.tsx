@@ -307,7 +307,14 @@ export default function HostingPage() {
   }
 
   async function zrusitFakturu(f: Fakt) {
-    if (!f.sf_faktura_id) return
+    // Ručně označeno jako vyfakturované (např. zaplaceno staré firmě) — jen se odebere značka, SuperFaktura se nemění
+    if (!f.sf_faktura_id) {
+      if (!window.confirm(`Odebrat označení „${f.sf_faktura_no}“ u této služby za rok ${f.rok}?\n\nSlužba se vrátí mezi nevyfakturované.`)) return
+      const { error } = await createClient().from("george_hosting_fakturace").delete().eq("id", f.id)
+      setZprava(error ? { ok: false, text: "Odebrání se nepovedlo: " + error.message } : { ok: true, text: "Označení odebráno." })
+      await nacti()
+      return
+    }
     if (!window.confirm(`Zrušit fakturu ${f.sf_faktura_no}?\n\nFaktura se smaže v SuperFaktuře a všechny její služby se vrátí mezi nevyfakturované.`)) return
     setBusy(-f.hosting_id); setZprava(null)
     const res = await fetch("/api/george/hosting-fakturace/zrus", {
@@ -442,7 +449,7 @@ export default function HostingPage() {
                         <div style={{ fontWeight: 700, fontSize: 14, textAlign: "right" }}>{fKc(Number(s.cena_rok))}</div>
                         <div style={{ textAlign: "center" }}>
                           {f ? (
-                            <button onClick={() => zrusitFakturu(f)} disabled={busy === -s.id} title="Kliknutím fakturu zrušíš" style={{
+                            <button onClick={() => zrusitFakturu(f)} disabled={busy === -s.id} title={f.sf_faktura_id ? "Kliknutím fakturu zrušíš" : "Kliknutím označení odebereš"} style={{
                               fontSize: 11.5, fontWeight: 700, padding: "3px 10px", borderRadius: 99, cursor: "pointer",
                               border: "1.5px solid #86efac", background: "#f0fdf4", color: "#166534",
                             }}>✓ {f.sf_faktura_no}</button>
