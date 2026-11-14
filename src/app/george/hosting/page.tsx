@@ -24,7 +24,7 @@ type Fakt = { id: number; hosting_id: number; rok: number; cena: number; sf_fakt
 type TypSluzby = "domena" | "hosting" | "redirect" | "email"
 const TYPY: { v: TypSluzby; label: string; bg: string; fg: string }[] = [
   { v: "domena",   label: "Doména",   bg: "#dbeafe", fg: "#1d4ed8" },
-  { v: "hosting",  label: "Hosting",  bg: "#ede9fe", fg: "#6d28d9" },
+  { v: "hosting",  label: "Hosting",  bg: "#fce7f3", fg: "#be185d" },
   { v: "redirect", label: "Redirect", bg: "#fef3c7", fg: "#92400e" },
   { v: "email",    label: "E-mail",   bg: "#dcfce7", fg: "#166534" },
 ]
