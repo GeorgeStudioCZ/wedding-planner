@@ -342,6 +342,7 @@ export async function vytvorFakturuGeorge(
   polozky:  SFPolozkaGeorge[],
   sfKlientId?: number | null,
   poznamka?: string,
+  nazevFaktury?: string,
 ): Promise<GSFakturaVystup> {
   const due = new Date()
   due.setDate(due.getDate() + GS_SPLATNOST)
@@ -350,7 +351,7 @@ export async function vytvorFakturuGeorge(
   const payload = {
     Invoice: {
       type:             "regular",
-      name:             "Faktura - George Studio",
+      name:             nazevFaktury ?? "Faktura - George Studio",
       sequence_id:      GS_SEQ_ID,
       invoice_currency: "CZK",
       logo_id:          GS_LOGO_ID,

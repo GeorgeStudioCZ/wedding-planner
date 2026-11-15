@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const { data: sluzby } = await sb
       .from("george_hosting")
-      .select("id, web, cena_rok, kvota_gb, kategorie_id, stav, george_kategorie(name, sazba)")
+      .select("id, web, typ, cena_rok, kvota_gb, kategorie_id, stav, george_kategorie(name, sazba)")
       .eq("zakaznik_id", zakaznikId)
       .eq("stav", "ok")
       .order("web", { ascending: true })
@@ -56,17 +56,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: `Všechny služby jsou za rok ${rok} už vyfakturované` }, { status: 409 })
     }
 
-    const polozky: SFPolozkaGeorge[] = k_fakturaci.map(s => {
-      const katJmeno = (s.george_kategorie as unknown as { name: string } | null)?.name ?? "Služba"
+    // Pořadí na faktuře: domény, hostingy, redirecty, e-maily; uvnitř typu podle webu
+    const poradiTypu = ["domena", "hosting", "redirect", "email"]
+    const serazene = [...k_fakturaci].sort((a, b) =>
+      poradiTypu.indexOf(a.typ) - poradiTypu.indexOf(b.typ) || (a.web ?? "").localeCompare(b.web ?? "", "cs") || a.id - b.id)
+
+    // Položka: název = služba z ceníku, popis = web / doména / e-mail.
+    // E-mail: množství = kvóta, jednotka = GB (cena za 1 GB); ostatní: 1 × rok.
+    const polozky: SFPolozkaGeorge[] = serazene.map(s => {
+      const sluzba = (s.george_kategorie as unknown as { name: string } | null)?.name ?? "Služba"
       const web = (s.web ?? "").trim()
-      const kvota = s.kvota_gb != null ? ` – ${Number(s.kvota_gb)} GB` : ""
-      return {
-        nazev:      web || katJmeno + kvota,
-        popis:      web ? katJmeno + kvota : undefined,
-        unit_price: cenaSluzby(s),
-        quantity:   1,
-        unit:       "rok",
+      const cena = cenaSluzby(s)
+      const kvota = s.kvota_gb != null ? Number(s.kvota_gb) : 0
+      if (s.typ === "email" && kvota > 0) {
+        return { nazev: sluzba, popis: web || undefined, unit_price: Math.round(cena / kvota * 100) / 100, quantity: kvota, unit: "GB" }
       }
+      return { nazev: sluzba, popis: web || undefined, unit_price: cena, quantity: 1, unit: "rok" }
     })
 
     const klient: SFKlientGeorge = {
@@ -80,9 +85,9 @@ export async function POST(req: NextRequest) {
       psc:     zak.psc    || undefined,
     }
     const sfKlientId = zak.ico ? await searchSFClientByIco(zak.ico) : null
-    const celkem = Math.round(polozky.reduce((a, p) => a + p.unit_price * p.quantity, 0) * 100) / 100
+    const celkem = Math.round(k_fakturaci.reduce((a, x) => a + cenaSluzby(x), 0) * 100) / 100
 
-    const faktura = await vytvorFakturuGeorge(klient, polozky, sfKlientId, `Hosting a domény – rok ${rok}`)
+    const faktura = await vytvorFakturuGeorge(klient, polozky, sfKlientId, `Hosting a domény – rok ${rok}`, `Hostingové služby ${rok}`)
 
     const { error: evErr } = await sb.from("george_faktury").insert({
       sf_id: faktura.id, sf_no: faktura.invoice_no, zakaznik_id: zakaznikId,
