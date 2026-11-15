@@ -196,6 +196,7 @@ function ZaznamRadek({ z, kategorie, zakaznici, onDelete, onEdit, onDuplicate, o
 type EditForm = {
   nazev: string; datum: string; casOd: string; casDo: string
   zakaznikId: string; kategorieId: string; poznamka: string; pocet: string; cenaKus: string
+  sazba: string   // hodinová sazba služby (zmražená u záznamu)
 }
 
 function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose, duplikace = false }: {
@@ -216,13 +217,16 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose, duplikace = 
     poznamka:    zaznam.poznamka ?? "",
     pocet:       zaznam.pocet != null ? String(zaznam.pocet) : "",
     cenaKus:     zaznam.pocet != null ? String(zaznam.cena_prodej_kus ?? kategorie.find(k => k.id === zaznam.kategorie_id)?.sazba ?? "") : "",
+    sazba:       zaznam.pocet == null ? String(zaznam.sazba_snapshot ?? kategorie.find(k => k.id === zaznam.kategorie_id)?.sazba ?? "") : "",
   })
+  const [sazbaUpravena, setSazbaUpravena] = useState(false)   // true = sazbu změnil uživatel ručně
   const [saving, setSaving] = useState(false)
 
   const studioZak    = zakaznici.filter(z => Array.isArray(z.projekty) && z.projekty.includes("Studio"))
   const casDoInvalid = !!form.casDo && !!form.casOd && (isMat ? form.casDo < form.casOd : form.casDo <= form.casOd)
   const pocetNum     = parseFloat(form.pocet.replace(",", "."))
   const cenaKusNum   = parseFloat(form.cenaKus.replace(",", "."))
+  const sazbaNum     = parseFloat(form.sazba.replace(",", "."))
   const katAkt       = kategorie.find(k => String(k.id) === form.kategorieId)
   const katFilt      = isMat
     ? kategorie.filter(k => k.typ === "material")
@@ -253,6 +257,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose, duplikace = 
         zakaznik_id:  form.zakaznikId  ? Number(form.zakaznikId)  : null,
         kategorie_id: form.kategorieId ? Number(form.kategorieId) : null,
         poznamka:     form.poznamka,
+        sazba_snapshot: !isNaN(sazbaNum) && sazbaNum >= 0 ? sazbaNum : null,
       })
     }
     setSaving(false)
@@ -269,7 +274,7 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose, duplikace = 
 
   const canSave = isMat
     ? !isNaN(pocetNum) && pocetNum > 0 && !!form.datum && !!form.casOd && !casDoInvalid
-    : !!form.datum && !!form.casOd && !casDoInvalid
+    : !!form.datum && !!form.casOd && !casDoInvalid && !isNaN(sazbaNum) && sazbaNum >= 0
 
   return (
     <div style={{
@@ -384,13 +389,42 @@ function EditPopup({ zaznam, kategorie, zakaznici, onSave, onClose, duplikace = 
           {/* Kategorie — filtrovaná podle typu záznamu */}
           <div>
             <label style={lbl}>{isMat ? "Materiál" : "Kategorie"}</label>
-            <select value={form.kategorieId} onChange={e => upd({ kategorieId: e.target.value })} style={inp}>
+            <select value={form.kategorieId} onChange={e => {
+              const nova = kategorie.find(k => String(k.id) === e.target.value)
+              // U hodinové služby se sazba přepne podle nové kategorie, pokud ji uživatel ručně neměnil
+              upd({ kategorieId: e.target.value, ...(!isMat && !sazbaUpravena && nova ? { sazba: String(nova.sazba) } : {}) })
+            }} style={inp}>
               <option value="">— bez kategorie —</option>
               {katFilt.map(k => (
                 <option key={k.id} value={k.id}>{k.name}</option>
               ))}
             </select>
           </div>
+
+          {/* Služba: hodinová sazba (zmražená u záznamu) */}
+          {!isMat && (
+            <div>
+              <label style={lbl}>Hodinová sazba (Kč/hod)</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <input
+                  value={form.sazba} onChange={e => { setSazbaUpravena(true); upd({ sazba: e.target.value }) }}
+                  placeholder="0" inputMode="decimal" style={{ ...inp, width: 110 }}
+                />
+                {!isNaN(sazbaNum) && sazbaNum >= 0 && form.casOd && form.casDo && !casDoInvalid && (() => {
+                  const h = Math.round((new Date(localToIso(form.datum, form.casDo)).getTime() - new Date(localToIso(form.datum, form.casOd)).getTime()) / 36_000) / 100
+                  return (
+                    <span style={{ fontSize: 13, color: "#6b7280" }}>
+                      {h.toLocaleString("cs-CZ")} hod × {sazbaNum.toLocaleString("cs-CZ")} ={" "}
+                      <strong style={{ color: "#059669" }}>{Math.round(h * sazbaNum).toLocaleString("cs-CZ")} Kč</strong>
+                    </span>
+                  )
+                })()}
+              </div>
+              {katAkt && sazbaNum !== katAkt.sazba && (
+                <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>Sazba v ceníku je {katAkt.sazba.toLocaleString("cs-CZ")} Kč/hod — u tohoto záznamu platí upravená.</div>
+              )}
+            </div>
+          )}
 
           {/* Poznámka */}
           <div>
@@ -621,7 +655,7 @@ export default function GeorgePage() {
     const db = createClient()
     // Při změně kategorie u hodinového záznamu zmrazit sazbu nové kategorie
     const puvodni = zaznamy.find(z => z.id === id)
-    if (puvodni && puvodni.pocet == null && updates.kategorie_id !== undefined && updates.kategorie_id !== puvodni.kategorie_id) {
+    if (puvodni && puvodni.pocet == null && updates.sazba_snapshot === undefined && updates.kategorie_id !== undefined && updates.kategorie_id !== puvodni.kategorie_id) {
       updates = { ...updates, sazba_snapshot: kategorie.find(k => k.id === updates.kategorie_id)?.sazba ?? null }
     }
     const { data, error } = await db.from("george_zaznamy").update(updates).eq("id", id).select().single()
