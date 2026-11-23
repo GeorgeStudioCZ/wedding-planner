@@ -135,6 +135,7 @@ export default function NovaZakazka() {
                 <option value="ve-strizne">Ve střižně</option>
                 <option value="po-svatbe">Po svatbě</option>
                 <option value="ukonceno">Ukončeno</option>
+                <option value="zruseno">Zrušeno / nemá zájem</option>
               </select>
             </div>
             <div className="grid grid-cols-2 gap-4">

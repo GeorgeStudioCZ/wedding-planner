@@ -19,6 +19,7 @@ const WED_PILL: Record<string, { bg: string; color: string }> = {
   "ve-strizne":   { bg: "#f3e8ff", color: "#6b21a8" },
   "po-svatbe":    { bg: "#e0f2fe", color: "#0369a1" },
   "ukonceno":     { bg: "#f1f5f9", color: "#475569" },
+  "zruseno":      { bg: "#fee2e2", color: "#b91c1c" },
 }
 
 const STAV_BORDER: Record<string, string> = {
@@ -30,6 +31,7 @@ const STAV_BORDER: Record<string, string> = {
   "ve-strizne":   "#c084fc",
   "po-svatbe":    "#38bdf8",
   "ukonceno":     "#94a3b8",
+  "zruseno":      "#f87171",
 }
 
 const TYP_BADGE: Record<string, { bg: string; color: string }> = {
@@ -278,6 +280,21 @@ function FakturaceSekce({ zakazka }: { zakazka: Zakazka }) {
     }
   }
 
+  async function zrusZalohu(f: SvatebniFaktura) {
+    if (!confirm(`Zrušit zálohovou fakturu ${f.cislo ?? ""}? Faktura se smaže ze SuperFaktury i z CRM a nelze ji vrátit.`)) return
+    setBusy(true); setChyba(null)
+    try {
+      const res = await fetch(`/api/svatby/faktury/${f.id}`, { method: "DELETE" })
+      const json = await res.json()
+      if (!json.ok) setChyba(json.error)
+      await nacti()
+    } catch (e) {
+      setChyba(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const btn = (aktivni: boolean): React.CSSProperties => ({
     width: "100%", padding: "9px 12px", borderRadius: "var(--radius-md)",
     border: "1px solid var(--line)", background: aktivni ? "var(--surface)" : "var(--surface-2, #f4f4f5)",
@@ -307,8 +324,13 @@ function FakturaceSekce({ zakazka }: { zakazka: Zakazka }) {
             Zobrazit PDF
           </a>
         )}
+        {f.typ === "zaloha" && f.stav === "vystavena" && faktury.length === 1 && (
+          <button onClick={() => zrusZalohu(f)} disabled={busy} style={{ marginLeft: "auto", fontSize: 12, background: "none", border: "none", color: "#b91c1c", cursor: "pointer", textDecoration: "underline" }}>
+            Zrušit zálohu
+          </button>
+        )}
         {f.typ !== "ostra" && (
-          <button onClick={() => prepniZaplaceno(f)} disabled={busy} style={{ marginLeft: "auto", fontSize: 12, background: "none", border: "none", color: "var(--ink-2)", cursor: "pointer", textDecoration: "underline" }}>
+          <button onClick={() => prepniZaplaceno(f)} disabled={busy} style={{ marginLeft: f.typ === "zaloha" && f.stav === "vystavena" && faktury.length === 1 ? 8 : "auto", fontSize: 12, background: "none", border: "none", color: "var(--ink-2)", cursor: "pointer", textDecoration: "underline" }}>
             {f.stav === "zaplacena" ? "Vrátit na nezaplacenou" : "Označit jako zaplacenou"}
           </button>
         )}
@@ -523,6 +545,7 @@ export default function DetailZakazky() {
     { value: "ve-strizne",   label: "Ve střižně",    barva: "bg-purple-100 text-purple-700" },
     { value: "po-svatbe",        label: "Po svatbě",          barva: "bg-sky-100 text-sky-700" },
     { value: "ukonceno",        label: "Ukončeno",           barva: "bg-slate-100 text-slate-500" },
+    { value: "zruseno",         label: "Zrušeno / nemá zájem", barva: "bg-red-100 text-red-700" },
     { value: "vystup-odevzdan", label: "Výstup odevzdán",    barva: "bg-green-100 text-green-700" },
     { value: "vystup-odebran",  label: "Odevzdání odebráno", barva: "bg-gray-100 text-gray-500" },
   ]
@@ -686,6 +709,7 @@ export default function DetailZakazky() {
     { value: "ve-strizne",   label: "Ve střižně" },
     { value: "po-svatbe",    label: "Po svatbě" },
     { value: "ukonceno",     label: "Ukončeno" },
+    { value: "zruseno",      label: "Zrušeno / nemá zájem" },
   ]
 
   // ─── Render ─────────────────────────────────────────────────────────────────

@@ -353,7 +353,7 @@ export default function Home() {
   const dnes = new Date()
   dnes.setHours(0, 0, 0, 0)
 
-  const NEPOTVRZENE_STAVY = ["poptavka", "rozhoduje-se", "objednavka", "cekam-platbu"]
+  const NEPOTVRZENE_STAVY = ["poptavka", "rozhoduje-se", "objednavka", "cekam-platbu", "zruseno"]
   const potvrzeneSvatby = zakazky.filter(z => !NEPOTVRZENE_STAVY.includes(z.stav))
 
   const probihaJednani = zakazky.filter(z =>
@@ -421,6 +421,7 @@ export default function Home() {
     { value: "ve-strizne",   label: "Ve střižně",    barva: "bg-purple-100 text-purple-700" },
     { value: "po-svatbe",    label: "Po svatbě",     barva: "bg-sky-100 text-sky-700" },
     { value: "ukonceno",     label: "Ukončeno",      barva: "bg-slate-100 text-slate-500" },
+    { value: "zruseno",      label: "Zrušeno / nemá zájem", barva: "bg-red-100 text-red-700" },
   ]
 
   function stavInfo(stav: string) {
@@ -467,6 +468,7 @@ export default function Home() {
     "ve-strizne":   { bg: "#f3e8ff", color: "#6b21a8" },
     "po-svatbe":    { bg: "#e0f2fe", color: "#0369a1" },
     "ukonceno":     { bg: "#f1f5f9", color: "#475569" },
+    "zruseno":      { bg: "#fee2e2", color: "#b91c1c" },
   }
 
   const STAV_BORDER: Record<string, string> = {
@@ -478,6 +480,7 @@ export default function Home() {
     "ve-strizne":   "#c084fc",
     "po-svatbe":    "#38bdf8",
     "ukonceno":     "#94a3b8",
+    "zruseno":      "#f87171",
   }
 
   // Barvy badge pro typ služby
@@ -976,7 +979,7 @@ export default function Home() {
               </div>
             </div>
             <div style={{ padding: "20px 22px" }}>
-              <MiniKalendar zakazky={zakazky.filter(z => z.datum_svatby && !["poptavka", "rozhoduje-se"].includes(z.stav))} />
+              <MiniKalendar zakazky={zakazky.filter(z => z.datum_svatby && !["poptavka", "rozhoduje-se", "zruseno"].includes(z.stav))} />
             </div>
           </div>
 
