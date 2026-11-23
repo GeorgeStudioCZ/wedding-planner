@@ -34,6 +34,7 @@ const WED_PILL: Record<string, { bg: string; color: string }> = {
   "ve-strizne":   { bg: "#f3e8ff", color: "#6b21a8" },
   "po-svatbe":    { bg: "#e0f2fe", color: "#0369a1" },
   "ukonceno":     { bg: "#f1f5f9", color: "#475569" },
+  "nema-zajem":   { bg: "#f3f4f6", color: "#6b7280" },
   "zruseno":      { bg: "#fee2e2", color: "#b91c1c" },
 }
 
@@ -46,6 +47,7 @@ const STAV_BORDER: Record<string, string> = {
   "ve-strizne":   "#c084fc",
   "po-svatbe":    "#38bdf8",
   "ukonceno":     "#94a3b8",
+  "nema-zajem":   "#d1d5db",
   "zruseno":      "#f87171",
 }
 
@@ -64,6 +66,7 @@ const STAV_LABEL: Record<string, string> = {
   "ve-strizne":   "Ve střižně",
   "po-svatbe":    "Po svatbě",
   "ukonceno":     "Ukončeno",
+  "nema-zajem":   "Nemá zájem",
   "zruseno":      "Zrušeno",
 }
 
@@ -77,6 +80,7 @@ const STAVOVE_FILTRY: { value: string; label: string }[] = [
   { value: "ve-strizne",   label: "Ve střižně" },
   { value: "po-svatbe",    label: "Po svatbě" },
   { value: "ukonceno",     label: "Ukončeno" },
+  { value: "nema-zajem",   label: "Nemá zájem" },
   { value: "zruseno",      label: "Zrušeno" },
 ]
 

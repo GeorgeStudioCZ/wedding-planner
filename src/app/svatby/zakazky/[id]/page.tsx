@@ -19,6 +19,7 @@ const WED_PILL: Record<string, { bg: string; color: string }> = {
   "ve-strizne":   { bg: "#f3e8ff", color: "#6b21a8" },
   "po-svatbe":    { bg: "#e0f2fe", color: "#0369a1" },
   "ukonceno":     { bg: "#f1f5f9", color: "#475569" },
+  "nema-zajem":   { bg: "#f3f4f6", color: "#6b7280" },
   "zruseno":      { bg: "#fee2e2", color: "#b91c1c" },
 }
 
@@ -31,6 +32,7 @@ const STAV_BORDER: Record<string, string> = {
   "ve-strizne":   "#c084fc",
   "po-svatbe":    "#38bdf8",
   "ukonceno":     "#94a3b8",
+  "nema-zajem":   "#d1d5db",
   "zruseno":      "#f87171",
 }
 
@@ -545,7 +547,8 @@ export default function DetailZakazky() {
     { value: "ve-strizne",   label: "Ve střižně",    barva: "bg-purple-100 text-purple-700" },
     { value: "po-svatbe",        label: "Po svatbě",          barva: "bg-sky-100 text-sky-700" },
     { value: "ukonceno",        label: "Ukončeno",           barva: "bg-slate-100 text-slate-500" },
-    { value: "zruseno",         label: "Zrušeno / nemá zájem", barva: "bg-red-100 text-red-700" },
+    { value: "nema-zajem",      label: "Nemá zájem",         barva: "bg-gray-100 text-gray-500" },
+    { value: "zruseno",         label: "Zrušeno",            barva: "bg-red-100 text-red-700" },
     { value: "vystup-odevzdan", label: "Výstup odevzdán",    barva: "bg-green-100 text-green-700" },
     { value: "vystup-odebran",  label: "Odevzdání odebráno", barva: "bg-gray-100 text-gray-500" },
   ]
@@ -709,7 +712,8 @@ export default function DetailZakazky() {
     { value: "ve-strizne",   label: "Ve střižně" },
     { value: "po-svatbe",    label: "Po svatbě" },
     { value: "ukonceno",     label: "Ukončeno" },
-    { value: "zruseno",      label: "Zrušeno / nemá zájem" },
+    { value: "nema-zajem",   label: "Nemá zájem" },
+    { value: "zruseno",      label: "Zrušeno" },
   ]
 
   // ─── Render ─────────────────────────────────────────────────────────────────
