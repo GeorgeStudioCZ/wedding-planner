@@ -420,7 +420,7 @@ export default function Home() {
     { value: "zaplaceno",    label: "Zaplaceno",     barva: "bg-green-100 text-green-700" },
     { value: "ve-strizne",   label: "Ve střižně",    barva: "bg-purple-100 text-purple-700" },
     { value: "po-svatbe",    label: "Po svatbě",     barva: "bg-sky-100 text-sky-700" },
-    { value: "ukonceno",     label: "Ukončeno",      barva: "bg-slate-100 text-slate-500" },
+    { value: "ukonceno",     label: "Dokončeno",      barva: "bg-slate-100 text-slate-500" },
     { value: "nema-zajem",   label: "Nemá zájem",    barva: "bg-gray-100 text-gray-500" },
     { value: "zruseno",      label: "Zrušeno",       barva: "bg-red-100 text-red-700" },
   ]

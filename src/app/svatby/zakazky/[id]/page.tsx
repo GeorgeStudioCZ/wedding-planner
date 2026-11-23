@@ -414,12 +414,17 @@ export default function DetailZakazky() {
     if (!zakazka) return
     const novy = !zakazka.vystup_odevzdan
     const cas = novy ? new Date().toISOString() : null
-    await supabase.from("zakazky").update({ vystup_odevzdan: novy, datum_odevzdani: cas }).eq("id", zakazka.id)
+    // Odevzdáním výstupu je zakázka dokončená; odebráním se vrací na "Po svatbě"
+    const novyStav = novy ? "ukonceno" : (zakazka.stav === "ukonceno" ? "po-svatbe" : zakazka.stav)
+    await supabase.from("zakazky").update({ vystup_odevzdan: novy, datum_odevzdani: cas, stav: novyStav }).eq("id", zakazka.id)
     await supabase.from("zakazky_historie").insert([{
       zakazka_id: zakazka.id,
       stav: novy ? "vystup-odevzdan" : "vystup-odebran",
     }])
-    setZakazka({ ...zakazka, vystup_odevzdan: novy, datum_odevzdani: cas })
+    if (novyStav !== zakazka.stav) {
+      await supabase.from("zakazky_historie").insert([{ zakazka_id: zakazka.id, stav: novyStav }])
+    }
+    setZakazka({ ...zakazka, vystup_odevzdan: novy, datum_odevzdani: cas, stav: novyStav })
     nactiHistorii()
   }
 
@@ -546,7 +551,7 @@ export default function DetailZakazky() {
     { value: "zaplaceno",    label: "Zaplaceno",     barva: "bg-green-100 text-green-700" },
     { value: "ve-strizne",   label: "Ve střižně",    barva: "bg-purple-100 text-purple-700" },
     { value: "po-svatbe",        label: "Po svatbě",          barva: "bg-sky-100 text-sky-700" },
-    { value: "ukonceno",        label: "Ukončeno",           barva: "bg-slate-100 text-slate-500" },
+    { value: "ukonceno",        label: "Dokončeno",           barva: "bg-slate-100 text-slate-500" },
     { value: "nema-zajem",      label: "Nemá zájem",         barva: "bg-gray-100 text-gray-500" },
     { value: "zruseno",         label: "Zrušeno",            barva: "bg-red-100 text-red-700" },
     { value: "vystup-odevzdan", label: "Výstup odevzdán",    barva: "bg-green-100 text-green-700" },
@@ -711,7 +716,7 @@ export default function DetailZakazky() {
     { value: "zaplaceno",    label: "Zaplaceno" },
     { value: "ve-strizne",   label: "Ve střižně" },
     { value: "po-svatbe",    label: "Po svatbě" },
-    { value: "ukonceno",     label: "Ukončeno" },
+    { value: "ukonceno",     label: "Dokončeno" },
     { value: "nema-zajem",   label: "Nemá zájem" },
     { value: "zruseno",      label: "Zrušeno" },
   ]

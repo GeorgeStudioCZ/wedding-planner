@@ -134,7 +134,7 @@ export default function NovaZakazka() {
                 <option value="zaplaceno">Zaplaceno</option>
                 <option value="ve-strizne">Ve střižně</option>
                 <option value="po-svatbe">Po svatbě</option>
-                <option value="ukonceno">Ukončeno</option>
+                <option value="ukonceno">Dokončeno</option>
                 <option value="nema-zajem">Nemá zájem</option>
                 <option value="zruseno">Zrušeno</option>
               </select>

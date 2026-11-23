@@ -65,7 +65,7 @@ const STAV_LABEL: Record<string, string> = {
   "zaplaceno":    "Zaplaceno",
   "ve-strizne":   "Ve střižně",
   "po-svatbe":    "Po svatbě",
-  "ukonceno":     "Ukončeno",
+  "ukonceno":     "Dokončeno",
   "nema-zajem":   "Nemá zájem",
   "zruseno":      "Zrušeno",
 }
@@ -79,7 +79,7 @@ const STAVOVE_FILTRY: { value: string; label: string }[] = [
   { value: "zaplaceno",    label: "Zaplaceno" },
   { value: "ve-strizne",   label: "Ve střižně" },
   { value: "po-svatbe",    label: "Po svatbě" },
-  { value: "ukonceno",     label: "Ukončeno" },
+  { value: "ukonceno",     label: "Dokončeno" },
   { value: "nema-zajem",   label: "Nemá zájem" },
   { value: "zruseno",      label: "Zrušeno" },
 ]
